@@ -6,6 +6,10 @@ import Navbar from "@/components/layout/Navbar";
 import { isValidLocale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 
+import CategoryShowcase from "@/components/home/CategoryShowcase";
+
+import FeaturedProducts from "@/components/home/FeaturedProducts";
+import { products } from "@/data/products";
 type HomePageProps = {
   params: Promise<{
     locale: string;
@@ -136,6 +140,16 @@ export default async function HomePage({
           </div>
         </div>
       </section>
+      <CategoryShowcase
+  locale={locale}
+ 
+  dictionary={dictionary.categoryShowcase}
+/>
+      <FeaturedProducts
+        locale={locale}
+        products={products}
+        dictionary={dictionary.featuredProducts}
+      />
     </main>
   );
 }

@@ -1,94 +1,128 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 
 export default function PageLoader() {
-  const [isLoading, setIsLoading] = useState(true);
+  const [isVisible, setIsVisible] = useState(true);
   const [isLeaving, setIsLeaving] = useState(false);
 
   useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+
     document.body.style.overflow = "hidden";
 
     const leaveTimer = window.setTimeout(() => {
       setIsLeaving(true);
-    }, 1700);
+    }, 2100);
 
     const removeTimer = window.setTimeout(() => {
-      setIsLoading(false);
-      document.body.style.overflow = "";
-    }, 2300);
+      setIsVisible(false);
+      document.body.style.overflow = previousOverflow;
+    }, 2850);
 
     return () => {
       window.clearTimeout(leaveTimer);
       window.clearTimeout(removeTimer);
-      document.body.style.overflow = "";
+
+      document.body.style.overflow = previousOverflow;
     };
   }, []);
 
-  if (!isLoading) {
+  if (!isVisible) {
     return null;
   }
 
   return (
     <div
       role="status"
+      aria-live="polite"
       aria-label="Sayfa yükleniyor"
       className={[
-        "fixed inset-0 z-[9999] flex min-h-[100dvh] items-center justify-center overflow-hidden",
-        "bg-[#E5E0D7]",
-        "transition-all duration-700 ease-[cubic-bezier(0.76,0,0.24,1)]",
+        "fixed inset-0 z-[9999]",
+        "flex min-h-[100dvh] items-center justify-center",
+        "overflow-hidden bg-background",
+        "transition-all duration-[750ms]",
+        "ease-[cubic-bezier(0.76,0,0.24,1)]",
         isLeaving
-          ? "pointer-events-none -translate-y-full opacity-0"
-          : "translate-y-0 opacity-100",
+          ? "pointer-events-none scale-[1.015] opacity-0"
+          : "scale-100 opacity-100",
       ].join(" ")}
     >
-      {/* Arka plan dokusu */}
+      {/* Merkezde yumuşak altın ışık */}
       <div
         aria-hidden="true"
-        className="absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,rgba(238,234,227,0.95)_0%,rgba(229,224,215,0.92)_42%,rgba(203,196,184,0.72)_100%)]"
+        className="absolute left-1/2 top-1/2 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent/[0.07] blur-[120px] sm:h-[560px] sm:w-[560px] lg:h-[680px] lg:w-[680px]"
       />
 
-      {/* Dekoratif ışıklar */}
+      {/* Sağ üst gümüş ışık */}
       <div
         aria-hidden="true"
-        className="absolute -end-24 -top-24 h-72 w-72 rounded-full bg-[#92734A]/10 blur-[100px] sm:h-96 sm:w-96"
+        className="absolute end-[5%] top-[10%] h-[260px] w-[260px] rounded-full bg-silver/15 blur-[110px] sm:h-[380px] sm:w-[380px]"
       />
 
+      {/* Sol alt altın ışık */}
       <div
         aria-hidden="true"
-        className="absolute -bottom-28 -start-24 h-72 w-72 rounded-full bg-[#AAA9A5]/20 blur-[100px] sm:h-96 sm:w-96"
+        className="absolute bottom-[5%] start-[8%] h-[240px] w-[240px] rounded-full bg-accent/[0.04] blur-[100px] sm:h-[340px] sm:w-[340px]"
       />
 
-      {/* Üst ve alt çizgiler */}
+      {/* İnce dış çerçeve */}
       <div
         aria-hidden="true"
-        className="absolute inset-x-6 top-6 h-px bg-gradient-to-r from-transparent via-[#242320]/20 to-transparent sm:inset-x-12 sm:top-10"
+        className="pointer-events-none absolute inset-4 border border-foreground/[0.07] sm:inset-7 lg:inset-10"
       />
 
+      {/* Üst dekoratif çizgi */}
       <div
         aria-hidden="true"
-        className="absolute inset-x-6 bottom-6 h-px bg-gradient-to-r from-transparent via-[#242320]/20 to-transparent sm:inset-x-12 sm:bottom-10"
-      />
+        className="absolute left-1/2 top-4 flex -translate-x-1/2 items-center sm:top-7 lg:top-10"
+      >
+        <span className="h-px w-10 bg-gradient-to-r from-transparent to-accent/50 sm:w-16" />
 
-      {/* Loader içeriği */}
-      <div className="relative z-10 flex w-full max-w-md flex-col items-center px-6 text-center">
-        <div className="overflow-hidden">
-          <p className="page-loader-brand font-heading text-[42px] font-medium uppercase leading-none tracking-[0.22em] text-[#242320] sm:text-[56px] sm:tracking-[0.28em]">
-            Luxea
-          </p>
+        <span className="mx-3 h-1.5 w-1.5 rotate-45 border border-accent/60" />
+
+        <span className="h-px w-10 bg-gradient-to-l from-transparent to-accent/50 sm:w-16" />
+      </div>
+
+      {/* Ana içerik */}
+      <div className="relative z-10 flex w-full flex-col items-center px-6 text-center">
+        {/* Tek logo */}
+<div className="page-loader-logo relative h-[330px] w-[330px] overflow-hidden min-[390px]:h-[360px] min-[390px]:w-[360px] sm:h-[420px] sm:w-[420px] lg:h-[470px] lg:w-[470px] xl:h-[520px] xl:w-[520px]">
+<Image
+  src="/luxea-1.jpg"
+  alt="LUXEA"
+  fill
+  priority
+  sizes="(max-width: 389px) 330px, (max-width: 639px) 360px, (max-width: 1023px) 420px, (max-width: 1279px) 470px, 520px"
+  className="object-contain object-center"
+/>
         </div>
 
-        <p className="page-loader-subtitle mt-4 text-[8px] font-medium uppercase tracking-[0.42em] text-[#92734A] sm:text-[9px]">
-          Premium Accessories
+        {/* Dekoratif ayırıcı */}
+        <div className="page-loader-divider mt-4 flex w-full max-w-[280px] items-center sm:mt-6">
+          <span className="h-px flex-1 bg-gradient-to-r from-transparent via-accent/40 to-accent/60" />
+
+          <span className="mx-4 h-1.5 w-1.5 rotate-45 bg-accent/70" />
+
+          <span className="h-px flex-1 bg-gradient-to-l from-transparent via-accent/40 to-accent/60" />
+        </div>
+
+        {/* İlerleme çizgisi */}
+        <div className="mt-6 h-px w-full max-w-[210px] overflow-hidden bg-foreground/10">
+          <div className="page-loader-progress h-full w-full bg-gradient-to-r from-transparent via-accent to-transparent" />
+        </div>
+
+        {/* Alt metin */}
+        <p className="page-loader-caption mt-5 text-[8px] font-semibold uppercase tracking-[0.34em] text-accent sm:text-[9px]">
+          Luxury in every detail
         </p>
+      </div>
 
-        {/* Yükleme çizgisi */}
-        <div className="mt-9 h-px w-44 overflow-hidden bg-[#242320]/15 sm:mt-11 sm:w-52">
-          <div className="page-loader-progress h-full bg-[#92734A]" />
-        </div>
-
-        <p className="page-loader-year mt-5 text-[8px] uppercase tracking-[0.32em] text-[#777269]">
-          Est. 2026
+      {/* Alt marka bilgisi */}
+      <div className="page-loader-footer absolute inset-x-0 bottom-9 flex justify-center px-6 sm:bottom-12 lg:bottom-14">
+        <p className="text-[7px] font-medium uppercase tracking-[0.3em] text-foreground/35 sm:text-[8px]">
+          LUXEA · EST. 2026
         </p>
       </div>
 
