@@ -10,6 +10,8 @@ import {
   type ReactNode,
 } from "react";
 
+export type Currency = "EUR" | "USD" | "GBP";
+
 export type OrderStatus =
   | "received"
   | "payment-confirmed"
@@ -33,7 +35,7 @@ export type OrderItem = {
   color: string;
   quantity: number;
   unitPrice: number;
-  currency: string;
+  currency: Currency;
 };
 
 export type OrderCustomer = {
@@ -68,7 +70,7 @@ export type Order = {
   subtotal: number;
   shippingCost: number;
   total: number;
-  currency: string;
+  currency: Currency;
 
   status: OrderStatus;
   statusHistory: OrderStatusHistory[];
@@ -84,16 +86,14 @@ export type CreateOrderInput = {
 
   subtotal: number;
   shippingCost?: number;
-  currency: string;
+  currency: Currency;
 };
 
 type OrderContextValue = {
   orders: Order[];
   isLoaded: boolean;
 
-  createOrder: (
-    input: CreateOrderInput
-  ) => Order;
+  createOrder: (input: CreateOrderInput) => Order;
 
   findOrderByTrackingCode: (
     trackingCode: string
@@ -120,6 +120,12 @@ const VALID_ORDER_STATUSES: OrderStatus[] = [
   "cancelled",
 ];
 
+const SUPPORTED_CURRENCIES: Currency[] = [
+  "EUR",
+  "USD",
+  "GBP",
+];
+
 const OrderContext =
   createContext<OrderContextValue | null>(null);
 
@@ -134,9 +140,18 @@ function isOrderStatus(
   );
 }
 
-function createRandomSegment(
-  length: number
-) {
+function isCurrency(
+  value: unknown
+): value is Currency {
+  return (
+    typeof value === "string" &&
+    SUPPORTED_CURRENCIES.includes(
+      value as Currency
+    )
+  );
+}
+
+function createRandomSegment(length: number) {
   const characters =
     "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
@@ -174,8 +189,7 @@ function createRandomSegment(
 }
 
 function createTrackingCode() {
-  const year =
-    new Date().getFullYear();
+  const year = new Date().getFullYear();
 
   return `LUX-${year}-${createRandomSegment(
     8
@@ -185,18 +199,15 @@ function createTrackingCode() {
 function createUniqueTrackingCode(
   existingOrders: Order[]
 ) {
-  let trackingCode =
-    createTrackingCode();
+  let trackingCode = createTrackingCode();
 
   while (
     existingOrders.some(
       (order) =>
-        order.trackingCode ===
-        trackingCode
+        order.trackingCode === trackingCode
     )
   ) {
-    trackingCode =
-      createTrackingCode();
+    trackingCode = createTrackingCode();
   }
 
   return trackingCode;
@@ -225,8 +236,7 @@ function isValidOrderItem(
     return false;
   }
 
-  const item =
-    value as Partial<OrderItem>;
+  const item = value as Partial<OrderItem>;
 
   return (
     typeof item.id === "string" &&
@@ -235,17 +245,85 @@ function isValidOrderItem(
     typeof item.image === "string" &&
     typeof item.color === "string" &&
     typeof item.quantity === "number" &&
-    Number.isFinite(item.quantity) &&
+    Number.isInteger(item.quantity) &&
     item.quantity > 0 &&
     typeof item.unitPrice === "number" &&
     Number.isFinite(item.unitPrice) &&
     item.unitPrice >= 0 &&
-    typeof item.currency === "string" &&
+    isCurrency(item.currency) &&
     typeof item.name === "object" &&
     item.name !== null &&
     typeof item.name.tr === "string" &&
     typeof item.name.en === "string" &&
     typeof item.name.ar === "string"
+  );
+}
+
+function isValidOrderCustomer(
+  value: unknown
+): value is OrderCustomer {
+  if (
+    typeof value !== "object" ||
+    value === null
+  ) {
+    return false;
+  }
+
+  const customer =
+    value as Partial<OrderCustomer>;
+
+  return (
+    typeof customer.email === "string" &&
+    typeof customer.firstName ===
+      "string" &&
+    typeof customer.lastName ===
+      "string" &&
+    typeof customer.phone === "string"
+  );
+}
+
+function isValidShippingAddress(
+  value: unknown
+): value is OrderShippingAddress {
+  if (
+    typeof value !== "object" ||
+    value === null
+  ) {
+    return false;
+  }
+
+  const address =
+    value as Partial<OrderShippingAddress>;
+
+  return (
+    typeof address.country === "string" &&
+    typeof address.address === "string" &&
+    typeof address.city === "string" &&
+    typeof address.postalCode === "string" &&
+    (address.addressLineTwo === undefined ||
+      typeof address.addressLineTwo ===
+        "string") &&
+    (address.state === undefined ||
+      typeof address.state === "string")
+  );
+}
+
+function isValidStatusHistoryEntry(
+  value: unknown
+): value is OrderStatusHistory {
+  if (
+    typeof value !== "object" ||
+    value === null
+  ) {
+    return false;
+  }
+
+  const entry =
+    value as Partial<OrderStatusHistory>;
+
+  return (
+    isOrderStatus(entry.status) &&
+    typeof entry.date === "string"
   );
 }
 
@@ -259,8 +337,7 @@ function normalizeStoredOrder(
     return null;
   }
 
-  const order =
-    value as Partial<Order>;
+  const order = value as Partial<Order>;
 
   if (
     typeof order.id !== "string" ||
@@ -271,112 +348,71 @@ function normalizeStoredOrder(
       "string" ||
     typeof order.updatedAt !==
       "string" ||
-    !Array.isArray(order.items)
+    !Array.isArray(order.items) ||
+    !isValidOrderCustomer(
+      order.customer
+    ) ||
+    !isValidShippingAddress(
+      order.shippingAddress
+    )
   ) {
     return null;
   }
 
   const validItems =
-    order.items.filter(
-      isValidOrderItem
-    );
+    order.items.filter(isValidOrderItem);
 
   if (
     validItems.length !==
-    order.items.length
-  ) {
-    return null;
-  }
-
-  if (
-    typeof order.customer !==
-      "object" ||
-    order.customer === null ||
-    typeof order.customer.email !==
-      "string" ||
-    typeof order.customer.firstName !==
-      "string" ||
-    typeof order.customer.lastName !==
-      "string" ||
-    typeof order.customer.phone !==
-      "string"
-  ) {
-    return null;
-  }
-
-  if (
-    typeof order.shippingAddress !==
-      "object" ||
-    order.shippingAddress === null ||
-    typeof order.shippingAddress
-      .country !== "string" ||
-    typeof order.shippingAddress
-      .address !== "string" ||
-    typeof order.shippingAddress
-      .city !== "string" ||
-    typeof order.shippingAddress
-      .postalCode !== "string"
+      order.items.length ||
+    validItems.length === 0
   ) {
     return null;
   }
 
   const subtotal =
-    typeof order.subtotal === "number"
+    typeof order.subtotal === "number" &&
+    Number.isFinite(order.subtotal)
       ? order.subtotal
-      : 0;
+      : validItems.reduce(
+          (total, item) =>
+            total +
+            item.unitPrice * item.quantity,
+          0
+        );
 
   const shippingCost =
     typeof order.shippingCost ===
-    "number"
-      ? order.shippingCost
+      "number" &&
+    Number.isFinite(order.shippingCost)
+      ? Math.max(0, order.shippingCost)
       : 0;
 
   const total =
-    typeof order.total === "number"
+    typeof order.total === "number" &&
+    Number.isFinite(order.total)
       ? order.total
       : subtotal + shippingCost;
 
-  const currency =
-    typeof order.currency ===
-      "string" &&
-    order.currency.trim()
+  const currency: Currency =
+    isCurrency(order.currency)
       ? order.currency
-      : validItems[0]?.currency ??
-        "USD";
+      : validItems[0]?.currency ?? "USD";
 
   const statusHistory =
-    Array.isArray(
-      order.statusHistory
-    )
+    Array.isArray(order.statusHistory)
       ? order.statusHistory.filter(
-          (
-            entry
-          ): entry is OrderStatusHistory =>
-            typeof entry ===
-              "object" &&
-            entry !== null &&
-            isOrderStatus(
-              (
-                entry as Partial<OrderStatusHistory>
-              ).status
-            ) &&
-            typeof (
-              entry as Partial<OrderStatusHistory>
-            ).date === "string"
+          isValidStatusHistoryEntry
         )
       : [];
 
   return {
     id: order.id,
-    trackingCode:
-      order.trackingCode,
+    trackingCode: order.trackingCode,
 
-    customer:
-      order.customer as OrderCustomer,
-
+    customer: order.customer,
     shippingAddress:
-      order.shippingAddress as OrderShippingAddress,
-
+      order.shippingAddress,
     items: validItems,
 
     subtotal,
@@ -385,6 +421,7 @@ function normalizeStoredOrder(
     currency,
 
     status: order.status,
+
     statusHistory:
       statusHistory.length > 0
         ? statusHistory
@@ -423,21 +460,18 @@ export function OrderProvider({
       const parsedOrders: unknown =
         JSON.parse(storedOrders);
 
-      if (
-        !Array.isArray(parsedOrders)
-      ) {
+      if (!Array.isArray(parsedOrders)) {
         return;
       }
 
-      const validOrders =
-        parsedOrders
-          .map(normalizeStoredOrder)
-          .filter(
-            (
-              order
-            ): order is Order =>
-              order !== null
-          );
+      const validOrders = parsedOrders
+        .map(normalizeStoredOrder)
+        .filter(
+          (
+            order
+          ): order is Order =>
+            order !== null
+        );
 
       setOrders(validOrders);
     } catch (error) {
@@ -471,22 +505,22 @@ export function OrderProvider({
   }, [orders, isLoaded]);
 
   const createOrder = useCallback(
-    (
-      input: CreateOrderInput
-    ): Order => {
+    (input: CreateOrderInput): Order => {
       const now =
         new Date().toISOString();
 
-      const shippingCost =
-        Math.max(
-          0,
-          input.shippingCost ?? 0
-        );
+      const shippingCost = Math.max(
+        0,
+        input.shippingCost ?? 0
+      );
+
+      const subtotal = Math.max(
+        0,
+        input.subtotal
+      );
 
       const trackingCode =
-        createUniqueTrackingCode(
-          orders
-        );
+        createUniqueTrackingCode(orders);
 
       const newOrder: Order = {
         id: createOrderId(),
@@ -495,17 +529,12 @@ export function OrderProvider({
         customer: input.customer,
         shippingAddress:
           input.shippingAddress,
-
         items: input.items,
 
-        subtotal: input.subtotal,
+        subtotal,
         shippingCost,
-        total:
-          input.subtotal +
-          shippingCost,
-
-        currency:
-          input.currency || "USD",
+        total: subtotal + shippingCost,
+        currency: input.currency,
 
         status: "received",
 
@@ -520,12 +549,10 @@ export function OrderProvider({
         updatedAt: now,
       };
 
-      setOrders(
-        (currentOrders) => [
-          newOrder,
-          ...currentOrders,
-        ]
-      );
+      setOrders((currentOrders) => [
+        newOrder,
+        ...currentOrders,
+      ]);
 
       return newOrder;
     },
@@ -534,9 +561,7 @@ export function OrderProvider({
 
   const findOrderByTrackingCode =
     useCallback(
-      (
-        trackingCode: string
-      ) => {
+      (trackingCode: string) => {
         const normalizedCode =
           trackingCode
             .trim()
@@ -564,44 +589,38 @@ export function OrderProvider({
         const now =
           new Date().toISOString();
 
-        setOrders(
-          (currentOrders) =>
-            currentOrders.map(
-              (order) => {
-                if (
-                  order.id !== orderId ||
-                  order.status ===
-                    status
-                ) {
-                  return order;
-                }
+        setOrders((currentOrders) =>
+          currentOrders.map((order) => {
+            if (
+              order.id !== orderId ||
+              order.status === status
+            ) {
+              return order;
+            }
 
-                const alreadyExists =
-                  order.statusHistory.some(
-                    (entry) =>
-                      entry.status ===
-                      status
-                  );
+            const statusAlreadyExists =
+              order.statusHistory.some(
+                (entry) =>
+                  entry.status === status
+              );
 
-                return {
-                  ...order,
+            return {
+              ...order,
+              status,
+              updatedAt: now,
 
-                  status,
-                  updatedAt: now,
-
-                  statusHistory:
-                    alreadyExists
-                      ? order.statusHistory
-                      : [
-                          ...order.statusHistory,
-                          {
-                            status,
-                            date: now,
-                          },
-                        ],
-                };
-              }
-            )
+              statusHistory:
+                statusAlreadyExists
+                  ? order.statusHistory
+                  : [
+                      ...order.statusHistory,
+                      {
+                        status,
+                        date: now,
+                      },
+                    ],
+            };
+          })
         );
       },
       []
@@ -626,17 +645,14 @@ export function OrderProvider({
     );
 
   return (
-    <OrderContext.Provider
-      value={value}
-    >
+    <OrderContext.Provider value={value}>
       {children}
     </OrderContext.Provider>
   );
 }
 
 export function useOrders() {
-  const context =
-    useContext(OrderContext);
+  const context = useContext(OrderContext);
 
   if (!context) {
     throw new Error(

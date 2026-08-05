@@ -1,14 +1,12 @@
 "use client";
 
 import {
-  useEffect,
   useMemo,
   useState,
   type FormEvent,
 } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import {
   Check,
   Circle,
@@ -67,6 +65,7 @@ type OrderTrackingDictionary = {
 type OrderTrackingContentProps = {
   locale: Locale;
   dictionary: OrderTrackingDictionary;
+  initialTrackingCode?: string;
 };
 
 type OrderTrackingResultProps = {
@@ -86,37 +85,23 @@ const ORDER_STEPS: OrderStatus[] = [
 export default function OrderTrackingContent({
   locale,
   dictionary,
+  initialTrackingCode = "",
 }: OrderTrackingContentProps) {
-  const searchParams = useSearchParams();
-
   const {
     isLoaded,
     findOrderByTrackingCode,
   } = useOrders();
 
+  const normalizedInitialCode =
+    initialTrackingCode.trim().toUpperCase();
+
   const [trackingCode, setTrackingCode] =
-    useState("");
+    useState(normalizedInitialCode);
 
   const [searchedCode, setSearchedCode] =
-    useState("");
+    useState(normalizedInitialCode);
 
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    const codeFromUrl =
-      searchParams.get("code")?.trim() ?? "";
-
-    if (!codeFromUrl) {
-      return;
-    }
-
-    const normalizedCode =
-      codeFromUrl.toUpperCase();
-
-    setTrackingCode(normalizedCode);
-    setSearchedCode(normalizedCode);
-    setError("");
-  }, [searchParams]);
 
   const order = useMemo(() => {
     if (!searchedCode) {
@@ -143,6 +128,7 @@ export default function OrderTrackingContent({
     if (!normalizedCode) {
       setError(dictionary.requiredCode);
       setSearchedCode("");
+
       return;
     }
 
@@ -216,6 +202,7 @@ export default function OrderTrackingContent({
                   setTrackingCode(
                     event.target.value
                   );
+
                   setError("");
                 }}
                 placeholder={
@@ -430,7 +417,7 @@ function OrderTrackingResult({
         </div>
       </section>
 
-      {/* Zaman çizelgesi */}
+      {/* Sipariş aşamaları */}
       <section className="w-full py-12">
         {isCancelled ? (
           <div className="mx-auto flex max-w-[760px] flex-col items-center justify-center gap-5 border border-danger/25 bg-danger/10 p-6 text-center text-danger">
@@ -584,7 +571,7 @@ function OrderTrackingResult({
         )}
       </section>
 
-      {/* Sipariş ayrıntıları */}
+      {/* Sipariş detayları */}
       <div className="grid w-full gap-10 border-t border-border pt-12 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-16">
         <div className="min-w-0">
           <div className="grid gap-6 sm:grid-cols-2">
@@ -607,7 +594,7 @@ function OrderTrackingResult({
               </p>
             </section>
 
-            {/* Teslimat */}
+            {/* Teslimat adresi */}
             <section className="flex flex-col items-center border border-border bg-surface/40 p-6 text-center">
               <p className="text-[8px] font-semibold uppercase tracking-[0.2em] text-accent">
                 {dictionary.deliveryAddress}
@@ -768,10 +755,15 @@ function getStatusLabel(
   status: OrderStatus,
   dictionary: OrderTrackingDictionary
 ) {
-  const labels: Record<OrderStatus, string> = {
+  const labels: Record<
+    OrderStatus,
+    string
+  > = {
     received: dictionary.received,
+
     "payment-confirmed":
       dictionary.paymentConfirmed,
+
     preparing: dictionary.preparing,
     shipped: dictionary.shipped,
     delivered: dictionary.delivered,
