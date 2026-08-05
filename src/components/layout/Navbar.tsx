@@ -125,7 +125,7 @@ export default function Navbar({
               >
                 <span className="relative block h-[68px] w-[96px] overflow-hidden sm:h-[76px] sm:w-[112px]">
                   <Image
-                    src="/luxea-2.png"
+                    src="/luxea-2.jpg"
                     alt="LUXEA"
                     fill
                     priority
