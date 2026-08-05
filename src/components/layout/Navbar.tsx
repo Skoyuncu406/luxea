@@ -7,16 +7,16 @@ import { usePathname } from "next/navigation";
 import {
   ArrowUpRight,
   ChevronDown,
-  Heart,
   Search,
-  ShoppingBag,
   UserRound,
 } from "lucide-react";
 
+import CartNavLink from "./CartNavLink";
+import FavoritesNavLink from "./FavoritesNavLink";
+import LanguageSwitcher from "./LanguageSwitcher";
+
 import { categories } from "@/data/categories";
 import type { Locale } from "@/lib/i18n/config";
-
-import LanguageSwitcher from "./LanguageSwitcher";
 
 type NavbarDictionary = {
   navigation: {
@@ -94,7 +94,7 @@ export default function Navbar({
   return (
     <header
       className={[
-        "fixed inset-x-0 top-0 z-50 w-full overflow-visible",
+        "fixed inset-x-0 top-0 z-[500] w-full overflow-visible",
         "transition-[background-color,box-shadow,backdrop-filter] duration-500",
         "ease-[cubic-bezier(0.22,1,0.36,1)]",
         shouldShowBackground
@@ -103,9 +103,11 @@ export default function Navbar({
       ].join(" ")}
     >
       <div className="container-premium overflow-visible">
-        {/* Mobil ve tablet navbar */}
+        {/* =========================================================
+            MOBİL + TABLET
+        ========================================================= */}
         <div className="relative lg:hidden">
-          {/* Mobil üst satır */}
+          {/* Üst satır */}
           <div
             className={[
               "grid h-[72px] grid-cols-[auto_minmax(0,1fr)_auto] items-center",
@@ -115,7 +117,7 @@ export default function Navbar({
                 : "border-b border-transparent",
             ].join(" ")}
           >
-            {/* Mobil logo */}
+            {/* Logo */}
             <div className="flex min-w-0 items-center justify-start">
               <Link
                 href={`/${locale}`}
@@ -123,14 +125,21 @@ export default function Navbar({
                 aria-label="LUXEA"
                 className="group relative flex shrink-0 items-center"
               >
-                <span className="relative block h-[68px] w-[96px] overflow-hidden sm:h-[76px] sm:w-[112px]">
+                <span
+                  className={[
+                    "relative block shrink-0 overflow-hidden",
+                    "h-[48px] w-[68px]",
+                    "min-[390px]:h-[50px] min-[390px]:w-[72px]",
+                    "sm:h-[56px] sm:w-[82px]",
+                  ].join(" ")}
+                >
                   <Image
                     src="/luxea-2.jpg"
                     alt="LUXEA"
                     fill
                     priority
-                    sizes="(max-width: 639px) 90px, 116px"
-                    className="scale-[1.35] object-contain object-center transition-transform duration-500 ease-out group-hover:scale-[1.42]"
+                    sizes="(max-width: 389px) 68px, (max-width: 639px) 72px, 82px"
+                    className="object-contain object-center transition-transform duration-500 ease-out group-hover:scale-[1.03]"
                   />
                 </span>
               </Link>
@@ -145,18 +154,18 @@ export default function Navbar({
                 className={mobileIconClass}
                 onClick={closeMobileCategories}
               >
-                <Search size={17} strokeWidth={1.45} />
+                <Search
+                  size={17}
+                  strokeWidth={1.45}
+                />
               </Link>
 
-              <Link
-                href={`/${locale}/favorites`}
-                aria-label={dictionary.common.favorites}
-                title={dictionary.common.favorites}
-                className={mobileIconClass}
-                onClick={closeMobileCategories}
-              >
-                <Heart size={17} strokeWidth={1.45} />
-              </Link>
+              <FavoritesNavLink
+                locale={locale}
+                label={dictionary.common.favorites}
+                variant="mobile"
+                onNavigate={closeMobileCategories}
+              />
 
               <Link
                 href={`/${locale}/account`}
@@ -165,22 +174,18 @@ export default function Navbar({
                 className={mobileIconClass}
                 onClick={closeMobileCategories}
               >
-                <UserRound size={17} strokeWidth={1.45} />
+                <UserRound
+                  size={17}
+                  strokeWidth={1.45}
+                />
               </Link>
 
-              <Link
-                href={`/${locale}/cart`}
-                aria-label={dictionary.common.cart}
-                title={dictionary.common.cart}
-                className={mobileIconClass}
-                onClick={closeMobileCategories}
-              >
-                <ShoppingBag size={17} strokeWidth={1.45} />
-
-                <span className="absolute end-0 top-0 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-accent px-0.5 text-[7px] font-semibold leading-none text-white">
-                  0
-                </span>
-              </Link>
+              <CartNavLink
+                locale={locale}
+                label={dictionary.common.cart}
+                variant="mobile"
+                onNavigate={closeMobileCategories}
+              />
             </div>
 
             {/* Mobil dil seçimi */}
@@ -211,7 +216,9 @@ export default function Navbar({
             <button
               type="button"
               onClick={() =>
-                setIsMobileCategoriesOpen((current) => !current)
+                setIsMobileCategoriesOpen(
+                  (current) => !current
+                )
               }
               aria-expanded={isMobileCategoriesOpen}
               aria-controls="mobile-category-menu"
@@ -237,7 +244,9 @@ export default function Navbar({
                 strokeWidth={1.4}
                 className={[
                   "shrink-0 transition-transform duration-300",
-                  isMobileCategoriesOpen ? "rotate-180" : "",
+                  isMobileCategoriesOpen
+                    ? "rotate-180"
+                    : "",
                 ].join(" ")}
               />
 
@@ -255,7 +264,13 @@ export default function Navbar({
             <Link
               href={`/${locale}/account/orders`}
               onClick={closeMobileCategories}
-              className="group relative flex min-w-0 items-center justify-center px-2 text-center text-[9px] font-semibold uppercase tracking-[0.13em] text-foreground transition-colors duration-300 hover:bg-surface/40 hover:text-accent min-[390px]:text-[10px] min-[390px]:tracking-[0.15em]"
+              className={[
+                "group relative flex min-w-0 items-center justify-center px-2",
+                "text-center text-[9px] font-semibold uppercase tracking-[0.13em]",
+                "text-foreground transition-colors duration-300",
+                "hover:bg-surface/40 hover:text-accent",
+                "min-[390px]:text-[10px] min-[390px]:tracking-[0.15em]",
+              ].join(" ")}
             >
               <span className="truncate">
                 {dictionary.navigation.orders}
@@ -269,7 +284,7 @@ export default function Navbar({
           <div
             id="mobile-category-menu"
             className={[
-              "absolute inset-x-0 top-full z-50 overflow-hidden",
+              "absolute inset-x-0 top-full z-[600] overflow-hidden",
               "border-b border-border bg-[#EEEAE3]",
               "shadow-[0_24px_55px_rgba(36,35,32,0.16)]",
               "transition-all duration-500",
@@ -284,7 +299,11 @@ export default function Navbar({
               <Link
                 href={`/${locale}/categories`}
                 onClick={closeMobileCategories}
-                className="group mb-4 flex items-center justify-between border-b border-border pb-5 text-foreground transition-colors duration-300 hover:text-accent"
+                className={[
+                  "group mb-4 flex items-center justify-between",
+                  "border-b border-border pb-5 text-foreground",
+                  "transition-colors duration-300 hover:text-accent",
+                ].join(" ")}
               >
                 <div>
                   <p className="text-[8px] font-semibold uppercase tracking-[0.24em] text-accent">
@@ -299,36 +318,67 @@ export default function Navbar({
                 <ArrowUpRight
                   size={18}
                   strokeWidth={1.35}
-                  className="transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5"
+                  className={[
+                    "transition-transform duration-300",
+                    "group-hover:-translate-y-0.5 group-hover:translate-x-0.5",
+                    "rtl:group-hover:-translate-x-0.5",
+                  ].join(" ")}
                 />
               </Link>
 
               {/* Mobil kategori listesi */}
               <div className="grid grid-cols-2 border-s border-t border-border">
-                {visibleCategories.map((category, index) => (
-                  <Link
-                    key={category.id}
-                    href={`/${locale}/categories/${category.slug}`}
-                    onClick={closeMobileCategories}
-                    className="group relative min-w-0 border-e border-b border-border px-3 py-5 transition-colors duration-300 hover:bg-background/50 hover:text-accent sm:px-5"
-                  >
-                    <span className="block text-[8px] font-medium tracking-[0.18em] text-muted">
-                      {String(index + 1).padStart(2, "0")}
-                    </span>
+                {visibleCategories.map(
+                  (category, index) => (
+                    <Link
+                      key={category.id}
+                      href={`/${locale}/categories/${category.slug}`}
+                      onClick={
+                        closeMobileCategories
+                      }
+                      className={[
+                        "group relative min-w-0",
+                        "border-e border-b border-border",
+                        "px-3 py-5 transition-colors duration-300",
+                        "hover:bg-background/50 hover:text-accent sm:px-5",
+                      ].join(" ")}
+                    >
+                      <span className="block text-[8px] font-medium tracking-[0.18em] text-muted">
+                        {String(index + 1).padStart(
+                          2,
+                          "0"
+                        )}
+                      </span>
 
-                    <span className="mt-2 block whitespace-normal break-words font-heading text-[23px] leading-[1.05] text-foreground transition-colors duration-300 group-hover:text-accent sm:text-[27px]">
-                      {category.name[locale]}
-                    </span>
+                      <span
+                        className={[
+                          "mt-2 block whitespace-normal break-words",
+                          "font-heading text-[23px] leading-[1.05]",
+                          "text-foreground transition-colors duration-300",
+                          "group-hover:text-accent sm:text-[27px]",
+                        ].join(" ")}
+                      >
+                        {category.name[locale]}
+                      </span>
 
-                    <span className="mt-4 block h-px w-7 bg-border-strong transition-all duration-300 group-hover:w-12 group-hover:bg-accent" />
-                  </Link>
-                ))}
+                      <span
+                        className={[
+                          "mt-4 block h-px w-7 bg-border-strong",
+                          "transition-all duration-300",
+                          "group-hover:w-12 group-hover:bg-accent",
+                        ].join(" ")}
+                      />
+                    </Link>
+                  )
+                )}
               </div>
             </div>
           </div>
         </div>
 
-        {/* Masaüstü navbar */}
+        {/* =========================================================
+            MASAÜSTÜ
+        ========================================================= */}
         <div
           className={[
             "hidden h-[88px]",
@@ -347,14 +397,14 @@ export default function Navbar({
               aria-label="LUXEA"
               className="group relative flex shrink-0 items-center"
             >
-              <span className="relative block h-[86px] w-[145px] overflow-hidden">
+              <span className="relative block h-[66px] w-[96px] shrink-0 overflow-hidden xl:h-[70px] xl:w-[102px]">
                 <Image
                   src="/luxea-2.jpg"
                   alt="LUXEA"
                   fill
                   priority
-                  sizes="145px"
-                  className="scale-[1.4] object-contain object-center transition-transform duration-500 ease-out group-hover:scale-[1.46]"
+                  sizes="(min-width: 1280px) 102px, 96px"
+                  className="object-contain object-center transition-transform duration-500 ease-out group-hover:scale-[1.03]"
                 />
               </span>
             </Link>
@@ -365,34 +415,57 @@ export default function Navbar({
             aria-label="Main navigation"
             className="flex items-center justify-center gap-10 overflow-visible"
           >
-            {/* Masaüstü kategori dropdown */}
+            {/* Kategori dropdown */}
             <div className="group relative">
               <button
                 type="button"
                 aria-haspopup="true"
-                className="relative inline-flex items-center gap-2 whitespace-nowrap py-3 text-[11px] font-medium uppercase tracking-[0.18em] text-foreground transition-colors duration-300 group-hover:text-accent group-focus-within:text-accent"
+                className={[
+                  "relative inline-flex items-center gap-2 whitespace-nowrap py-3",
+                  "text-[11px] font-medium uppercase tracking-[0.18em]",
+                  "text-foreground transition-colors duration-300",
+                  "group-hover:text-accent group-focus-within:text-accent",
+                ].join(" ")}
               >
-                <span>{dictionary.navigation.categories}</span>
+                <span>
+                  {dictionary.navigation.categories}
+                </span>
 
                 <ChevronDown
                   size={13}
                   strokeWidth={1.4}
-                  className="transition-transform duration-300 group-hover:rotate-180 group-focus-within:rotate-180"
+                  className={[
+                    "transition-transform duration-300",
+                    "group-hover:rotate-180",
+                    "group-focus-within:rotate-180",
+                  ].join(" ")}
                 />
 
-                <span className="absolute inset-x-0 bottom-1 h-px origin-center scale-x-0 bg-accent transition-transform duration-300 group-hover:scale-x-100 group-focus-within:scale-x-100" />
+                <span
+                  className={[
+                    "absolute inset-x-0 bottom-1 h-px",
+                    "origin-center scale-x-0 bg-accent",
+                    "transition-transform duration-300",
+                    "group-hover:scale-x-100",
+                    "group-focus-within:scale-x-100",
+                  ].join(" ")}
+                />
               </button>
 
               {/* Hover köprüsü */}
               <div
                 aria-hidden="true"
-                className="fixed left-1/2 top-[72px] h-8 w-[22.222vw] min-w-[380px] max-w-[520px] -translate-x-1/2"
+                className={[
+                  "fixed left-1/2 top-[72px] h-8",
+                  "w-[22.222vw] min-w-[380px] max-w-[520px]",
+                  "-translate-x-1/2",
+                ].join(" ")}
               />
 
-              {/* Masaüstü kategori menüsü */}
+              {/* Masaüstü kategori dropdown */}
               <div
                 className={[
-                  "invisible pointer-events-none fixed left-1/2 top-[88px] z-[70]",
+                  "invisible pointer-events-none fixed left-1/2 top-[88px] z-[600]",
                   "w-[22.222vw] min-w-[380px] max-w-[520px]",
                   "-translate-x-1/2 translate-y-3 opacity-0",
                   "transition-all duration-300",
@@ -404,7 +477,7 @@ export default function Navbar({
                 ].join(" ")}
               >
                 <div className="border border-border bg-[#EEEAE3] p-5 shadow-[0_24px_65px_rgba(36,35,32,0.15)]">
-                  {/* Menü başlığı */}
+                  {/* Başlık */}
                   <div className="flex items-center justify-between gap-5 border-b border-border pb-5">
                     <div className="min-w-0">
                       <p className="text-[8px] font-semibold uppercase tracking-[0.26em] text-accent">
@@ -412,14 +485,26 @@ export default function Navbar({
                       </p>
 
                       <h2 className="mt-2 font-heading text-[30px] leading-none text-foreground">
-                        {dictionary.navigation.allCategories}
+                        {
+                          dictionary.navigation
+                            .allCategories
+                        }
                       </h2>
                     </div>
 
                     <Link
                       href={`/${locale}/categories`}
-                      aria-label={dictionary.navigation.allCategories}
-                      className="group/all flex h-9 w-9 shrink-0 items-center justify-center border border-border text-foreground transition-all duration-300 hover:border-accent hover:bg-accent hover:!text-white"
+                      aria-label={
+                        dictionary.navigation
+                          .allCategories
+                      }
+                      className={[
+                        "group/all flex h-9 w-9 shrink-0",
+                        "items-center justify-center",
+                        "border border-border text-foreground",
+                        "transition-all duration-300",
+                        "hover:border-accent hover:bg-accent hover:!text-white",
+                      ].join(" ")}
                     >
                       <ArrowUpRight
                         size={15}
@@ -428,25 +513,48 @@ export default function Navbar({
                     </Link>
                   </div>
 
-                  {/* Kompakt kategori listesi */}
+                  {/* Kategoriler */}
                   <div className="mt-5 grid grid-cols-2 border-s border-t border-border">
-                    {visibleCategories.map((category, index) => (
-                      <Link
-                        key={category.id}
-                        href={`/${locale}/categories/${category.slug}`}
-                        className="group/item relative min-h-[96px] min-w-0 border-e border-b border-border px-4 py-4 transition-colors duration-300 hover:bg-background/55"
-                      >
-                        <span className="block text-[7px] font-medium tracking-[0.18em] text-muted">
-                          {String(index + 1).padStart(2, "0")}
-                        </span>
+                    {visibleCategories.map(
+                      (category, index) => (
+                        <Link
+                          key={category.id}
+                          href={`/${locale}/categories/${category.slug}`}
+                          className={[
+                            "group/item relative min-h-[96px] min-w-0",
+                            "border-e border-b border-border",
+                            "px-4 py-4 transition-colors duration-300",
+                            "hover:bg-background/55",
+                          ].join(" ")}
+                        >
+                          <span className="block text-[7px] font-medium tracking-[0.18em] text-muted">
+                            {String(
+                              index + 1
+                            ).padStart(2, "0")}
+                          </span>
 
-                        <span className="mt-2 block whitespace-normal break-words font-heading text-[20px] leading-[1.05] text-foreground transition-colors duration-300 group-hover/item:text-accent">
-                          {category.name[locale]}
-                        </span>
+                          <span
+                            className={[
+                              "mt-2 block whitespace-normal break-words",
+                              "font-heading text-[20px] leading-[1.05]",
+                              "text-foreground transition-colors duration-300",
+                              "group-hover/item:text-accent",
+                            ].join(" ")}
+                          >
+                            {category.name[locale]}
+                          </span>
 
-                        <span className="absolute bottom-4 start-4 h-px w-6 bg-border-strong transition-all duration-300 group-hover/item:w-10 group-hover/item:bg-accent" />
-                      </Link>
-                    ))}
+                          <span
+                            className={[
+                              "absolute bottom-4 start-4 h-px w-6",
+                              "bg-border-strong transition-all duration-300",
+                              "group-hover/item:w-10",
+                              "group-hover/item:bg-accent",
+                            ].join(" ")}
+                          />
+                        </Link>
+                      )
+                    )}
                   </div>
                 </div>
               </div>
@@ -455,11 +563,23 @@ export default function Navbar({
             {/* Siparişlerim */}
             <Link
               href={`/${locale}/account/orders`}
-              className="group relative whitespace-nowrap py-3 text-[11px] font-medium uppercase tracking-[0.18em] text-foreground transition-colors duration-300 hover:text-accent"
+              className={[
+                "group relative whitespace-nowrap py-3",
+                "text-[11px] font-medium uppercase tracking-[0.18em]",
+                "text-foreground transition-colors duration-300",
+                "hover:text-accent",
+              ].join(" ")}
             >
               {dictionary.navigation.orders}
 
-              <span className="absolute inset-x-0 bottom-1 h-px origin-center scale-x-0 bg-accent transition-transform duration-300 group-hover:scale-x-100" />
+              <span
+                className={[
+                  "absolute inset-x-0 bottom-1 h-px",
+                  "origin-center scale-x-0 bg-accent",
+                  "transition-transform duration-300",
+                  "group-hover:scale-x-100",
+                ].join(" ")}
+              />
             </Link>
           </nav>
 
@@ -471,17 +591,17 @@ export default function Navbar({
               title={dictionary.common.search}
               className={desktopIconClass}
             >
-              <Search size={18} strokeWidth={1.5} />
+              <Search
+                size={18}
+                strokeWidth={1.5}
+              />
             </Link>
 
-            <Link
-              href={`/${locale}/favorites`}
-              aria-label={dictionary.common.favorites}
-              title={dictionary.common.favorites}
-              className={desktopIconClass}
-            >
-              <Heart size={18} strokeWidth={1.5} />
-            </Link>
+            <FavoritesNavLink
+              locale={locale}
+              label={dictionary.common.favorites}
+              variant="desktop"
+            />
 
             <Link
               href={`/${locale}/account`}
@@ -489,21 +609,17 @@ export default function Navbar({
               title={dictionary.common.account}
               className={desktopIconClass}
             >
-              <UserRound size={18} strokeWidth={1.5} />
+              <UserRound
+                size={18}
+                strokeWidth={1.5}
+              />
             </Link>
 
-            <Link
-              href={`/${locale}/cart`}
-              aria-label={dictionary.common.cart}
-              title={dictionary.common.cart}
-              className={desktopIconClass}
-            >
-              <ShoppingBag size={18} strokeWidth={1.5} />
-
-              <span className="absolute end-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[8px] font-semibold leading-none text-white">
-                0
-              </span>
-            </Link>
+            <CartNavLink
+              locale={locale}
+              label={dictionary.common.cart}
+              variant="desktop"
+            />
 
             <div
               className={[

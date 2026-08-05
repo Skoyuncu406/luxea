@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 
+import { useFavorites } from "@/contexts/FavoritesContext";
 import { formatPrice } from "@/lib/format-price";
 import type { Locale } from "@/lib/i18n/config";
 import type { Category } from "@/types/category";
@@ -50,8 +51,6 @@ type ProductsCatalogProps = {
   dictionary: ProductsCatalogDictionary;
 };
 
-const FAVORITES_STORAGE_KEY = "luxea-favorites";
-
 export default function ProductsCatalog({
   locale,
   products,
@@ -68,39 +67,7 @@ export default function ProductsCatalog({
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isSortOpen, setIsSortOpen] = useState(false);
 
-  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
-  const [favoritesLoaded, setFavoritesLoaded] = useState(false);
-
-  useEffect(() => {
-    try {
-      const storedFavorites = window.localStorage.getItem(
-        FAVORITES_STORAGE_KEY
-      );
-
-      if (storedFavorites) {
-        const parsedFavorites = JSON.parse(storedFavorites);
-
-        if (Array.isArray(parsedFavorites)) {
-          setFavoriteIds(parsedFavorites);
-        }
-      }
-    } catch {
-      setFavoriteIds([]);
-    } finally {
-      setFavoritesLoaded(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!favoritesLoaded) {
-      return;
-    }
-
-    window.localStorage.setItem(
-      FAVORITES_STORAGE_KEY,
-      JSON.stringify(favoriteIds)
-    );
-  }, [favoriteIds, favoritesLoaded]);
+  const { isFavorite, toggleFavorite } = useFavorites();
 
   const visibleCategories = useMemo(() => {
     return categories
@@ -198,8 +165,9 @@ export default function ProductsCatalog({
   ];
 
   const selectedSort =
-    sortOptions.find((option) => option.value === sortOption) ??
-    sortOptions[0];
+    sortOptions.find(
+      (option) => option.value === sortOption
+    ) ?? sortOptions[0];
 
   function clearFilters() {
     setSearchQuery("");
@@ -209,27 +177,23 @@ export default function ProductsCatalog({
     setIsSortOpen(false);
   }
 
-  function toggleFavorite(productId: string) {
-    setFavoriteIds((currentFavorites) => {
-      const isFavorite = currentFavorites.includes(productId);
+  function selectCategory(categoryId: string) {
+    setSelectedCategoryId(categoryId);
+    setIsFilterOpen(false);
+  }
 
-      if (isFavorite) {
-        return currentFavorites.filter(
-          (favoriteId) => favoriteId !== productId
-        );
-      }
-
-      return [...currentFavorites, productId];
-    });
+  function selectSort(option: SortOption) {
+    setSortOption(option);
+    setIsSortOpen(false);
   }
 
   return (
-    <div className="relative w-full">
+    <div className="relative z-0 w-full">
       {/* Arama, kategori ve sıralama */}
-      <div className="relative z-[90] border-y border-border py-5 sm:py-6">
+      <div className="relative z-30 border-y border-border py-5 sm:py-6">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px_260px]">
           {/* Arama */}
-          <div className="group relative min-w-0">
+          <div className="group relative z-0 min-w-0">
             <div className="pointer-events-none absolute inset-y-0 start-0 z-10 flex w-14 items-center justify-center text-muted transition-colors duration-300 group-focus-within:text-accent">
               <Search size={18} strokeWidth={1.4} />
             </div>
@@ -270,7 +234,7 @@ export default function ProductsCatalog({
           </div>
 
           {/* Kategori filtresi */}
-          <div className="relative z-[100]">
+          <div className="relative z-40">
             <button
               type="button"
               onClick={() => {
@@ -278,6 +242,7 @@ export default function ProductsCatalog({
                 setIsSortOpen(false);
               }}
               aria-expanded={isFilterOpen}
+              aria-haspopup="listbox"
               className={[
                 "flex h-14 w-full items-center justify-between gap-4 border px-5",
                 "text-start transition-all duration-300 sm:h-16",
@@ -316,12 +281,15 @@ export default function ProductsCatalog({
               />
             </button>
 
+            {/* Kategori dropdown */}
             <div
+              role="listbox"
               className={[
-                "absolute inset-x-0 top-[calc(100%+10px)] z-[120]",
+                "absolute inset-x-0 top-[calc(100%+10px)] z-50",
                 "max-h-[420px] overflow-y-auto border border-border",
-                "bg-[#EEEAE3] p-2 shadow-[0_24px_65px_rgba(36,35,32,0.20)]",
-                "backdrop-blur-2xl transition-all duration-300",
+                "bg-[#EEEAE3] p-2",
+                "shadow-[0_24px_65px_rgba(36,35,32,0.20)]",
+                "transition-all duration-300",
                 isFilterOpen
                   ? "visible translate-y-0 opacity-100"
                   : "invisible pointer-events-none -translate-y-2 opacity-0",
@@ -329,10 +297,9 @@ export default function ProductsCatalog({
             >
               <button
                 type="button"
-                onClick={() => {
-                  setSelectedCategoryId("all");
-                  setIsFilterOpen(false);
-                }}
+                role="option"
+                aria-selected={selectedCategoryId === "all"}
+                onClick={() => selectCategory("all")}
                 className={[
                   "flex w-full items-center justify-between gap-4 px-4 py-3.5 text-start",
                   "transition-colors duration-300 hover:bg-background/60 hover:text-accent",
@@ -353,21 +320,22 @@ export default function ProductsCatalog({
               <div className="my-1 h-px bg-border" />
 
               {visibleCategories.map((category) => {
-                const isSelected =
+                const categoryIsSelected =
                   selectedCategoryId === category.id;
 
                 return (
                   <button
                     key={category.id}
                     type="button"
-                    onClick={() => {
-                      setSelectedCategoryId(category.id);
-                      setIsFilterOpen(false);
-                    }}
+                    role="option"
+                    aria-selected={categoryIsSelected}
+                    onClick={() =>
+                      selectCategory(category.id)
+                    }
                     className={[
                       "flex w-full items-center justify-between gap-4 px-4 py-3.5 text-start",
                       "transition-colors duration-300 hover:bg-background/60 hover:text-accent",
-                      isSelected
+                      categoryIsSelected
                         ? "text-accent"
                         : "text-foreground",
                     ].join(" ")}
@@ -376,7 +344,7 @@ export default function ProductsCatalog({
                       {category.name[locale]}
                     </span>
 
-                    {isSelected && (
+                    {categoryIsSelected && (
                       <Check size={14} strokeWidth={1.5} />
                     )}
                   </button>
@@ -386,7 +354,7 @@ export default function ProductsCatalog({
           </div>
 
           {/* Sıralama */}
-          <div className="relative z-[100]">
+          <div className="relative z-40">
             <button
               type="button"
               onClick={() => {
@@ -394,6 +362,7 @@ export default function ProductsCatalog({
                 setIsFilterOpen(false);
               }}
               aria-expanded={isSortOpen}
+              aria-haspopup="listbox"
               className={[
                 "flex h-14 w-full items-center justify-between gap-4 border px-5",
                 "text-start transition-all duration-300 sm:h-16",
@@ -408,7 +377,7 @@ export default function ProductsCatalog({
                 </span>
 
                 <span className="mt-1 block truncate font-heading text-[20px] leading-none text-foreground">
-                  {selectedSort?.label || dictionary.sortRecommended}
+                  {selectedSort.label}
                 </span>
               </span>
 
@@ -422,11 +391,13 @@ export default function ProductsCatalog({
               />
             </button>
 
+            {/* Sıralama dropdown */}
             <div
+              role="listbox"
               className={[
-                "absolute inset-x-0 top-[calc(100%+10px)] z-[120]",
+                "absolute inset-x-0 top-[calc(100%+10px)] z-50",
                 "border border-border bg-[#EEEAE3] p-2",
-                "shadow-[0_24px_65px_rgba(36,35,32,0.20)] backdrop-blur-2xl",
+                "shadow-[0_24px_65px_rgba(36,35,32,0.20)]",
                 "transition-all duration-300",
                 isSortOpen
                   ? "visible translate-y-0 opacity-100"
@@ -434,29 +405,30 @@ export default function ProductsCatalog({
               ].join(" ")}
             >
               {sortOptions.map((option) => {
-                const isSelected =
+                const optionIsSelected =
                   option.value === sortOption;
 
                 return (
                   <button
                     key={option.value}
                     type="button"
-                    onClick={() => {
-                      setSortOption(option.value);
-                      setIsSortOpen(false);
-                    }}
+                    role="option"
+                    aria-selected={optionIsSelected}
+                    onClick={() =>
+                      selectSort(option.value)
+                    }
                     className={[
                       "flex w-full items-center justify-between gap-4 px-4 py-3.5 text-start",
                       "text-[10px] font-semibold uppercase tracking-[0.12em]",
                       "transition-colors duration-300 hover:bg-background/60 hover:text-accent",
-                      isSelected
+                      optionIsSelected
                         ? "text-accent"
                         : "text-foreground",
                     ].join(" ")}
                   >
                     <span>{option.label}</span>
 
-                    {isSelected && (
+                    {optionIsSelected && (
                       <Check size={14} strokeWidth={1.5} />
                     )}
                   </button>
@@ -483,6 +455,7 @@ export default function ProductsCatalog({
             className="inline-flex items-center gap-2 text-[9px] font-semibold uppercase tracking-[0.16em] text-foreground transition-colors duration-300 hover:text-accent"
           >
             <X size={13} strokeWidth={1.4} />
+
             <span>{dictionary.clearFilters}</span>
           </button>
         )}
@@ -492,7 +465,7 @@ export default function ProductsCatalog({
       {filteredProducts.length > 0 ? (
         <div className="relative z-0 grid grid-cols-1 gap-x-6 gap-y-16 pt-10 sm:grid-cols-2 sm:pt-12 lg:grid-cols-3 lg:gap-x-8 lg:gap-y-20 xl:grid-cols-4 xl:gap-x-9">
           {filteredProducts.map((product) => {
-            const isFavorite = favoriteIds.includes(product.id);
+            const productIsFavorite = isFavorite(product.id);
 
             return (
               <article
@@ -529,7 +502,10 @@ export default function ProductsCatalog({
                     />
                   )}
 
-                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#242320]/20 via-transparent to-transparent" />
+                  <div
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#242320]/20 via-transparent to-transparent"
+                  />
 
                   {product.isNew && (
                     <span className="pointer-events-none absolute start-4 top-4 z-20 border border-white/45 bg-black/10 px-3 py-2 text-[8px] font-semibold uppercase tracking-[0.2em] text-white backdrop-blur-md">
@@ -537,16 +513,19 @@ export default function ProductsCatalog({
                     </span>
                   )}
 
+                  {/* Favori butonu */}
                   <button
                     type="button"
-                    onClick={() => toggleFavorite(product.id)}
+                    onClick={() =>
+                      toggleFavorite(product.id)
+                    }
                     aria-label={
-                      isFavorite
+                      productIsFavorite
                         ? dictionary.removeFromFavorites
                         : dictionary.addToFavorites
                     }
                     title={
-                      isFavorite
+                      productIsFavorite
                         ? dictionary.removeFromFavorites
                         : dictionary.addToFavorites
                     }
@@ -554,7 +533,7 @@ export default function ProductsCatalog({
                       "absolute end-4 top-4 z-30 flex h-10 w-10 items-center justify-center",
                       "border border-white/45 bg-[#E5E0D7]/88 backdrop-blur-xl",
                       "transition-all duration-300 hover:border-accent hover:bg-accent hover:text-white",
-                      isFavorite
+                      productIsFavorite
                         ? "border-accent bg-accent text-white"
                         : "text-foreground",
                     ].join(" ")}
@@ -562,7 +541,11 @@ export default function ProductsCatalog({
                     <Heart
                       size={17}
                       strokeWidth={1.4}
-                      fill={isFavorite ? "currentColor" : "none"}
+                      fill={
+                        productIsFavorite
+                          ? "currentColor"
+                          : "none"
+                      }
                     />
                   </button>
 
@@ -600,7 +583,9 @@ export default function ProductsCatalog({
                           key={color}
                           aria-hidden="true"
                           className="h-3.5 w-3.5 rounded-full border border-black/15"
-                          style={{ backgroundColor: color }}
+                          style={{
+                            backgroundColor: color,
+                          }}
                         />
                       ))}
                     </div>

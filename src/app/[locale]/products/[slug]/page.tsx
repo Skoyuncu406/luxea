@@ -1,19 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import {
-  ArrowLeft,
-  Heart,
-  Minus,
-  Plus,
-  ShoppingBag,
-} from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
 import Navbar from "@/components/layout/Navbar";
+import ProductActions from "@/components/products/ProductActions";
 import { products } from "@/data/products";
-import { formatPrice } from "@/lib/format-price";
-import { getDictionary } from "@/lib/i18n/get-dictionary";
 import { isValidLocale } from "@/lib/i18n/config";
+import { getDictionary } from "@/lib/i18n/get-dictionary";
 
 type ProductDetailPageProps = {
   params: Promise<{
@@ -21,6 +15,45 @@ type ProductDetailPageProps = {
     slug: string;
   }>;
 };
+
+type FullscreenPreviewProps = {
+  src: string;
+  alt: string;
+};
+
+function FullscreenPreview({
+  src,
+  alt,
+}: FullscreenPreviewProps) {
+  return (
+    <div
+      aria-hidden="true"
+      className={[
+        "pointer-events-none fixed inset-0 z-[700]",
+        "hidden items-center justify-center p-8 lg:flex",
+        "bg-[#242320]/88 opacity-0 backdrop-blur-md",
+        "transition-opacity duration-500",
+        "group-hover/preview:opacity-100",
+      ].join(" ")}
+    >
+      <div className="relative h-[88dvh] w-[88vw] max-w-[1500px]">
+        <Image
+          src={src}
+          alt={alt}
+          fill
+          sizes="88vw"
+          className="object-contain object-center drop-shadow-[0_30px_80px_rgba(0,0,0,0.45)]"
+        />
+      </div>
+
+      <div className="absolute inset-x-0 bottom-7 flex justify-center">
+        <p className="text-[8px] font-semibold uppercase tracking-[0.3em] text-white/55">
+          LUXEA
+        </p>
+      </div>
+    </div>
+  );
+}
 
 export default async function ProductDetailPage({
   params,
@@ -32,7 +65,9 @@ export default async function ProductDetailPage({
   }
 
   const product = products.find(
-    (item) => item.slug === slug && item.isActive
+    (item) =>
+      item.slug === slug &&
+      item.isActive
   );
 
   if (!product) {
@@ -43,7 +78,10 @@ export default async function ProductDetailPage({
 
   return (
     <main className="min-h-screen bg-background text-foreground">
-      <Navbar locale={locale} dictionary={dictionary} />
+      <Navbar
+        locale={locale}
+        dictionary={dictionary}
+      />
 
       <section className="pt-[120px] sm:pt-[128px] lg:pt-[88px]">
         <div className="container-premium py-10 sm:py-14 lg:py-16">
@@ -57,223 +95,103 @@ export default async function ProductDetailPage({
               className="transition-transform duration-300 group-hover:-translate-x-1 rtl:rotate-180 rtl:group-hover:translate-x-1"
             />
 
-            <span>{dictionary.productDetail.backToProducts}</span>
+            <span>
+              {dictionary.productDetail.backToProducts}
+            </span>
           </Link>
 
-          <div className="mt-8 grid gap-10 lg:grid-cols-12 lg:gap-12 xl:gap-16">
-            {/* Görsel alanı */}
-            <div className="lg:col-span-7">
-              <div className="grid gap-4 sm:grid-cols-2 lg:h-[calc(100dvh-190px)] lg:min-h-[620px] lg:max-h-[780px] lg:grid-rows-[minmax(0,1.45fr)_minmax(0,1fr)]">
+          <div className="mt-8 grid gap-12 lg:grid-cols-12 lg:gap-12 xl:gap-16">
+            {/* Ürün görselleri */}
+            <div className="min-w-0 lg:col-span-7">
+              <div className="w-full">
                 {/* Ana görsel */}
-                <div className="relative min-h-[420px] overflow-hidden bg-surface sm:col-span-2 sm:min-h-[540px] lg:min-h-0">
+                <div className="group/preview relative mx-auto aspect-[4/5] w-full max-w-[720px] cursor-zoom-in overflow-hidden bg-surface sm:aspect-[5/6] lg:h-[calc(100dvh-230px)] lg:min-h-[560px] lg:max-h-[720px] lg:aspect-auto">
                   <Image
                     src={product.image}
                     alt={product.name[locale]}
                     fill
                     priority
                     sizes="(max-width: 1024px) 100vw, 58vw"
-                    className="object-cover object-center"
+                    className="object-cover object-center transition-transform duration-700 ease-out lg:group-hover/preview:scale-[1.025]"
                   />
+
+                  <div className="pointer-events-none absolute inset-0 bg-[#242320]/0 transition-colors duration-500 lg:group-hover/preview:bg-[#242320]/10" />
+
+                  <div className="pointer-events-none absolute inset-x-5 bottom-5 hidden translate-y-3 items-center justify-center opacity-0 transition-all duration-500 lg:flex lg:group-hover/preview:translate-y-0 lg:group-hover/preview:opacity-100">
+                    <span className="border border-white/40 bg-[#E5E0D7]/90 px-5 py-3 text-[8px] font-semibold uppercase tracking-[0.22em] text-foreground backdrop-blur-xl">
+                      Tam Ekran Görüntüle
+                    </span>
+                  </div>
 
                   {product.isNew && (
-                    <span className="absolute start-5 top-5 border border-white/45 bg-black/15 px-3 py-2 text-[8px] font-semibold uppercase tracking-[0.2em] text-white backdrop-blur-md">
-                      {dictionary.featuredProducts.newLabel}
+                    <span className="absolute start-4 top-4 z-10 border border-white/45 bg-black/15 px-3 py-2 text-[8px] font-semibold uppercase tracking-[0.2em] text-white backdrop-blur-md sm:start-5 sm:top-5">
+                      {
+                        dictionary.featuredProducts
+                          .newLabel
+                      }
                     </span>
                   )}
+
+                  <FullscreenPreview
+                    src={product.image}
+                    alt={product.name[locale]}
+                  />
                 </div>
 
-                {/* İkinci görsel */}
-                {product.hoverImage && (
-                  <div className="relative min-h-[300px] overflow-hidden bg-surface sm:min-h-[360px] lg:min-h-0">
+                {/* Küçük galeri */}
+                <div className="mt-4 flex items-start gap-3 overflow-x-auto pb-2 sm:mt-5 sm:gap-4 lg:overflow-visible">
+                  {product.hoverImage && (
+                    <div className="group/preview relative aspect-[4/5] w-[28%] min-w-[92px] max-w-[150px] shrink-0 cursor-zoom-in overflow-hidden border border-border bg-surface sm:w-[24%] sm:min-w-[120px] lg:w-[23%] lg:max-w-[160px]">
+                      <Image
+                        src={product.hoverImage}
+                        alt={`${product.name[locale]} - 2`}
+                        fill
+                        sizes="(max-width: 640px) 28vw, (max-width: 1024px) 24vw, 160px"
+                        className="object-cover object-center transition-transform duration-500 lg:group-hover/preview:scale-[1.06]"
+                      />
+
+                      <div className="pointer-events-none absolute inset-0 border-0 border-accent transition-all duration-300 lg:group-hover/preview:border" />
+
+                      <FullscreenPreview
+                        src={product.hoverImage}
+                        alt={`${product.name[locale]} - 2`}
+                      />
+                    </div>
+                  )}
+
+                  <div className="group/preview relative aspect-[4/5] w-[28%] min-w-[92px] max-w-[150px] shrink-0 cursor-zoom-in overflow-hidden border border-border bg-surface sm:w-[24%] sm:min-w-[120px] lg:w-[23%] lg:max-w-[160px]">
                     <Image
-                      src={product.hoverImage}
-                      alt=""
+                      src={product.image}
+                      alt={`${product.name[locale]} - 3`}
                       fill
-                      sizes="(max-width: 1024px) 100vw, 29vw"
-                      className="object-cover object-center"
+                      sizes="(max-width: 640px) 28vw, (max-width: 1024px) 24vw, 160px"
+                      className="scale-[1.15] object-cover object-center transition-transform duration-500 lg:group-hover/preview:scale-[1.22]"
+                    />
+
+                    <div
+                      aria-hidden="true"
+                      className="pointer-events-none absolute inset-0 bg-[#E5E0D7]/12"
+                    />
+
+                    <div className="pointer-events-none absolute inset-0 border-0 border-accent transition-all duration-300 lg:group-hover/preview:border" />
+
+                    <FullscreenPreview
+                      src={product.image}
+                      alt={`${product.name[locale]} - 3`}
                     />
                   </div>
-                )}
-
-                {/* Üçüncü görsel */}
-                <div className="relative hidden min-h-[300px] overflow-hidden bg-surface sm:block sm:min-h-[360px] lg:min-h-0">
-                  <Image
-                    src={product.image}
-                    alt=""
-                    fill
-                    sizes="(max-width: 1024px) 50vw, 29vw"
-                    className="scale-110 object-cover object-center"
-                  />
-
-                  <div className="absolute inset-0 bg-[#E5E0D7]/18" />
                 </div>
               </div>
             </div>
 
-            {/* Ürün bilgisi */}
-            <div className="lg:col-span-5">
+            {/* Ürün işlemleri */}
+            <div className="min-w-0 lg:col-span-5">
               <div className="lg:sticky lg:top-[112px]">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-accent sm:text-[11px]">
-                  LUXEA
-                </p>
-
-                <h1 className="mt-4 font-heading text-5xl leading-[0.95] text-foreground sm:text-6xl lg:text-[64px] xl:text-7xl">
-                  {product.name[locale]}
-                </h1>
-
-                <p className="mt-6 text-lg font-semibold tracking-[0.04em] text-foreground">
-                  {formatPrice(
-                    product.price,
-                    product.currency,
-                    locale
-                  )}
-                </p>
-
-                <p className="mt-6 text-sm leading-7 text-foreground-soft sm:text-base sm:leading-8">
-                  {product.shortDescription[locale]}
-                </p>
-
-                <div className="mt-9 border-y border-border py-6">
-                  <div className="flex items-center justify-between gap-6">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-foreground">
-                      {dictionary.productDetail.color}
-                    </p>
-
-                    <p className="text-[10px] uppercase tracking-[0.16em] text-muted">
-                      {dictionary.productDetail.selectColor}
-                    </p>
-                  </div>
-
-                  <div className="mt-5 flex flex-wrap items-center gap-3">
-                    {product.colors.map((color, index) => (
-                      <button
-                        key={color}
-                        type="button"
-                        aria-label={`${dictionary.productDetail.color} ${
-                          index + 1
-                        }`}
-                        className={[
-                          "relative flex h-9 w-9 items-center justify-center rounded-full border transition-all duration-300",
-                          index === 0
-                            ? "border-foreground"
-                            : "border-border hover:border-foreground",
-                        ].join(" ")}
-                      >
-                        <span
-                          className="h-6 w-6 rounded-full border border-black/10"
-                          style={{ backgroundColor: color }}
-                        />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="border-b border-border py-6">
-                  <div className="flex items-center justify-between gap-6">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-foreground">
-                      {dictionary.productDetail.quantity}
-                    </p>
-
-                    <p className="text-[10px] uppercase tracking-[0.16em] text-muted">
-                      {product.stock > 0
-                        ? dictionary.productDetail.inStock
-                        : dictionary.productDetail.outOfStock}
-                    </p>
-                  </div>
-
-                  <div className="mt-5 inline-flex h-12 items-center border border-border">
-                    <button
-                      type="button"
-                      aria-label={dictionary.productDetail.decrease}
-                      className="flex h-full w-12 items-center justify-center text-foreground transition-colors duration-300 hover:text-accent"
-                    >
-                      <Minus size={14} strokeWidth={1.5} />
-                    </button>
-
-                    <span className="flex h-full min-w-12 items-center justify-center border-x border-border text-sm">
-                      1
-                    </span>
-
-                    <button
-                      type="button"
-                      aria-label={dictionary.productDetail.increase}
-                      className="flex h-full w-12 items-center justify-center text-foreground transition-colors duration-300 hover:text-accent"
-                    >
-                      <Plus size={14} strokeWidth={1.5} />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                  <button
-                    type="button"
-                    className="inline-flex min-h-14 flex-1 items-center justify-center gap-3 border border-[#242320] bg-[#242320] px-7 text-[10px] font-semibold uppercase tracking-[0.16em] !text-[#F3F0EA] transition-all duration-300 hover:border-[#92734A] hover:bg-[#92734A] hover:!text-white"
-                  >
-                    <ShoppingBag size={17} strokeWidth={1.4} />
-
-                    <span className="!text-[#F3F0EA]">
-                      {dictionary.productDetail.addToCart}
-                    </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    aria-label={dictionary.productDetail.addToFavorites}
-                    className="inline-flex min-h-14 min-w-14 items-center justify-center border border-foreground text-foreground transition-all duration-300 hover:bg-foreground hover:!text-[#F3F0EA]"
-                  >
-                    <Heart size={18} strokeWidth={1.4} />
-                  </button>
-                </div>
-
-                <div className="mt-9 divide-y divide-border border-y border-border">
-                  <details className="group py-5">
-                    <summary className="flex cursor-pointer list-none items-center justify-between gap-6 text-[10px] font-semibold uppercase tracking-[0.17em]">
-                      <span>{dictionary.productDetail.details}</span>
-
-                      <Plus
-                        size={15}
-                        strokeWidth={1.4}
-                        className="transition-transform duration-300 group-open:rotate-45"
-                      />
-                    </summary>
-
-                    <p className="pt-4 text-sm leading-7 text-foreground-soft">
-                      {dictionary.productDetail.detailsText}
-                    </p>
-                  </details>
-
-                  <details className="group py-5">
-                    <summary className="flex cursor-pointer list-none items-center justify-between gap-6 text-[10px] font-semibold uppercase tracking-[0.17em]">
-                      <span>{dictionary.productDetail.shipping}</span>
-
-                      <Plus
-                        size={15}
-                        strokeWidth={1.4}
-                        className="transition-transform duration-300 group-open:rotate-45"
-                      />
-                    </summary>
-
-                    <p className="pt-4 text-sm leading-7 text-foreground-soft">
-                      {dictionary.productDetail.shippingText}
-                    </p>
-                  </details>
-
-                  <details className="group py-5">
-                    <summary className="flex cursor-pointer list-none items-center justify-between gap-6 text-[10px] font-semibold uppercase tracking-[0.17em]">
-                      <span>{dictionary.productDetail.returns}</span>
-
-                      <Plus
-                        size={15}
-                        strokeWidth={1.4}
-                        className="transition-transform duration-300 group-open:rotate-45"
-                      />
-                    </summary>
-
-                    <p className="pt-4 text-sm leading-7 text-foreground-soft">
-                      {dictionary.productDetail.returnsText}
-                    </p>
-                  </details>
-                </div>
+                <ProductActions
+                  locale={locale}
+                  product={product}
+                  dictionary={dictionary.productDetail}
+                />
               </div>
             </div>
           </div>

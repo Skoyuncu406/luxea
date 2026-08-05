@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import PageLoader from "@/components/layout/PageLoader";
+import type { ReactNode } from "react";
 import {
   Cormorant_Garamond,
   Manrope,
@@ -7,7 +7,10 @@ import {
   Noto_Sans_Arabic,
 } from "next/font/google";
 import { notFound } from "next/navigation";
-
+import { CartProvider } from "@/contexts/CartContext";
+import { OrderProvider } from "@/contexts/OrderContext";
+import PageLoader from "@/components/layout/PageLoader";
+import { FavoritesProvider } from "@/contexts/FavoritesContext";
 import {
   getDirection,
   isValidLocale,
@@ -46,7 +49,7 @@ const arabicBodyFont = Noto_Sans_Arabic({
 });
 
 type LocaleLayoutProps = Readonly<{
-  children: React.ReactNode;
+  children: ReactNode;
   params: Promise<{
     locale: string;
   }>;
@@ -96,6 +99,15 @@ export default async function LocaleLayout({
   const direction = getDirection(locale);
   const isArabic = locale === "ar";
 
+  const bodyClassName = [
+    headingFont.variable,
+    bodyFont.variable,
+    arabicHeadingFont.variable,
+    arabicBodyFont.variable,
+    isArabic ? "font-arabic" : "font-latin",
+    "min-h-screen bg-background text-foreground",
+  ].join(" ");
+
   return (
     <html
       lang={locale}
@@ -103,19 +115,16 @@ export default async function LocaleLayout({
       data-locale={locale}
       suppressHydrationWarning
     >
-<body
-  className={[
-    headingFont.variable,
-    bodyFont.variable,
-    arabicHeadingFont.variable,
-    arabicBodyFont.variable,
-    isArabic ? "font-arabic" : "font-latin",
-  ].join(" ")}
->
-  <PageLoader />
-
-  {children}
-</body>
+      <body className={bodyClassName}>
+ <FavoritesProvider>
+    <CartProvider>
+      <OrderProvider>
+        <PageLoader />
+        {children}
+      </OrderProvider>
+    </CartProvider>
+  </FavoritesProvider>
+      </body>
     </html>
   );
 }
