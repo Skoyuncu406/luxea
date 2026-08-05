@@ -129,7 +129,7 @@ export default function Navbar({
                     alt="LUXEA"
                     fill
                     priority
-                    sizes="(max-width: 639px) 96px, 112px"
+                    sizes="(max-width: 639px) 90px, 116px"
                     className="scale-[1.35] object-contain object-center transition-transform duration-500 ease-out group-hover:scale-[1.42]"
                   />
                 </span>
