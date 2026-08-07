@@ -18,6 +18,7 @@ import {
 
 import { useCart } from "@/contexts/CartContext";
 import { useOrders } from "@/contexts/OrderContext";
+import { useProducts } from "@/contexts/ProductContext";
 import { formatPrice } from "@/lib/format-price";
 import type { Locale } from "@/lib/i18n/config";
 import type { Product } from "@/types/product";
@@ -64,7 +65,6 @@ type CheckoutDictionary = {
 
 type CheckoutContentProps = {
   locale: Locale;
-  products: Product[];
   dictionary: CheckoutDictionary;
 };
 
@@ -193,22 +193,52 @@ const initialFormState: CheckoutFormState = {
 
 export default function CheckoutContent({
   locale,
-  products,
   dictionary,
 }: CheckoutContentProps) {
   const router = useRouter();
 
+  /*
+   * ============================================================
+   * CART
+   * ============================================================
+   */
   const {
     cartItems,
     isLoaded: isCartLoaded,
     clearCart,
   } = useCart();
 
+  /*
+   * ============================================================
+   * PRODUCTS
+   *
+   * Ürünler artık statik olarak prop üzerinden gelmiyor.
+   * ProductContext kullanıldığı için admin panelinden eklenen
+   * yeni ürünler de checkout tarafından görülebilir.
+   * ============================================================
+   */
+  const {
+    products,
+    isLoaded: areProductsLoaded,
+    decreaseProductStocks,
+    restoreProductStocks,
+  } = useProducts();
+
+  /*
+   * ============================================================
+   * ORDERS
+   * ============================================================
+   */
   const {
     createOrder,
     isLoaded: areOrdersLoaded,
   } = useOrders();
 
+  /*
+   * ============================================================
+   * FORM STATE
+   * ============================================================
+   */
   const [form, setForm] =
     useState<CheckoutFormState>(initialFormState);
 
@@ -218,9 +248,20 @@ export default function CheckoutContent({
   const [isSubmitting, setIsSubmitting] =
     useState(false);
 
+  /*
+   * Sepet, ürünler ve sipariş sistemi tamamen yüklenmeden
+   * checkout içeriğini göstermiyoruz.
+   */
   const isLoaded =
-    isCartLoaded && areOrdersLoaded;
+    isCartLoaded &&
+    areProductsLoaded &&
+    areOrdersLoaded;
 
+  /*
+   * ============================================================
+   * SEPET ÜRÜNLERİNİ GÜNCEL PRODUCT CONTEXT İLE EŞLEŞTİR
+   * ============================================================
+   */
   const resolvedCartItems = useMemo(() => {
     return cartItems
       .map((cartItem) => {
@@ -250,6 +291,11 @@ export default function CheckoutContent({
       );
   }, [cartItems, products]);
 
+  /*
+   * ============================================================
+   * ARA TOPLAM
+   * ============================================================
+   */
   const subtotal = useMemo(() => {
     return resolvedCartItems.reduce(
       (total, { cartItem, product }) =>
@@ -259,10 +305,18 @@ export default function CheckoutContent({
     );
   }, [resolvedCartItems]);
 
+  /*
+   * Şimdilik sepetin ilk ürününün para birimi kullanılıyor.
+   */
   const currency =
     resolvedCartItems[0]?.product.currency ??
     "USD";
 
+  /*
+   * ============================================================
+   * FORM ALANI GÜNCELLEME
+   * ============================================================
+   */
   function updateField(
     field: keyof CheckoutFormState,
     value: string
@@ -278,6 +332,11 @@ export default function CheckoutContent({
     }));
   }
 
+  /*
+   * ============================================================
+   * FORM DOĞRULAMA
+   * ============================================================
+   */
   function validateForm() {
     const nextErrors: FormErrors = {};
 
@@ -321,6 +380,11 @@ export default function CheckoutContent({
     );
   }
 
+  /*
+   * ============================================================
+   * SİPARİŞ OLUŞTUR
+   * ============================================================
+   */
   function handleSubmit(
     event: FormEvent<HTMLFormElement>
   ) {
@@ -340,9 +404,50 @@ export default function CheckoutContent({
       return;
     }
 
+    /*
+     * Sipariş oluşturulmadan hemen önce stokları tekrar kontrol et.
+     */
+    const hasInvalidStock =
+      resolvedCartItems.some(
+        ({ cartItem, product }) =>
+          product.stock < cartItem.quantity
+      );
+
+    if (hasInvalidStock) {
+      return;
+    }
+
     setIsSubmitting(true);
 
+    /*
+     * Stok düşürme işlemi başarılı olduktan sonra sipariş
+     * oluşturulurken hata oluşursa stokları geri yüklemek için
+     * bu bilgiyi tutuyoruz.
+     */
+    let stocksDecreased = false;
+
     try {
+      /*
+       * ========================================================
+       * STOKLARI DÜŞÜR
+       * ========================================================
+       */
+      decreaseProductStocks(
+        resolvedCartItems.map(
+          ({ cartItem, product }) => ({
+            productId: product.id,
+            quantity: cartItem.quantity,
+          })
+        )
+      );
+
+      stocksDecreased = true;
+
+      /*
+       * ========================================================
+       * ORDER ITEMS
+       * ========================================================
+       */
       const orderItems =
         resolvedCartItems.map(
           ({ cartItem, product }) => ({
@@ -358,6 +463,11 @@ export default function CheckoutContent({
           })
         );
 
+      /*
+       * ========================================================
+       * SİPARİŞİ OLUŞTUR
+       * ========================================================
+       */
       const order = createOrder({
         customer: {
           email: form.email.trim(),
@@ -380,18 +490,26 @@ export default function CheckoutContent({
         },
 
         items: orderItems,
+
         subtotal,
+
         shippingCost: 0,
+
         currency,
       });
 
       /*
-       * Sipariş oluşturulduktan sonra sepet
-       * temizlenir. Siparişin ürünleri artık
-       * OrderContext içinde saklanmaktadır.
+       * ========================================================
+       * SEPETİ TEMİZLE
+       * ========================================================
        */
       clearCart();
 
+      /*
+       * ========================================================
+       * SİPARİŞ TAMAMLANDI SAYFASINA GİT
+       * ========================================================
+       */
       router.push(
         `/${locale}/order-complete/${encodeURIComponent(
           order.trackingCode
@@ -403,10 +521,36 @@ export default function CheckoutContent({
         error
       );
 
+      /*
+       * Sipariş oluşturulamadıysa düşürülen stokları geri yükle.
+       */
+      if (stocksDecreased) {
+        try {
+          restoreProductStocks(
+            resolvedCartItems.map(
+              ({ cartItem, product }) => ({
+                productId: product.id,
+                quantity: cartItem.quantity,
+              })
+            )
+          );
+        } catch (restoreError) {
+          console.error(
+            "Ürün stokları geri yüklenemedi:",
+            restoreError
+          );
+        }
+      }
+
       setIsSubmitting(false);
     }
   }
 
+  /*
+   * ============================================================
+   * LOADING
+   * ============================================================
+   */
   if (!isLoaded) {
     return (
       <div className="mt-12 grid animate-pulse gap-10 lg:grid-cols-[minmax(0,1fr)_400px]">
@@ -422,6 +566,11 @@ export default function CheckoutContent({
     );
   }
 
+  /*
+   * ============================================================
+   * BOŞ SEPET
+   * ============================================================
+   */
   if (resolvedCartItems.length === 0) {
     return (
       <div className="mt-12 flex min-h-[480px] flex-col items-center justify-center border-y border-border px-5 text-center">
@@ -457,6 +606,11 @@ export default function CheckoutContent({
     );
   }
 
+  /*
+   * ============================================================
+   * CHECKOUT
+   * ============================================================
+   */
   return (
     <form
       onSubmit={handleSubmit}
@@ -468,9 +622,12 @@ export default function CheckoutContent({
         "xl:grid-cols-[minmax(0,1fr)_440px]",
       ].join(" ")}
     >
-      {/* Form alanı */}
+      {/* ======================================================
+          SOL TARAF
+      ====================================================== */}
       <div className="min-w-0">
-        {/* İletişim bilgileri */}
+
+        {/* İletişim */}
         <section>
           <div className="flex items-center gap-4 border-b border-border pb-5">
             <span className="flex h-8 w-8 items-center justify-center border border-accent text-[10px] font-semibold text-accent">
@@ -496,7 +653,9 @@ export default function CheckoutContent({
           </div>
         </section>
 
-        {/* Teslimat bilgileri */}
+        {/* ====================================================
+            TESLİMAT
+        ==================================================== */}
         <section className="mt-12">
           <div className="flex items-center gap-4 border-b border-border pb-5">
             <span className="flex h-8 w-8 items-center justify-center border border-accent text-[10px] font-semibold text-accent">
@@ -562,14 +721,16 @@ export default function CheckoutContent({
                   {dictionary.selectCountry}
                 </option>
 
-                {COUNTRIES.map((country) => (
-                  <option
-                    key={country.code}
-                    value={country.code}
-                  >
-                    {country[locale]}
-                  </option>
-                ))}
+                {COUNTRIES.map(
+                  (country) => (
+                    <option
+                      key={country.code}
+                      value={country.code}
+                    >
+                      {country[locale]}
+                    </option>
+                  )
+                )}
               </select>
 
               <span className="pointer-events-none absolute start-5 top-2 text-[8px] font-semibold uppercase tracking-[0.18em] text-muted">
@@ -589,6 +750,7 @@ export default function CheckoutContent({
               )}
             </div>
 
+            {/* Adres */}
             <div className="sm:col-span-2">
               <CheckoutInput
                 value={form.address}
@@ -604,9 +766,12 @@ export default function CheckoutContent({
               />
             </div>
 
+            {/* Adres 2 */}
             <div className="sm:col-span-2">
               <CheckoutInput
-                value={form.addressLineTwo}
+                value={
+                  form.addressLineTwo
+                }
                 label={
                   dictionary.addressLineTwo
                 }
@@ -620,6 +785,7 @@ export default function CheckoutContent({
               />
             </div>
 
+            {/* Şehir */}
             <CheckoutInput
               value={form.city}
               label={dictionary.city}
@@ -630,6 +796,7 @@ export default function CheckoutContent({
               }
             />
 
+            {/* Eyalet */}
             <CheckoutInput
               value={form.state}
               label={dictionary.state}
@@ -640,6 +807,7 @@ export default function CheckoutContent({
               }
             />
 
+            {/* Posta kodu */}
             <CheckoutInput
               value={form.postalCode}
               label={dictionary.postalCode}
@@ -653,6 +821,7 @@ export default function CheckoutContent({
               }
             />
 
+            {/* Telefon */}
             <CheckoutInput
               type="tel"
               value={form.phone}
@@ -673,7 +842,9 @@ export default function CheckoutContent({
           </div>
         </section>
 
-        {/* Güvenli ödeme */}
+        {/* ====================================================
+            GÜVENLİ ÖDEME
+        ==================================================== */}
         <div className="mt-10 flex items-start gap-4 border-y border-border py-6">
           <LockKeyhole
             size={20}
@@ -694,7 +865,9 @@ export default function CheckoutContent({
           </div>
         </div>
 
-        {/* Alt butonlar */}
+        {/* ====================================================
+            ALT BUTONLAR
+        ==================================================== */}
         <div className="mt-8 flex flex-col-reverse gap-4 sm:flex-row sm:items-center sm:justify-between">
           <Link
             href={`/${locale}/cart`}
@@ -719,7 +892,9 @@ export default function CheckoutContent({
               ].join(" ")}
             />
 
-            <span>{dictionary.backToCart}</span>
+            <span>
+              {dictionary.backToCart}
+            </span>
           </Link>
 
           <button
@@ -751,7 +926,9 @@ export default function CheckoutContent({
         </div>
       </div>
 
-      {/* Sipariş özeti */}
+      {/* ======================================================
+          SAĞ TARAF - SİPARİŞ ÖZETİ
+      ====================================================== */}
       <aside className="min-w-0 lg:sticky lg:top-[116px] lg:self-start">
         <div className="border border-border bg-surface/60 p-5 sm:p-7">
           <p className="text-[9px] font-semibold uppercase tracking-[0.24em] text-accent">
@@ -762,6 +939,7 @@ export default function CheckoutContent({
             {dictionary.orderSummary}
           </h2>
 
+          {/* Ürünler */}
           <div className="mt-7 max-h-[390px] space-y-5 overflow-y-auto pe-2">
             {resolvedCartItems.map(
               ({ cartItem, product }) => (
@@ -774,10 +952,13 @@ export default function CheckoutContent({
                     "pb-5",
                   ].join(" ")}
                 >
+                  {/* Görsel */}
                   <div className="relative aspect-[4/5] overflow-hidden bg-background">
                     <Image
                       src={product.image}
-                      alt={product.name[locale]}
+                      alt={
+                        product.name[locale]
+                      }
                       fill
                       sizes="78px"
                       className="object-cover object-center"
@@ -788,9 +969,12 @@ export default function CheckoutContent({
                     </span>
                   </div>
 
+                  {/* Ürün bilgileri */}
                   <div className="min-w-0">
                     <h3 className="font-heading text-xl leading-none text-foreground">
-                      {product.name[locale]}
+                      {
+                        product.name[locale]
+                      }
                     </h3>
 
                     <div className="mt-3 flex items-center gap-2">
@@ -822,7 +1006,9 @@ export default function CheckoutContent({
             )}
           </div>
 
-          {/* Tutarlar */}
+          {/* ==================================================
+              TUTARLAR
+          ================================================== */}
           <div className="mt-7 space-y-4 border-y border-border py-6">
             <div className="flex items-center justify-between gap-6">
               <span className="text-[10px] uppercase tracking-[0.15em] text-muted">
@@ -851,6 +1037,7 @@ export default function CheckoutContent({
             </div>
           </div>
 
+          {/* Toplam */}
           <div className="flex items-end justify-between gap-6 pt-6">
             <span className="text-[10px] font-semibold uppercase tracking-[0.17em] text-foreground">
               {dictionary.total}
@@ -870,6 +1057,11 @@ export default function CheckoutContent({
   );
 }
 
+/*
+ * =============================================================
+ * CHECKOUT INPUT
+ * =============================================================
+ */
 type CheckoutInputProps = {
   value: string;
   label: string;

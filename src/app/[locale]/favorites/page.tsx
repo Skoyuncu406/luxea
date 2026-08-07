@@ -1,8 +1,7 @@
 import { notFound } from "next/navigation";
 
-import FavoritesContent from "@/components/favorites/FavoritesContent";
+import FavoritesContentClient from "@/components/favorites/FavoritesContentClient";
 import Navbar from "@/components/layout/Navbar";
-import { products } from "@/data/products";
 import { isValidLocale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 
@@ -21,7 +20,8 @@ export default async function FavoritesPage({
     notFound();
   }
 
-  const dictionary = await getDictionary(locale);
+  const dictionary =
+    await getDictionary(locale);
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -38,18 +38,25 @@ export default async function FavoritesPage({
             </p>
 
             <h1 className="mt-4 font-heading text-[44px] leading-[0.95] text-foreground sm:text-6xl lg:text-7xl xl:text-[82px]">
-              {dictionary.favoritesPage.title}
+              {
+                dictionary.favoritesPage
+                  .title
+              }
             </h1>
 
             <p className="mt-6 max-w-[680px] text-sm leading-7 text-foreground-soft sm:text-base sm:leading-8">
-              {dictionary.favoritesPage.description}
+              {
+                dictionary.favoritesPage
+                  .description
+              }
             </p>
           </div>
 
-          <FavoritesContent
+          <FavoritesContentClient
             locale={locale}
-            products={products}
-            dictionary={dictionary.favoritesPage}
+            dictionary={
+              dictionary.favoritesPage
+            }
           />
         </div>
       </section>

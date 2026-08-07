@@ -1,8 +1,7 @@
 import { notFound } from "next/navigation";
 
-import CartContent from "@/components/cart/CartContent";
+import CartContentClient from "@/components/cart/CartContentClient";
 import Navbar from "@/components/layout/Navbar";
-import { products } from "@/data/products";
 import { isValidLocale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 
@@ -46,9 +45,8 @@ export default async function CartPage({
             </p>
           </div>
 
-          <CartContent
+          <CartContentClient
             locale={locale}
-            products={products}
             dictionary={dictionary.cartPage}
           />
         </div>

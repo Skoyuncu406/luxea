@@ -239,6 +239,304 @@ ordersPage: {
   clearSearch: "Clear Search",
   loading: "Loading orders",
 },
+adminOrdersPage: {
+  title: "Order Management",
+  description:
+    "Manage orders, customer information, delivery details, and order statuses.",
+
+  searchPlaceholder:
+    "Search by tracking code, customer, email, or phone...",
+
+  allStatuses: "All Statuses",
+  ordersFound: "orders found",
+
+  noOrders: "No orders found.",
+  noOrdersDescription:
+    "Try changing your search or filter criteria.",
+
+  clearFilters: "Clear Filters",
+
+  totalOrders: "Total Orders",
+  pendingOrders: "New / Pending",
+
+  trackingCode: "Tracking Code",
+  customer: "Customer",
+  orderDate: "Order Date",
+  total: "Total",
+  status: "Status",
+
+  details: "Details",
+  hideDetails: "Hide Details",
+
+  email: "Email",
+  phone: "Phone",
+  deliveryAddress: "Delivery Address",
+
+  orderItems: "Order Items",
+  quantity: "Quantity",
+  color: "Color",
+  unitPrice: "Unit Price",
+
+  subtotal: "Subtotal",
+  shipping: "Shipping",
+  orderTotal: "Order Total",
+
+  statusHistory: "Order History",
+  updateStatus: "Update Order Status",
+
+  received: "Order Received",
+  paymentConfirmed: "Payment Confirmed",
+  preparing: "Preparing",
+  shipped: "Shipped",
+  delivered: "Delivered",
+  cancelled: "Cancelled",
+
+  loading: "Loading orders",
+},
+adminLoginPage: {
+  eyebrow: "Administrator Access",
+  title: "Admin Login",
+  description:
+    "Sign in with your secure administrator account to manage orders and store operations.",
+
+  email: "Administrator Email",
+  emailPlaceholder: "admin@luxea.com",
+
+  password: "Password",
+  passwordPlaceholder: "Enter your password",
+
+  showPassword: "Show password",
+  hidePassword: "Hide password",
+
+  submit: "Sign In",
+  submitting: "Signing In",
+
+  requiredFields:
+    "Please complete the email and password fields.",
+
+  invalidCredentials:
+    "The email or password is incorrect.",
+
+  genericError:
+    "An error occurred while signing in. Please try again.",
+
+  secureArea: "Secure administration.",
+  secureAreaDescription:
+    "Review orders, manage delivery processes, and control LUXEA store operations from one central workspace.",
+},
+adminDashboardPage: {
+  totalProducts: "Total Products",
+activeProducts: "Active Products",
+inactiveProducts: "Inactive Products",
+featuredProducts: "Featured Products",
+lowStockProducts: "Low Stock",
+outOfStockProducts: "Out of Stock",
+
+totalCategories: "Total Categories",
+activeCategories: "Active Categories",
+
+catalogOverview: "Product & Stock Overview",
+inventoryOverview: "Category & Order Status",
+  title: "Admin Dashboard",
+  description:
+    "Monitor store performance, order statuses, and current operations from one central workspace.",
+
+  totalRevenue: "Total Revenue",
+  totalOrders: "Total Orders",
+  totalCustomers: "Total Customers",
+  pendingOrders: "Pending Orders",
+  preparingOrders: "Orders Preparing",
+  shippedOrders: "Orders Shipped",
+  deliveredOrders: "Orders Delivered",
+
+  recentOrders: "Recent Orders",
+  viewAllOrders: "View All Orders",
+  trackingCode: "Tracking Code",
+  customer: "Customer",
+  orderDate: "Order Date",
+  total: "Total",
+  status: "Status",
+  noOrders: "No orders yet.",
+  loading: "Loading dashboard",
+
+  received: "Order Received",
+  paymentConfirmed: "Payment Confirmed",
+  preparing: "Preparing",
+  shipped: "Shipped",
+  delivered: "Delivered",
+  cancelled: "Cancelled",
+},
+adminNavigation: {
+  dashboard: "Dashboard",
+  orders: "Orders",
+  products: "Products",
+  categories: "Categories",
+  settings: "Settings",
+  logout: "Sign Out",
+  loggingOut: "Signing Out",
+},
+adminProductsPage: {
+  title: "Product Management",
+  description:
+    "Manage products, prices, inventory, images, and collection information.",
+  comingSoonTitle:
+    "Product management is being prepared.",
+  comingSoonDescription:
+    "This area will support creating, editing, deleting, pricing, inventory, colors, and product image management.",
+  backToDashboard: "Back to Dashboard",
+},
+
+adminCategoriesPage: {
+  title: "Category Management",
+  description:
+    "Manage store categories, ordering, and visibility settings.",
+  comingSoonTitle:
+    "Category management is being prepared.",
+  comingSoonDescription:
+    "This area will support creating, editing, deleting, ordering, and activating or deactivating categories.",
+  backToDashboard: "Back to Dashboard",
+},
+
+adminSettingsPage: {
+  title: "Store Settings",
+  description:
+    "Manage store details, default currency, and operational settings.",
+  comingSoonTitle:
+    "The settings area is being prepared.",
+  comingSoonDescription:
+    "This area will support store information, currency, delivery, and general system preferences.",
+  backToDashboard: "Back to Dashboard",
+},
+adminProductFormPage: {
+  newTitle: "Add New Product",
+  newDescription:
+    "Manage product information, pricing, images, and store visibility.",
+
+  editTitle: "Edit Product",
+  editDescription:
+    "Update product information, pricing, images, and store visibility.",
+
+  basicInformation: "Basic Information",
+  basicInformationDescription:
+    "Enter the multilingual product name, description, slug, and category information.",
+
+  turkish: "Turkish",
+  english: "English",
+  arabic: "Arabic",
+
+  productName: "Product Name",
+  shortDescription: "Short Description",
+  slug: "Product Slug",
+  slugDescription:
+    "The unique address used in the product URL.",
+  category: "Category",
+  selectCategory: "Select a category",
+
+  commerceInformation: "Commerce Information",
+  commerceInformationDescription:
+    "Manage pricing, currency, stock, ordering, and product color options.",
+
+  price: "Price",
+  currency: "Currency",
+  stock: "Stock",
+  order: "Order",
+
+  colors: "Product Colors",
+  colorsDescription:
+    "Add the color options that will be displayed on the product detail page.",
+  addColor: "Add Color",
+  removeColor: "Remove Color",
+
+  images: "Product Images",
+  imagesDescription:
+    "Upload the primary product image and an optional hover image.",
+  mainImage: "Main Image",
+  mainImageDescription:
+    "The primary image displayed in product listings and on the product detail page.",
+  hoverImage: "Hover Image",
+  hoverImageDescription:
+    "An optional second image displayed when the pointer moves over the product image.",
+
+  visibility: "Visibility",
+  visibilityDescription:
+    "Choose how the product will appear in the store.",
+  active: "Active Product",
+  activeDescription:
+    "The product can be displayed in the store.",
+  featured: "Featured Product",
+  featuredDescription:
+    "The product may appear in the featured products section on the home page.",
+  newProduct: "New Product",
+  newProductDescription:
+    "A new-season label will be displayed on the product.",
+
+  save: "Save Product",
+  saving: "Saving Product",
+  cancel: "Cancel",
+
+  requiredField: "This field is required.",
+  invalidPrice:
+    "Enter a valid price.",
+  invalidStock:
+    "Stock must be zero or a positive whole number.",
+  invalidOrder:
+    "Order must be zero or a positive whole number.",
+  imageRequired:
+    "You must upload a main product image.",
+  categoryRequired:
+    "You must select a category.",
+  saveError:
+    "An error occurred while saving the product.",
+},
+adminCategoryFormPage: {
+  newTitle: "Add New Category",
+  newDescription:
+    "Create a new store category with multilingual content, imagery, and visibility settings.",
+
+  basicInformation: "Category Information",
+  basicInformationDescription:
+    "Enter the category name, eyebrow text, slug, and display order.",
+
+  turkish: "Turkish",
+  english: "English",
+  arabic: "Arabic",
+
+  categoryName: "Category Name",
+  eyebrow: "Eyebrow Text",
+
+  slug: "Category Slug",
+  slugDescription:
+    "The unique address used in the category URL.",
+
+  order: "Display Order",
+
+  image: "Category Image",
+  imageDescription:
+    "Choose or drag and drop the primary image used in the category showcase.",
+
+  visibility: "Visibility",
+  visibilityDescription:
+    "Choose whether the category can be displayed and used in the store.",
+
+  active: "Active Category",
+  activeDescription:
+    "The category can be displayed in the store and selected for products.",
+
+  save: "Save Category",
+  saving: "Saving Category",
+  cancel: "Cancel",
+
+  requiredField: "This field is required.",
+  imageRequired:
+    "You must upload a category image.",
+  invalidOrder:
+    "Display order must be zero or a positive whole number.",
+  saveError:
+    "An error occurred while saving the category.",
+},
+editTitle: "Edit Category",
+editDescription:
+  "Update category names, image, display order, and visibility settings.",
 };
 
 export default en;

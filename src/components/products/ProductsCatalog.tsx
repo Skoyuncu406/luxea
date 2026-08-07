@@ -58,6 +58,7 @@ export default function ProductsCatalog({
   dictionary,
 }: ProductsCatalogProps) {
   const [searchQuery, setSearchQuery] = useState("");
+
   const [selectedCategoryId, setSelectedCategoryId] =
     useState<string>("all");
 
@@ -188,10 +189,10 @@ export default function ProductsCatalog({
   }
 
   return (
-    <div className="relative z-0 w-full">
+    <div className="relative z-0 isolate w-full">
       {/* Arama, kategori ve sıralama */}
-      <div className="relative z-30 border-y border-border py-5 sm:py-6">
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px_260px]">
+      <div className="relative z-[40] border-y border-border py-5 sm:py-6">
+        <div className="relative grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px_260px]">
           {/* Arama */}
           <div className="group relative z-0 min-w-0">
             <div className="pointer-events-none absolute inset-y-0 start-0 z-10 flex w-14 items-center justify-center text-muted transition-colors duration-300 group-focus-within:text-accent">
@@ -234,7 +235,12 @@ export default function ProductsCatalog({
           </div>
 
           {/* Kategori filtresi */}
-          <div className="relative z-40">
+          <div
+            className={[
+              "relative",
+              isFilterOpen ? "z-[80]" : "z-[20]",
+            ].join(" ")}
+          >
             <button
               type="button"
               onClick={() => {
@@ -244,8 +250,8 @@ export default function ProductsCatalog({
               aria-expanded={isFilterOpen}
               aria-haspopup="listbox"
               className={[
-                "flex h-14 w-full items-center justify-between gap-4 border px-5",
-                "text-start transition-all duration-300 sm:h-16",
+                "relative z-10 flex h-14 w-full items-center justify-between gap-4",
+                "border px-5 text-start transition-all duration-300 sm:h-16",
                 isFilterOpen
                   ? "border-accent bg-surface text-accent"
                   : "border-border bg-surface/60 text-foreground hover:border-border-strong hover:bg-surface",
@@ -285,10 +291,10 @@ export default function ProductsCatalog({
             <div
               role="listbox"
               className={[
-                "absolute inset-x-0 top-[calc(100%+10px)] z-50",
-                "max-h-[420px] overflow-y-auto border border-border",
-                "bg-[#EEEAE3] p-2",
-                "shadow-[0_24px_65px_rgba(36,35,32,0.20)]",
+                "absolute inset-x-0 top-[calc(100%+10px)] z-[90]",
+                "max-h-[420px] overflow-y-auto",
+                "border border-border bg-[#EEEAE3] p-2",
+                "shadow-[0_24px_65px_rgba(36,35,32,0.22)]",
                 "transition-all duration-300",
                 isFilterOpen
                   ? "visible translate-y-0 opacity-100"
@@ -301,8 +307,9 @@ export default function ProductsCatalog({
                 aria-selected={selectedCategoryId === "all"}
                 onClick={() => selectCategory("all")}
                 className={[
-                  "flex w-full items-center justify-between gap-4 px-4 py-3.5 text-start",
-                  "transition-colors duration-300 hover:bg-background/60 hover:text-accent",
+                  "flex w-full items-center justify-between gap-4 px-4 py-3.5",
+                  "text-start transition-colors duration-300",
+                  "hover:bg-background/60 hover:text-accent",
                   selectedCategoryId === "all"
                     ? "text-accent"
                     : "text-foreground",
@@ -333,8 +340,9 @@ export default function ProductsCatalog({
                       selectCategory(category.id)
                     }
                     className={[
-                      "flex w-full items-center justify-between gap-4 px-4 py-3.5 text-start",
-                      "transition-colors duration-300 hover:bg-background/60 hover:text-accent",
+                      "flex w-full items-center justify-between gap-4 px-4 py-3.5",
+                      "text-start transition-colors duration-300",
+                      "hover:bg-background/60 hover:text-accent",
                       categoryIsSelected
                         ? "text-accent"
                         : "text-foreground",
@@ -354,7 +362,12 @@ export default function ProductsCatalog({
           </div>
 
           {/* Sıralama */}
-          <div className="relative z-40">
+          <div
+            className={[
+              "relative",
+              isSortOpen ? "z-[80]" : "z-[20]",
+            ].join(" ")}
+          >
             <button
               type="button"
               onClick={() => {
@@ -364,8 +377,8 @@ export default function ProductsCatalog({
               aria-expanded={isSortOpen}
               aria-haspopup="listbox"
               className={[
-                "flex h-14 w-full items-center justify-between gap-4 border px-5",
-                "text-start transition-all duration-300 sm:h-16",
+                "relative z-10 flex h-14 w-full items-center justify-between gap-4",
+                "border px-5 text-start transition-all duration-300 sm:h-16",
                 isSortOpen
                   ? "border-accent bg-surface text-accent"
                   : "border-border bg-surface/60 text-foreground hover:border-border-strong hover:bg-surface",
@@ -395,9 +408,10 @@ export default function ProductsCatalog({
             <div
               role="listbox"
               className={[
-                "absolute inset-x-0 top-[calc(100%+10px)] z-50",
-                "border border-border bg-[#EEEAE3] p-2",
-                "shadow-[0_24px_65px_rgba(36,35,32,0.20)]",
+                "absolute inset-x-0 top-[calc(100%+10px)] z-[90]",
+                "overflow-hidden border border-border",
+                "bg-[#EEEAE3] p-2",
+                "shadow-[0_24px_65px_rgba(36,35,32,0.22)]",
                 "transition-all duration-300",
                 isSortOpen
                   ? "visible translate-y-0 opacity-100"
@@ -418,9 +432,10 @@ export default function ProductsCatalog({
                       selectSort(option.value)
                     }
                     className={[
-                      "flex w-full items-center justify-between gap-4 px-4 py-3.5 text-start",
-                      "text-[10px] font-semibold uppercase tracking-[0.12em]",
-                      "transition-colors duration-300 hover:bg-background/60 hover:text-accent",
+                      "flex w-full items-center justify-between gap-4 px-4 py-3.5",
+                      "text-start text-[10px] font-semibold uppercase tracking-[0.12em]",
+                      "transition-colors duration-300",
+                      "hover:bg-background/60 hover:text-accent",
                       optionIsSelected
                         ? "text-accent"
                         : "text-foreground",
@@ -532,7 +547,8 @@ export default function ProductsCatalog({
                     className={[
                       "absolute end-4 top-4 z-30 flex h-10 w-10 items-center justify-center",
                       "border border-white/45 bg-[#E5E0D7]/88 backdrop-blur-xl",
-                      "transition-all duration-300 hover:border-accent hover:bg-accent hover:text-white",
+                      "transition-all duration-300",
+                      "hover:border-accent hover:bg-accent hover:text-white",
                       productIsFavorite
                         ? "border-accent bg-accent text-white"
                         : "text-foreground",

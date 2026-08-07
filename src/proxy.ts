@@ -1,30 +1,65 @@
 import { NextRequest, NextResponse } from "next/server";
+
 import {
-  defaultLocale,
-  isValidLocale,
-} from "@/lib/i18n/config";
+  ADMIN_SESSION_COOKIE,
+  verifyAdminSessionToken,
+} from "@/lib/auth/admin-session";
 
-export function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+const LOCALES = ["tr", "en", "ar"];
 
-  const pathnameLocale = pathname.split("/")[1];
+export async function proxy(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
 
-  if (isValidLocale(pathnameLocale)) {
+  const locale = LOCALES.find((item) =>
+    pathname.startsWith(`/${item}`)
+  );
+
+  if (!locale) {
     return NextResponse.next();
   }
 
-  const url = request.nextUrl.clone();
+  const loginPath = `/${locale}/admin/login`;
 
-  url.pathname =
-    pathname === "/"
-      ? `/${defaultLocale}`
-      : `/${defaultLocale}${pathname}`;
+  if (pathname === loginPath) {
+    return NextResponse.next();
+  }
 
-  return NextResponse.redirect(url);
+  if (pathname.startsWith(`/${locale}/admin`)) {
+    const token =
+      request.cookies.get(
+        ADMIN_SESSION_COOKIE
+      )?.value;
+
+    if (!token) {
+      return NextResponse.redirect(
+        new URL(loginPath, request.url)
+      );
+    }
+
+    const session =
+      await verifyAdminSessionToken(token);
+
+    if (!session) {
+      const response =
+        NextResponse.redirect(
+          new URL(loginPath, request.url)
+        );
+
+      response.cookies.delete(
+        ADMIN_SESSION_COOKIE
+      );
+
+      return response;
+    }
+  }
+
+  return NextResponse.next();
 }
 
 export const config = {
   matcher: [
-    "/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|.*\\..*).*)",
+    "/tr/admin/:path*",
+    "/en/admin/:path*",
+    "/ar/admin/:path*",
   ],
 };

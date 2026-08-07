@@ -17,8 +17,10 @@ import {
   locales,
 } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
+import { CategoryProvider } from "@/contexts/CategoryContext";
 
 import "../globals.css";
+import { ProductProvider } from "@/contexts/ProductContext";
 
 const headingFont = Cormorant_Garamond({
   variable: "--font-heading",
@@ -116,14 +118,18 @@ export default async function LocaleLayout({
       suppressHydrationWarning
     >
       <body className={bodyClassName}>
- <FavoritesProvider>
-    <CartProvider>
-      <OrderProvider>
-        <PageLoader />
-        {children}
-      </OrderProvider>
-    </CartProvider>
-  </FavoritesProvider>
+<CategoryProvider>
+  <ProductProvider>
+    <FavoritesProvider>
+      <CartProvider>
+        <OrderProvider>
+          <PageLoader />
+          {children}
+        </OrderProvider>
+      </CartProvider>
+    </FavoritesProvider>
+  </ProductProvider>
+</CategoryProvider>
       </body>
     </html>
   );

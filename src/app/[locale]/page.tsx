@@ -3,13 +3,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import Navbar from "@/components/layout/Navbar";
+import CategoryShowcase from "@/components/home/CategoryShowcase";
+import FeaturedProducts from "@/components/home/FeaturedProducts";
+
 import { isValidLocale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/get-dictionary";
 
-import CategoryShowcase from "@/components/home/CategoryShowcase";
-
-import FeaturedProducts from "@/components/home/FeaturedProducts";
-import { products } from "@/data/products";
 type HomePageProps = {
   params: Promise<{
     locale: string;
@@ -25,8 +24,11 @@ export default async function HomePage({
     notFound();
   }
 
-  const dictionary = await getDictionary(locale);
-  const isTurkish = locale === "tr";
+  const dictionary =
+    await getDictionary(locale);
+
+  const isTurkish =
+    locale === "tr";
 
   return (
     <main className="min-h-screen w-full overflow-x-clip bg-background text-foreground">
@@ -35,6 +37,9 @@ export default async function HomePage({
         dictionary={dictionary}
       />
 
+      {/* =====================================================
+          HERO
+      ===================================================== */}
       <section className="relative flex min-h-[100dvh] w-full items-center justify-center overflow-hidden pt-[120px] sm:pt-[128px] lg:pt-[88px]">
         {/* Hero arka plan görseli */}
         <div className="absolute inset-0">
@@ -76,14 +81,20 @@ export default async function HomePage({
         <div className="container-premium relative z-10 flex w-full justify-center py-8 sm:py-12 lg:py-24">
           <div className="flex w-full max-w-[1100px] flex-col items-center text-center">
             <p className="mb-4 w-full text-center text-[10px] font-medium uppercase tracking-[0.22em] text-accent sm:mb-5 sm:text-[11px] sm:tracking-[0.28em] lg:mb-6 lg:text-xs lg:tracking-[0.32em]">
-              {dictionary.hero.eyebrow}
+              {
+                dictionary.hero
+                  .eyebrow
+              }
             </p>
 
             {isTurkish ? (
               <>
                 {/* Mobil ve tablet */}
                 <h1 className="w-full text-center font-heading text-[clamp(2.3rem,9.5vw,4.75rem)] leading-[1] text-foreground lg:hidden">
-                  {dictionary.hero.title}
+                  {
+                    dictionary.hero
+                      .title
+                  }
                 </h1>
 
                 {/* Masaüstü */}
@@ -99,12 +110,18 @@ export default async function HomePage({
               </>
             ) : (
               <h1 className="w-full text-center font-heading text-[clamp(2.3rem,9.5vw,4.75rem)] leading-[1] text-foreground lg:text-[80px] lg:leading-[0.98] xl:text-[92px] 2xl:text-[100px]">
-                {dictionary.hero.title}
+                {
+                  dictionary.hero
+                    .title
+                }
               </h1>
             )}
 
             <p className="mt-5 w-full max-w-[640px] text-center text-[13px] leading-6 text-foreground-soft sm:mt-7 sm:text-base sm:leading-8 md:mt-8 md:text-lg">
-              {dictionary.hero.description}
+              {
+                dictionary.hero
+                  .description
+              }
             </p>
 
             <div className="mt-8 flex w-full flex-col items-center justify-center gap-4 sm:mt-10 sm:flex-row sm:flex-wrap sm:gap-5 lg:mt-12 lg:gap-6">
@@ -113,7 +130,10 @@ export default async function HomePage({
                 className="inline-flex min-h-12 w-full max-w-[320px] shrink-0 items-center justify-center border border-[#242320] bg-[#242320] px-6 text-center text-[10px] font-semibold uppercase tracking-[0.13em] !text-[#F3F0EA] transition-all duration-300 hover:border-[#92734A] hover:bg-[#92734A] hover:!text-white sm:min-h-14 sm:w-auto sm:max-w-none sm:px-9 sm:text-xs sm:tracking-[0.18em]"
               >
                 <span className="whitespace-nowrap !text-[#F3F0EA] group-hover:!text-white">
-                  {dictionary.hero.primaryAction}
+                  {
+                    dictionary.hero
+                      .primaryAction
+                  }
                 </span>
               </Link>
 
@@ -122,7 +142,10 @@ export default async function HomePage({
                 className="group inline-flex min-h-12 shrink-0 items-center justify-center gap-3 text-center text-[10px] uppercase tracking-[0.13em] text-foreground transition-colors duration-300 hover:text-accent sm:min-h-14 sm:gap-4 sm:text-xs sm:tracking-[0.18em]"
               >
                 <span className="whitespace-nowrap">
-                  {dictionary.hero.secondaryAction}
+                  {
+                    dictionary.hero
+                      .secondaryAction
+                  }
                 </span>
 
                 <span className="hidden w-20 items-center sm:flex">
@@ -140,15 +163,25 @@ export default async function HomePage({
           </div>
         </div>
       </section>
+
+      {/* =====================================================
+          KATEGORİ VİTRİNİ
+      ===================================================== */}
       <CategoryShowcase
-  locale={locale}
- 
-  dictionary={dictionary.categoryShowcase}
-/>
+        locale={locale}
+        dictionary={
+          dictionary.categoryShowcase
+        }
+      />
+
+      {/* =====================================================
+          ÖNE ÇIKAN ÜRÜNLER
+      ===================================================== */}
       <FeaturedProducts
         locale={locale}
-        products={products}
-        dictionary={dictionary.featuredProducts}
+        dictionary={
+          dictionary.featuredProducts
+        }
       />
     </main>
   );

@@ -241,6 +241,304 @@ ordersPage: {
   clearSearch: "مسح البحث",
   loading: "جارٍ تحميل الطلبات",
 },
+adminOrdersPage: {
+  title: "إدارة الطلبات",
+  description:
+    "أدر الطلبات ومعلومات العملاء وتفاصيل التسليم وحالات الطلب.",
+
+  searchPlaceholder:
+    "ابحث برمز التتبع أو اسم العميل أو البريد الإلكتروني أو الهاتف...",
+
+  allStatuses: "جميع الحالات",
+  ordersFound: "طلب تم العثور عليه",
+
+  noOrders: "لم يتم العثور على طلبات.",
+  noOrdersDescription:
+    "حاول تغيير معايير البحث أو التصفية.",
+
+  clearFilters: "مسح عوامل التصفية",
+
+  totalOrders: "إجمالي الطلبات",
+  pendingOrders: "جديد / قيد الانتظار",
+
+  trackingCode: "رمز التتبع",
+  customer: "العميل",
+  orderDate: "تاريخ الطلب",
+  total: "الإجمالي",
+  status: "الحالة",
+
+  details: "التفاصيل",
+  hideDetails: "إخفاء التفاصيل",
+
+  email: "البريد الإلكتروني",
+  phone: "الهاتف",
+  deliveryAddress: "عنوان التسليم",
+
+  orderItems: "منتجات الطلب",
+  quantity: "الكمية",
+  color: "اللون",
+  unitPrice: "سعر الوحدة",
+
+  subtotal: "المجموع الفرعي",
+  shipping: "الشحن",
+  orderTotal: "إجمالي الطلب",
+
+  statusHistory: "سجل الطلب",
+  updateStatus: "تحديث حالة الطلب",
+
+  received: "تم استلام الطلب",
+  paymentConfirmed: "تم تأكيد الدفع",
+  preparing: "قيد التجهيز",
+  shipped: "تم الشحن",
+  delivered: "تم التسليم",
+  cancelled: "تم الإلغاء",
+
+  loading: "جارٍ تحميل الطلبات",
+},
+adminLoginPage: {
+  eyebrow: "دخول المسؤول",
+  title: "تسجيل دخول الإدارة",
+  description:
+    "سجّل الدخول باستخدام حساب المسؤول الآمن لإدارة الطلبات وعمليات المتجر.",
+
+  email: "البريد الإلكتروني للمسؤول",
+  emailPlaceholder: "admin@luxea.com",
+
+  password: "كلمة المرور",
+  passwordPlaceholder: "أدخل كلمة المرور",
+
+  showPassword: "إظهار كلمة المرور",
+  hidePassword: "إخفاء كلمة المرور",
+
+  submit: "تسجيل الدخول",
+  submitting: "جارٍ تسجيل الدخول",
+
+  requiredFields:
+    "يرجى إدخال البريد الإلكتروني وكلمة المرور.",
+
+  invalidCredentials:
+    "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
+
+  genericError:
+    "حدث خطأ أثناء تسجيل الدخول. يرجى المحاولة مرة أخرى.",
+
+  secureArea: "منطقة إدارة آمنة.",
+  secureAreaDescription:
+    "راجع الطلبات وأدر عمليات التوصيل وتحكم في عمليات متجر LUXEA من مكان واحد.",
+},
+adminDashboardPage: {
+  totalProducts: "إجمالي المنتجات",
+activeProducts: "المنتجات النشطة",
+inactiveProducts: "المنتجات غير النشطة",
+featuredProducts: "المنتجات المميزة",
+lowStockProducts: "مخزون منخفض",
+outOfStockProducts: "نفد المخزون",
+
+totalCategories: "إجمالي الفئات",
+activeCategories: "الفئات النشطة",
+
+catalogOverview: "ملخص المنتجات والمخزون",
+inventoryOverview: "حالة الفئات والطلبات",
+  title: "لوحة الإدارة",
+  description:
+    "تابع أداء المتجر وحالات الطلبات والعمليات الحالية من لوحة مركزية واحدة.",
+
+  totalRevenue: "إجمالي الإيرادات",
+  totalOrders: "إجمالي الطلبات",
+  totalCustomers: "إجمالي العملاء",
+  pendingOrders: "الطلبات المعلقة",
+  preparingOrders: "الطلبات قيد التحضير",
+  shippedOrders: "الطلبات المشحونة",
+  deliveredOrders: "الطلبات المسلمة",
+
+  recentOrders: "أحدث الطلبات",
+  viewAllOrders: "عرض جميع الطلبات",
+  trackingCode: "رمز التتبع",
+  customer: "العميل",
+  orderDate: "تاريخ الطلب",
+  total: "الإجمالي",
+  status: "الحالة",
+  noOrders: "لا توجد طلبات حتى الآن.",
+  loading: "جارٍ تحميل لوحة الإدارة",
+
+  received: "تم استلام الطلب",
+  paymentConfirmed: "تم تأكيد الدفع",
+  preparing: "قيد التحضير",
+  shipped: "تم الشحن",
+  delivered: "تم التسليم",
+  cancelled: "تم الإلغاء",
+},
+adminNavigation: {
+  dashboard: "لوحة الإدارة",
+  orders: "الطلبات",
+  products: "المنتجات",
+  categories: "الفئات",
+  settings: "الإعدادات",
+  logout: "تسجيل الخروج",
+  loggingOut: "جارٍ تسجيل الخروج",
+},
+adminProductsPage: {
+  title: "إدارة المنتجات",
+  description:
+    "أدر المنتجات والأسعار والمخزون والصور ومعلومات المجموعات.",
+  comingSoonTitle:
+    "يتم تجهيز نظام إدارة المنتجات.",
+  comingSoonDescription:
+    "سيدعم هذا القسم إضافة المنتجات وتعديلها وحذفها وإدارة الأسعار والمخزون والألوان والصور.",
+  backToDashboard: "العودة إلى لوحة الإدارة",
+},
+
+adminCategoriesPage: {
+  title: "إدارة الفئات",
+  description:
+    "أدر فئات المتجر وترتيبها وإعدادات ظهورها.",
+  comingSoonTitle:
+    "يتم تجهيز نظام إدارة الفئات.",
+  comingSoonDescription:
+    "سيدعم هذا القسم إضافة الفئات وتعديلها وحذفها وترتيبها وتفعيلها أو تعطيلها.",
+  backToDashboard: "العودة إلى لوحة الإدارة",
+},
+
+adminSettingsPage: {
+  title: "إعدادات المتجر",
+  description:
+    "أدر معلومات المتجر والعملة الافتراضية والإعدادات التشغيلية.",
+  comingSoonTitle:
+    "يتم تجهيز قسم الإعدادات.",
+  comingSoonDescription:
+    "سيدعم هذا القسم معلومات المتجر والعملات والتوصيل والإعدادات العامة للنظام.",
+  backToDashboard: "العودة إلى لوحة الإدارة",
+},
+adminProductFormPage: {
+  newTitle: "إضافة منتج جديد",
+  newDescription:
+    "أدر معلومات المنتج والأسعار والصور وإعدادات الظهور في المتجر.",
+
+  editTitle: "تعديل المنتج",
+  editDescription:
+    "حدّث معلومات المنتج والأسعار والصور وإعدادات الظهور في المتجر.",
+
+  basicInformation: "المعلومات الأساسية",
+  basicInformationDescription:
+    "أدخل اسم المنتج ووصفه والرابط والفئة باللغات المختلفة.",
+
+  turkish: "التركية",
+  english: "الإنجليزية",
+  arabic: "العربية",
+
+  productName: "اسم المنتج",
+  shortDescription: "الوصف المختصر",
+  slug: "رابط المنتج",
+  slugDescription:
+    "العنوان الفريد المستخدم في رابط صفحة المنتج.",
+  category: "الفئة",
+  selectCategory: "اختر فئة",
+
+  commerceInformation: "المعلومات التجارية",
+  commerceInformationDescription:
+    "أدر السعر والعملة والمخزون والترتيب وخيارات ألوان المنتج.",
+
+  price: "السعر",
+  currency: "العملة",
+  stock: "المخزون",
+  order: "الترتيب",
+
+  colors: "ألوان المنتج",
+  colorsDescription:
+    "أضف خيارات الألوان التي ستظهر في صفحة تفاصيل المنتج.",
+  addColor: "إضافة لون",
+  removeColor: "إزالة اللون",
+
+  images: "صور المنتج",
+  imagesDescription:
+    "حمّل الصورة الرئيسية للمنتج وصورة اختيارية عند تمرير المؤشر.",
+  mainImage: "الصورة الرئيسية",
+  mainImageDescription:
+    "الصورة الأساسية التي تظهر في قوائم المنتجات وصفحة التفاصيل.",
+  hoverImage: "صورة التمرير",
+  hoverImageDescription:
+    "صورة ثانية اختيارية تظهر عند تمرير المؤشر فوق صورة المنتج.",
+
+  visibility: "الظهور",
+  visibilityDescription:
+    "حدد كيفية ظهور المنتج في المتجر.",
+  active: "منتج نشط",
+  activeDescription:
+    "يمكن عرض المنتج في المتجر.",
+  featured: "منتج مميز",
+  featuredDescription:
+    "يمكن عرض المنتج في قسم المنتجات المميزة في الصفحة الرئيسية.",
+  newProduct: "منتج جديد",
+  newProductDescription:
+    "سيظهر على المنتج وسم الموسم الجديد.",
+
+  save: "حفظ المنتج",
+  saving: "جارٍ حفظ المنتج",
+  cancel: "إلغاء",
+
+  requiredField: "هذا الحقل مطلوب.",
+  invalidPrice:
+    "أدخل سعراً صالحاً.",
+  invalidStock:
+    "يجب أن يكون المخزون صفراً أو عدداً صحيحاً موجباً.",
+  invalidOrder:
+    "يجب أن يكون الترتيب صفراً أو عدداً صحيحاً موجباً.",
+  imageRequired:
+    "يجب تحميل الصورة الرئيسية للمنتج.",
+  categoryRequired:
+    "يجب اختيار فئة.",
+  saveError:
+    "حدث خطأ أثناء حفظ المنتج.",
+},
+adminCategoryFormPage: {
+  newTitle: "إضافة فئة جديدة",
+  newDescription:
+    "أنشئ فئة جديدة للمتجر مع المحتوى متعدد اللغات والصورة وإعدادات الظهور.",
+
+  basicInformation: "معلومات الفئة",
+  basicInformationDescription:
+    "أدخل اسم الفئة والنص المختصر والرابط وترتيب الظهور.",
+
+  turkish: "التركية",
+  english: "الإنجليزية",
+  arabic: "العربية",
+
+  categoryName: "اسم الفئة",
+  eyebrow: "النص المميز",
+
+  slug: "رابط الفئة",
+  slugDescription:
+    "العنوان الفريد المستخدم في رابط صفحة الفئة.",
+
+  order: "ترتيب الظهور",
+
+  image: "صورة الفئة",
+  imageDescription:
+    "اختر الصورة الرئيسية للفئة من جهازك أو اسحبها وأفلتها.",
+
+  visibility: "الظهور",
+  visibilityDescription:
+    "حدد ما إذا كانت الفئة ستظهر ويمكن استخدامها في المتجر.",
+
+  active: "فئة نشطة",
+  activeDescription:
+    "يمكن عرض الفئة في المتجر واختيارها للمنتجات.",
+
+  save: "حفظ الفئة",
+  saving: "جارٍ حفظ الفئة",
+  cancel: "إلغاء",
+
+  requiredField: "هذا الحقل مطلوب.",
+  imageRequired:
+    "يجب تحميل صورة للفئة.",
+  invalidOrder:
+    "يجب أن يكون ترتيب الظهور صفراً أو عدداً صحيحاً موجباً.",
+  saveError:
+    "حدث خطأ أثناء حفظ الفئة.",
+},
+editTitle: "تعديل الفئة",
+editDescription:
+  "حدّث أسماء الفئة وصورتها وترتيب ظهورها وإعدادات الظهور.",
 };
 
 export default ar;
