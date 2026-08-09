@@ -1,11 +1,17 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import {
+  useMemo,
+  useState,
+} from "react";
+
 import Image from "next/image";
 import Link from "next/link";
+
 import {
   Check,
   Edit3,
+  Loader2,
   Plus,
   Search,
   Tags,
@@ -13,10 +19,27 @@ import {
   X,
 } from "lucide-react";
 
-import { useCategories } from "@/contexts/CategoryContext";
-import { useProducts } from "@/contexts/ProductContext";
-import type { Locale } from "@/lib/i18n/config";
-import type { Category } from "@/types/category";
+import {
+  useCategories,
+} from "@/contexts/CategoryContext";
+
+import {
+  useProducts,
+} from "@/contexts/ProductContext";
+
+import type {
+  Locale,
+} from "@/lib/i18n/config";
+
+import type {
+  Category,
+} from "@/types/category";
+
+/*
+ * ============================================================
+ * TYPES
+ * ============================================================
+ */
 
 type AdminCategoriesDictionary = {
   addCategory: string;
@@ -43,6 +66,7 @@ type AdminCategoriesDictionary = {
 
   deleteTitle: string;
   deleteDescription: string;
+
   deleteBlockedTitle: string;
   deleteBlockedDescription: string;
 
@@ -55,8 +79,16 @@ type AdminCategoriesDictionary = {
 
 type AdminCategoriesContentProps = {
   locale: Locale;
-  dictionary: AdminCategoriesDictionary;
+
+  dictionary:
+    AdminCategoriesDictionary;
 };
+
+/*
+ * ============================================================
+ * COMPONENT
+ * ============================================================
+ */
 
 export default function AdminCategoriesContent({
   locale,
@@ -64,71 +96,187 @@ export default function AdminCategoriesContent({
 }: AdminCategoriesContentProps) {
   const {
     categories,
-    isLoaded: categoriesLoaded,
+
+    isLoaded:
+      categoriesLoaded,
+
     deleteCategory,
+
     toggleCategoryActive,
   } = useCategories();
 
   const {
     products,
-    isLoaded: productsLoaded,
+
+    isLoaded:
+      productsLoaded,
   } = useProducts();
 
-  const [searchQuery, setSearchQuery] =
-    useState("");
+  /*
+   * ==========================================================
+   * STATE
+   * ==========================================================
+   */
+
+  const [
+    searchQuery,
+    setSearchQuery,
+  ] = useState("");
 
   const [
     categoryToDelete,
     setCategoryToDelete,
-  ] = useState<Category | null>(null);
+  ] =
+    useState<Category | null>(
+      null
+    );
+
+  const [
+    processingCategoryId,
+    setProcessingCategoryId,
+  ] =
+    useState<string | null>(
+      null
+    );
+
+  const [
+    deleteError,
+    setDeleteError,
+  ] =
+    useState<string | null>(
+      null
+    );
 
   const isLoaded =
-    categoriesLoaded && productsLoaded;
+    categoriesLoaded &&
+    productsLoaded;
 
-  const filteredCategories = useMemo(() => {
-    const normalizedSearch = searchQuery
-      .trim()
-      .toLocaleLowerCase(locale);
+  /*
+   * ==========================================================
+   * FILTER
+   * ==========================================================
+   */
 
-    return [...categories]
-      .filter((category) => {
-        if (!normalizedSearch) {
-          return true;
-        }
-
-        const name =
-          category.name[
-            locale
-          ].toLocaleLowerCase(locale);
-
-        const slug =
-          category.slug.toLocaleLowerCase(
+  const filteredCategories =
+    useMemo(() => {
+      const normalizedSearch =
+        searchQuery
+          .trim()
+          .toLocaleLowerCase(
             locale
           );
 
-        return (
-          name.includes(normalizedSearch) ||
-          slug.includes(normalizedSearch)
+      return [...categories]
+        .filter(
+          (category) => {
+            if (
+              !normalizedSearch
+            ) {
+              return true;
+            }
+
+            const name =
+              category.name[
+                locale
+              ].toLocaleLowerCase(
+                locale
+              );
+
+            const slug =
+              category.slug.toLocaleLowerCase(
+                locale
+              );
+
+            return (
+              name.includes(
+                normalizedSearch
+              ) ||
+              slug.includes(
+                normalizedSearch
+              )
+            );
+          }
+        )
+        .sort(
+          (a, b) =>
+            a.order - b.order
         );
-      })
-      .sort((a, b) => a.order - b.order);
-  }, [
-    categories,
-    locale,
-    searchQuery,
-  ]);
+    }, [
+      categories,
+      locale,
+      searchQuery,
+    ]);
+
+  /*
+   * ==========================================================
+   * PRODUCT COUNT
+   * ==========================================================
+   */
 
   function getCategoryProductCount(
     categoryId: string
   ) {
     return products.filter(
       (product) =>
-        product.categoryId === categoryId
+        product.categoryId ===
+        categoryId
     ).length;
   }
 
-  function confirmDelete() {
-    if (!categoryToDelete) {
+  /*
+   * ==========================================================
+   * ACTIVE / INACTIVE
+   * ==========================================================
+   */
+
+  async function handleToggleActive(
+    categoryId: string
+  ) {
+    if (
+      processingCategoryId
+    ) {
+      return;
+    }
+
+    setDeleteError(null);
+
+    setProcessingCategoryId(
+      categoryId
+    );
+
+    try {
+      await toggleCategoryActive(
+        categoryId
+      );
+    } catch (error) {
+      console.error(
+        "Kategori durumu değiştirilemedi:",
+        error
+      );
+
+      setDeleteError(
+        error instanceof Error
+          ? error.message
+          : "Kategori durumu değiştirilemedi."
+      );
+    } finally {
+      setProcessingCategoryId(
+        null
+      );
+    }
+  }
+
+  /*
+   * ==========================================================
+   * DELETE
+   * ==========================================================
+   */
+
+  async function confirmDelete() {
+    if (
+      !categoryToDelete ||
+      processingCategoryId
+    ) {
       return;
     }
 
@@ -137,27 +285,121 @@ export default function AdminCategoriesContent({
         categoryToDelete.id
       );
 
+    /*
+     * UI seviyesinde ilk kontrol.
+     *
+     * API tarafında da aynı kontrol var.
+     */
     if (productCount > 0) {
       return;
     }
 
-    deleteCategory(categoryToDelete.id);
-    setCategoryToDelete(null);
+    setDeleteError(null);
+
+    setProcessingCategoryId(
+      categoryToDelete.id
+    );
+
+    try {
+      /*
+       * Database cevabını mutlaka
+       * bekliyoruz.
+       */
+      await deleteCategory(
+        categoryToDelete.id
+      );
+
+      /*
+       * Modal yalnızca PostgreSQL
+       * silme işlemi başarılı olursa
+       * kapanır.
+       */
+      setCategoryToDelete(
+        null
+      );
+    } catch (error) {
+      console.error(
+        "Kategori silinemedi:",
+        error
+      );
+
+      setDeleteError(
+        error instanceof Error
+          ? error.message
+          : "Kategori silinemedi."
+      );
+    } finally {
+      setProcessingCategoryId(
+        null
+      );
+    }
   }
 
-  function deactivateCategory() {
-    if (!categoryToDelete) {
+  /*
+   * ==========================================================
+   * DEACTIVATE INSTEAD
+   * ==========================================================
+   */
+
+  async function deactivateCategory() {
+    if (
+      !categoryToDelete ||
+      processingCategoryId
+    ) {
       return;
     }
 
-    if (categoryToDelete.isActive) {
-      toggleCategoryActive(
-        categoryToDelete.id
+    /*
+     * Zaten pasifse tekrar API
+     * çağrısı yapmaya gerek yok.
+     */
+    if (
+      !categoryToDelete.isActive
+    ) {
+      setCategoryToDelete(
+        null
       );
+
+      return;
     }
 
-    setCategoryToDelete(null);
+    setDeleteError(null);
+
+    setProcessingCategoryId(
+      categoryToDelete.id
+    );
+
+    try {
+      await toggleCategoryActive(
+        categoryToDelete.id
+      );
+
+      setCategoryToDelete(
+        null
+      );
+    } catch (error) {
+      console.error(
+        "Kategori pasif hale getirilemedi:",
+        error
+      );
+
+      setDeleteError(
+        error instanceof Error
+          ? error.message
+          : "Kategori pasif hale getirilemedi."
+      );
+    } finally {
+      setProcessingCategoryId(
+        null
+      );
+    }
   }
+
+  /*
+   * ==========================================================
+   * LOADING
+   * ==========================================================
+   */
 
   if (!isLoaded) {
     return (
@@ -169,10 +411,17 @@ export default function AdminCategoriesContent({
     );
   }
 
+  /*
+   * ==========================================================
+   * RENDER
+   * ==========================================================
+   */
+
   return (
     <>
       <div className="w-full min-w-0">
         {/* Üst aksiyon */}
+
         <div className="flex w-full justify-end">
           <Link
             href={`/${locale}/admin/categories/new`}
@@ -196,12 +445,26 @@ export default function AdminCategoriesContent({
             />
 
             <span>
-              {dictionary.addCategory}
+              {
+                dictionary.addCategory
+              }
             </span>
           </Link>
         </div>
 
+        {/* Global işlem hatası */}
+
+        {deleteError &&
+          !categoryToDelete && (
+            <div className="mt-6 border border-danger/30 bg-danger/10 px-5 py-4">
+              <p className="text-xs leading-6 text-danger">
+                {deleteError}
+              </p>
+            </div>
+          )}
+
         {/* Arama */}
+
         <section className="mt-6 border-y border-border py-5">
           <div className="group relative max-w-[620px]">
             <Search
@@ -213,9 +476,12 @@ export default function AdminCategoriesContent({
             <input
               type="text"
               value={searchQuery}
-              onChange={(event) =>
+              onChange={(
+                event
+              ) =>
                 setSearchQuery(
-                  event.target.value
+                  event.target
+                    .value
                 )
               }
               placeholder={
@@ -231,7 +497,9 @@ export default function AdminCategoriesContent({
               <button
                 type="button"
                 onClick={() =>
-                  setSearchQuery("")
+                  setSearchQuery(
+                    ""
+                  )
                 }
                 aria-label={
                   dictionary.clearSearch
@@ -240,7 +508,9 @@ export default function AdminCategoriesContent({
               >
                 <X
                   size={15}
-                  strokeWidth={1.4}
+                  strokeWidth={
+                    1.4
+                  }
                 />
               </button>
             )}
@@ -248,10 +518,15 @@ export default function AdminCategoriesContent({
         </section>
 
         {/* Sonuç */}
+
         <div className="flex min-h-[76px] items-center justify-between border-b border-border">
           <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-muted">
-            {filteredCategories.length}{" "}
-            {dictionary.categoriesFound}
+            {
+              filteredCategories.length
+            }{" "}
+            {
+              dictionary.categoriesFound
+            }
           </p>
 
           {searchQuery && (
@@ -262,98 +537,157 @@ export default function AdminCategoriesContent({
               }
               className="text-[9px] font-semibold uppercase tracking-[0.14em] text-foreground transition-colors hover:text-accent"
             >
-              {dictionary.clearSearch}
+              {
+                dictionary.clearSearch
+              }
             </button>
           )}
         </div>
 
-        {filteredCategories.length > 0 ? (
+        {filteredCategories.length >
+        0 ? (
           <>
             {/* Masaüstü */}
+
             <div className="hidden xl:block">
               <div className="grid min-h-16 grid-cols-[92px_minmax(220px,1.3fr)_minmax(130px,0.7fr)_80px_90px_130px_150px] items-center gap-4 border-b border-border px-3 text-[8px] font-semibold uppercase tracking-[0.16em] text-muted">
                 <span />
 
                 <span>
-                  {dictionary.category}
+                  {
+                    dictionary.category
+                  }
                 </span>
 
                 <span>
-                  {dictionary.slug}
+                  {
+                    dictionary.slug
+                  }
                 </span>
 
                 <span>
-                  {dictionary.order}
+                  {
+                    dictionary.order
+                  }
                 </span>
 
                 <span>
-                  {dictionary.products}
+                  {
+                    dictionary.products
+                  }
                 </span>
 
                 <span>
-                  {dictionary.status}
+                  {
+                    dictionary.status
+                  }
                 </span>
 
                 <span className="text-end">
-                  {dictionary.actions}
+                  {
+                    dictionary.actions
+                  }
                 </span>
               </div>
 
               <div className="divide-y divide-border border-b border-border">
                 {filteredCategories.map(
-                  (category) => (
-                    <DesktopCategoryRow
-                      key={category.id}
-                      category={category}
-                      locale={locale}
+                  (
+                    category
+                  ) => {
+                    const isProcessing =
+                      processingCategoryId ===
+                      category.id;
+
+                    return (
+                      <DesktopCategoryRow
+                        key={
+                          category.id
+                        }
+                        category={
+                          category
+                        }
+                        locale={
+                          locale
+                        }
+                        dictionary={
+                          dictionary
+                        }
+                        productCount={getCategoryProductCount(
+                          category.id
+                        )}
+                        isProcessing={
+                          isProcessing
+                        }
+                        onToggleActive={() =>
+                          void handleToggleActive(
+                            category.id
+                          )
+                        }
+                        onDelete={() => {
+                          setDeleteError(
+                            null
+                          );
+
+                          setCategoryToDelete(
+                            category
+                          );
+                        }}
+                      />
+                    );
+                  }
+                )}
+              </div>
+            </div>
+
+            {/* Mobil / tablet */}
+
+            <div className="grid gap-5 pt-6 xl:hidden">
+              {filteredCategories.map(
+                (
+                  category
+                ) => {
+                  const isProcessing =
+                    processingCategoryId ===
+                    category.id;
+
+                  return (
+                    <MobileCategoryCard
+                      key={
+                        category.id
+                      }
+                      category={
+                        category
+                      }
+                      locale={
+                        locale
+                      }
                       dictionary={
                         dictionary
                       }
                       productCount={getCategoryProductCount(
                         category.id
                       )}
+                      isProcessing={
+                        isProcessing
+                      }
                       onToggleActive={() =>
-                        toggleCategoryActive(
+                        void handleToggleActive(
                           category.id
                         )
                       }
-                      onDelete={() =>
+                      onDelete={() => {
+                        setDeleteError(
+                          null
+                        );
+
                         setCategoryToDelete(
                           category
-                        )
-                      }
+                        );
+                      }}
                     />
-                  )
-                )}
-              </div>
-            </div>
-
-            {/* Mobil / tablet */}
-            <div className="grid gap-5 pt-6 xl:hidden">
-              {filteredCategories.map(
-                (category) => (
-                  <MobileCategoryCard
-                    key={category.id}
-                    category={category}
-                    locale={locale}
-                    dictionary={
-                      dictionary
-                    }
-                    productCount={getCategoryProductCount(
-                      category.id
-                    )}
-                    onToggleActive={() =>
-                      toggleCategoryActive(
-                        category.id
-                      )
-                    }
-                    onDelete={() =>
-                      setCategoryToDelete(
-                        category
-                      )
-                    }
-                  />
-                )
+                  );
+                }
               )}
             </div>
           </>
@@ -362,12 +696,16 @@ export default function AdminCategoriesContent({
             <span className="flex h-20 w-20 items-center justify-center border border-accent/30 bg-accent/10 text-accent">
               <Tags
                 size={31}
-                strokeWidth={1.15}
+                strokeWidth={
+                  1.15
+                }
               />
             </span>
 
             <h2 className="mt-7 font-heading text-4xl leading-none text-foreground sm:text-5xl">
-              {dictionary.noCategories}
+              {
+                dictionary.noCategories
+              }
             </h2>
 
             <p className="mt-5 max-w-xl text-sm leading-7 text-foreground-soft">
@@ -381,18 +719,43 @@ export default function AdminCategoriesContent({
 
       {categoryToDelete && (
         <DeleteCategoryModal
-          category={categoryToDelete}
+          category={
+            categoryToDelete
+          }
           locale={locale}
-          dictionary={dictionary}
+          dictionary={
+            dictionary
+          }
           productCount={getCategoryProductCount(
             categoryToDelete.id
           )}
-          onCancel={() =>
-            setCategoryToDelete(null)
+          isProcessing={
+            processingCategoryId ===
+            categoryToDelete.id
           }
-          onConfirm={confirmDelete}
-          onDeactivate={
-            deactivateCategory
+          error={
+            deleteError
+          }
+          onCancel={() => {
+            if (
+              processingCategoryId
+            ) {
+              return;
+            }
+
+            setDeleteError(
+              null
+            );
+
+            setCategoryToDelete(
+              null
+            );
+          }}
+          onConfirm={() =>
+            void confirmDelete()
+          }
+          onDeactivate={() =>
+            void deactivateCategory()
           }
         />
       )}
@@ -400,20 +763,41 @@ export default function AdminCategoriesContent({
   );
 }
 
+/*
+ * ============================================================
+ * ROW TYPES
+ * ============================================================
+ */
+
 type CategoryRowProps = {
   category: Category;
+
   locale: Locale;
-  dictionary: AdminCategoriesDictionary;
+
+  dictionary:
+    AdminCategoriesDictionary;
+
   productCount: number;
+
+  isProcessing: boolean;
+
   onToggleActive: () => void;
+
   onDelete: () => void;
 };
+
+/*
+ * ============================================================
+ * DESKTOP ROW
+ * ============================================================
+ */
 
 function DesktopCategoryRow({
   category,
   locale,
   dictionary,
   productCount,
+  isProcessing,
   onToggleActive,
   onDelete,
 }: CategoryRowProps) {
@@ -422,7 +806,11 @@ function DesktopCategoryRow({
       <div className="relative h-[92px] w-[74px] overflow-hidden bg-surface">
         <Image
           src={category.image}
-          alt={category.name[locale]}
+          alt={
+            category.name[
+              locale
+            ]
+          }
           fill
           sizes="74px"
           className="object-cover object-center"
@@ -431,11 +819,19 @@ function DesktopCategoryRow({
 
       <div className="min-w-0">
         <h2 className="break-words font-heading text-[24px] leading-none text-foreground">
-          {category.name[locale]}
+          {
+            category.name[
+              locale
+            ]
+          }
         </h2>
 
         <p className="mt-3 line-clamp-2 text-xs leading-5 text-foreground-soft">
-          {category.eyebrow[locale]}
+          {
+            category.eyebrow[
+              locale
+            ]
+          }
         </p>
       </div>
 
@@ -456,22 +852,45 @@ function DesktopCategoryRow({
 
       <button
         type="button"
-        onClick={onToggleActive}
+        onClick={
+          onToggleActive
+        }
+        disabled={
+          isProcessing
+        }
         className={[
           "inline-flex min-h-10 items-center",
           "justify-center gap-2 border px-3",
           "text-[7px] font-semibold uppercase",
           "tracking-[0.1em]",
+          "transition-all duration-300",
+
+          isProcessing
+            ? "cursor-wait opacity-60"
+            : "",
+
           category.isActive
             ? "border-accent bg-accent text-white"
             : "border-border text-muted hover:border-accent hover:text-accent",
         ].join(" ")}
       >
-        {category.isActive && (
-          <Check
-            size={10}
-            strokeWidth={1.6}
+        {isProcessing ? (
+          <Loader2
+            size={11}
+            strokeWidth={
+              1.5
+            }
+            className="animate-spin"
           />
+        ) : (
+          category.isActive && (
+            <Check
+              size={10}
+              strokeWidth={
+                1.6
+              }
+            />
+          )
         )}
 
         {category.isActive
@@ -483,8 +902,23 @@ function DesktopCategoryRow({
         <Link
           href={`/${locale}/admin/categories/${category.id}/edit`}
           aria-label={`${dictionary.edit}: ${category.name[locale]}`}
-          title={dictionary.edit}
-          className="inline-flex h-10 w-10 items-center justify-center border border-border text-foreground transition-colors hover:border-accent hover:bg-accent hover:text-white"
+          title={
+            dictionary.edit
+          }
+          className={[
+            "inline-flex h-10 w-10",
+            "items-center justify-center",
+            "border border-border",
+            "text-foreground",
+            "transition-colors",
+            "hover:border-accent",
+            "hover:bg-accent",
+            "hover:text-white",
+
+            isProcessing
+              ? "pointer-events-none opacity-40"
+              : "",
+          ].join(" ")}
         >
           <Edit3
             size={14}
@@ -495,9 +929,14 @@ function DesktopCategoryRow({
         <button
           type="button"
           onClick={onDelete}
+          disabled={
+            isProcessing
+          }
           aria-label={`${dictionary.delete}: ${category.name[locale]}`}
-          title={dictionary.delete}
-          className="inline-flex h-10 w-10 items-center justify-center border border-border text-foreground transition-colors hover:border-danger hover:bg-danger hover:text-white"
+          title={
+            dictionary.delete
+          }
+          className="inline-flex h-10 w-10 items-center justify-center border border-border text-foreground transition-colors hover:border-danger hover:bg-danger hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Trash2
             size={14}
@@ -509,11 +948,18 @@ function DesktopCategoryRow({
   );
 }
 
+/*
+ * ============================================================
+ * MOBILE CARD
+ * ============================================================
+ */
+
 function MobileCategoryCard({
   category,
   locale,
   dictionary,
   productCount,
+  isProcessing,
   onToggleActive,
   onDelete,
 }: CategoryRowProps) {
@@ -522,8 +968,14 @@ function MobileCategoryCard({
       <div className="grid grid-cols-[86px_minmax(0,1fr)] gap-4">
         <div className="relative aspect-[4/5] w-full overflow-hidden bg-surface">
           <Image
-            src={category.image}
-            alt={category.name[locale]}
+            src={
+              category.image
+            }
+            alt={
+              category.name[
+                locale
+              ]
+            }
             fill
             sizes="86px"
             className="object-cover object-center"
@@ -532,11 +984,19 @@ function MobileCategoryCard({
 
         <div className="min-w-0">
           <h2 className="font-heading text-2xl leading-none text-foreground">
-            {category.name[locale]}
+            {
+              category.name[
+                locale
+              ]
+            }
           </h2>
 
           <p className="mt-3 text-xs leading-5 text-foreground-soft">
-            {category.eyebrow[locale]}
+            {
+              category.eyebrow[
+                locale
+              ]
+            }
           </p>
 
           <p
@@ -551,17 +1011,23 @@ function MobileCategoryCard({
       <div className="mt-5 grid grid-cols-2 gap-3 border-y border-border py-5 text-center">
         <div>
           <p className="text-[7px] font-semibold uppercase tracking-[0.12em] text-muted">
-            {dictionary.order}
+            {
+              dictionary.order
+            }
           </p>
 
           <p className="mt-2 font-heading text-xl text-foreground">
-            {category.order}
+            {
+              category.order
+            }
           </p>
         </div>
 
         <div>
           <p className="text-[7px] font-semibold uppercase tracking-[0.12em] text-muted">
-            {dictionary.products}
+            {
+              dictionary.products
+            }
           </p>
 
           <p className="mt-2 font-heading text-xl text-foreground">
@@ -573,23 +1039,45 @@ function MobileCategoryCard({
       <div className="mt-5 flex flex-wrap gap-2">
         <button
           type="button"
-          onClick={onToggleActive}
+          onClick={
+            onToggleActive
+          }
+          disabled={
+            isProcessing
+          }
           className={[
             "inline-flex min-h-10",
             "items-center justify-center gap-2",
             "border px-4",
             "text-[7px] font-semibold uppercase",
             "tracking-[0.1em]",
+
+            isProcessing
+              ? "cursor-wait opacity-60"
+              : "",
+
             category.isActive
               ? "border-accent bg-accent text-white"
               : "border-border text-muted",
           ].join(" ")}
         >
-          {category.isActive && (
-            <Check
-              size={10}
-              strokeWidth={1.6}
+          {isProcessing ? (
+            <Loader2
+              size={11}
+              strokeWidth={
+                1.5
+              }
+              className="animate-spin"
             />
+          ) : (
+            category.isActive && (
+              <Check
+                size={10}
+                strokeWidth={
+                  1.6
+                }
+              />
+            )
           )}
 
           {category.isActive
@@ -599,7 +1087,16 @@ function MobileCategoryCard({
 
         <Link
           href={`/${locale}/admin/categories/${category.id}/edit`}
-          className="inline-flex h-10 w-10 items-center justify-center border border-border text-foreground"
+          className={[
+            "inline-flex h-10 w-10",
+            "items-center justify-center",
+            "border border-border",
+            "text-foreground",
+
+            isProcessing
+              ? "pointer-events-none opacity-40"
+              : "",
+          ].join(" ")}
         >
           <Edit3
             size={14}
@@ -610,7 +1107,10 @@ function MobileCategoryCard({
         <button
           type="button"
           onClick={onDelete}
-          className="inline-flex h-10 w-10 items-center justify-center border border-border text-foreground"
+          disabled={
+            isProcessing
+          }
+          className="inline-flex h-10 w-10 items-center justify-center border border-border text-foreground disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Trash2
             size={14}
@@ -622,21 +1122,46 @@ function MobileCategoryCard({
   );
 }
 
+/*
+ * ============================================================
+ * DELETE MODAL TYPES
+ * ============================================================
+ */
+
 type DeleteCategoryModalProps = {
   category: Category;
+
   locale: Locale;
-  dictionary: AdminCategoriesDictionary;
+
+  dictionary:
+    AdminCategoriesDictionary;
+
   productCount: number;
+
+  isProcessing: boolean;
+
+  error: string | null;
+
   onCancel: () => void;
+
   onConfirm: () => void;
+
   onDeactivate: () => void;
 };
+
+/*
+ * ============================================================
+ * DELETE MODAL
+ * ============================================================
+ */
 
 function DeleteCategoryModal({
   category,
   locale,
   dictionary,
   productCount,
+  isProcessing,
+  error,
   onCancel,
   onConfirm,
   onDeactivate,
@@ -656,22 +1181,40 @@ function DeleteCategoryModal({
             className={[
               "flex h-14 w-14",
               "items-center justify-center border",
+
               deleteIsBlocked
                 ? "border-accent/30 bg-accent/10 text-accent"
                 : "border-danger/30 bg-danger/10 text-danger",
             ].join(" ")}
           >
-            <Trash2
-              size={22}
-              strokeWidth={1.3}
-            />
+            {isProcessing ? (
+              <Loader2
+                size={22}
+                strokeWidth={
+                  1.3
+                }
+                className="animate-spin"
+              />
+            ) : (
+              <Trash2
+                size={22}
+                strokeWidth={
+                  1.3
+                }
+              />
+            )}
           </span>
 
           <button
             type="button"
             onClick={onCancel}
-            aria-label={dictionary.cancel}
-            className="flex h-10 w-10 items-center justify-center border border-border text-muted"
+            disabled={
+              isProcessing
+            }
+            aria-label={
+              dictionary.cancel
+            }
+            className="flex h-10 w-10 items-center justify-center border border-border text-muted disabled:cursor-not-allowed disabled:opacity-40"
           >
             <X
               size={15}
@@ -695,8 +1238,14 @@ function DeleteCategoryModal({
         <div className="mt-6 grid grid-cols-[64px_minmax(0,1fr)] items-center gap-4 border-y border-border py-5">
           <div className="relative h-20 w-16 overflow-hidden bg-surface">
             <Image
-              src={category.image}
-              alt={category.name[locale]}
+              src={
+                category.image
+              }
+              alt={
+                category.name[
+                  locale
+                ]
+              }
               fill
               sizes="64px"
               className="object-cover"
@@ -705,31 +1254,65 @@ function DeleteCategoryModal({
 
           <div className="min-w-0">
             <p className="font-heading text-2xl leading-none text-foreground">
-              {category.name[locale]}
+              {
+                category.name[
+                  locale
+                ]
+              }
             </p>
 
             <p className="mt-2 text-[9px] uppercase tracking-[0.12em] text-muted">
-              {dictionary.products}:{" "}
-              {productCount}
+              {
+                dictionary.products
+              }
+              : {productCount}
             </p>
           </div>
         </div>
+
+        {error && (
+          <div className="mt-5 border border-danger/30 bg-danger/10 px-4 py-3">
+            <p className="text-xs leading-6 text-danger">
+              {error}
+            </p>
+          </div>
+        )}
 
         {deleteIsBlocked ? (
           <div className="mt-8 grid gap-3 sm:grid-cols-2">
             <button
               type="button"
               onClick={onCancel}
-              className="min-h-13 border border-foreground px-6 text-[9px] font-semibold uppercase tracking-[0.14em] text-foreground transition-colors hover:bg-foreground hover:text-white"
+              disabled={
+                isProcessing
+              }
+              className="min-h-13 border border-foreground px-6 text-[9px] font-semibold uppercase tracking-[0.14em] text-foreground transition-colors hover:bg-foreground hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
             >
-              {dictionary.cancel}
+              {
+                dictionary.cancel
+              }
             </button>
 
             <button
               type="button"
-              onClick={onDeactivate}
-              className="min-h-13 border border-accent bg-accent px-6 text-[9px] font-semibold uppercase tracking-[0.14em] text-white"
+              onClick={
+                onDeactivate
+              }
+              disabled={
+                isProcessing
+              }
+              className="inline-flex min-h-13 items-center justify-center gap-2 border border-accent bg-accent px-6 text-[9px] font-semibold uppercase tracking-[0.14em] text-white disabled:cursor-wait disabled:opacity-60"
             >
+              {isProcessing && (
+                <Loader2
+                  size={13}
+                  strokeWidth={
+                    1.5
+                  }
+                  className="animate-spin"
+                />
+              )}
+
               {
                 dictionary.deactivateInstead
               }
@@ -740,16 +1323,36 @@ function DeleteCategoryModal({
             <button
               type="button"
               onClick={onCancel}
-              className="min-h-13 border border-foreground px-6 text-[9px] font-semibold uppercase tracking-[0.14em] text-foreground transition-colors hover:bg-foreground hover:text-white"
+              disabled={
+                isProcessing
+              }
+              className="min-h-13 border border-foreground px-6 text-[9px] font-semibold uppercase tracking-[0.14em] text-foreground transition-colors hover:bg-foreground hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
             >
-              {dictionary.cancel}
+              {
+                dictionary.cancel
+              }
             </button>
 
             <button
               type="button"
-              onClick={onConfirm}
-              className="min-h-13 border border-danger bg-danger px-6 text-[9px] font-semibold uppercase tracking-[0.14em] text-white"
+              onClick={
+                onConfirm
+              }
+              disabled={
+                isProcessing
+              }
+              className="inline-flex min-h-13 items-center justify-center gap-2 border border-danger bg-danger px-6 text-[9px] font-semibold uppercase tracking-[0.14em] text-white disabled:cursor-wait disabled:opacity-60"
             >
+              {isProcessing && (
+                <Loader2
+                  size={13}
+                  strokeWidth={
+                    1.5
+                  }
+                  className="animate-spin"
+                />
+              )}
+
               {
                 dictionary.confirmDelete
               }

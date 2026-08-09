@@ -10,7 +10,16 @@ import {
   type ReactNode,
 } from "react";
 
-export type Currency = "EUR" | "USD" | "GBP";
+/*
+ * =============================================================
+ * TYPES
+ * =============================================================
+ */
+
+export type Currency =
+  | "EUR"
+  | "USD"
+  | "GBP";
 
 export type OrderStatus =
   | "received"
@@ -65,69 +74,140 @@ export type Order = {
 
   customer: OrderCustomer;
   shippingAddress: OrderShippingAddress;
+
   items: OrderItem[];
 
   subtotal: number;
   shippingCost: number;
   total: number;
+
   currency: Currency;
 
   status: OrderStatus;
+
   statusHistory: OrderStatusHistory[];
 
   createdAt: string;
   updatedAt: string;
 };
 
+/*
+ * Checkout mevcut yapısını kırmamak için
+ * eski CreateOrderInput şeklini koruyoruz.
+ *
+ * Ancak subtotal / fiyat / currency gibi değerler
+ * artık server tarafında güvenilir kaynak değildir.
+ *
+ * /api/orders gerçek ürünleri PostgreSQL'den okuyup
+ * fiyat ve toplamları kendisi hesaplar.
+ */
+
 export type CreateOrderInput = {
   customer: OrderCustomer;
-  shippingAddress: OrderShippingAddress;
+
+  shippingAddress:
+    OrderShippingAddress;
+
   items: OrderItem[];
 
   subtotal: number;
+
   shippingCost?: number;
+
   currency: Currency;
 };
 
+/*
+ * =============================================================
+ * API RESPONSE TYPES
+ * =============================================================
+ */
+
+type OrdersApiResponse = {
+  success: boolean;
+  orders?: Order[];
+  message?: string;
+};
+
+type OrderApiResponse = {
+  success: boolean;
+  order?: Order;
+  message?: string;
+};
+
+/*
+ * =============================================================
+ * CONTEXT
+ * =============================================================
+ */
+
 type OrderContextValue = {
   orders: Order[];
+
   isLoaded: boolean;
 
-  createOrder: (input: CreateOrderInput) => Order;
+  isLoading: boolean;
+
+  error: string | null;
+
+  refreshOrders:
+    () => Promise<void>;
+
+  createOrder: (
+    input: CreateOrderInput
+  ) => Promise<Order>;
 
   findOrderByTrackingCode: (
     trackingCode: string
   ) => Order | undefined;
 
+  fetchOrderByTrackingCode: (
+    trackingCode: string
+  ) => Promise<Order | undefined>;
+
   updateOrderStatus: (
     orderId: string,
     status: OrderStatus
-  ) => void;
+  ) => Promise<Order>;
 };
 
 type OrderProviderProps = {
   children: ReactNode;
 };
 
-const ORDERS_STORAGE_KEY = "luxea-orders";
-
-const VALID_ORDER_STATUSES: OrderStatus[] = [
-  "received",
-  "payment-confirmed",
-  "preparing",
-  "shipped",
-  "delivered",
-  "cancelled",
-];
-
-const SUPPORTED_CURRENCIES: Currency[] = [
-  "EUR",
-  "USD",
-  "GBP",
-];
-
 const OrderContext =
-  createContext<OrderContextValue | null>(null);
+  createContext<OrderContextValue | null>(
+    null
+  );
+
+/*
+ * =============================================================
+ * VALIDATION CONSTANTS
+ * =============================================================
+ */
+
+const VALID_ORDER_STATUSES:
+  OrderStatus[] = [
+    "received",
+    "payment-confirmed",
+    "preparing",
+    "shipped",
+    "delivered",
+    "cancelled",
+  ];
+
+const SUPPORTED_CURRENCIES:
+  Currency[] = [
+    "EUR",
+    "USD",
+    "GBP",
+  ];
+
+/*
+ * =============================================================
+ * TYPE GUARDS
+ * =============================================================
+ */
 
 function isOrderStatus(
   value: unknown
@@ -151,82 +231,7 @@ function isCurrency(
   );
 }
 
-function createRandomSegment(length: number) {
-  const characters =
-    "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-
-  if (
-    typeof window !== "undefined" &&
-    window.crypto?.getRandomValues
-  ) {
-    const randomValues =
-      new Uint32Array(length);
-
-    window.crypto.getRandomValues(
-      randomValues
-    );
-
-    return Array.from(randomValues)
-      .map(
-        (value) =>
-          characters[
-            value % characters.length
-          ]
-      )
-      .join("");
-  }
-
-  return Array.from(
-    { length },
-    () =>
-      characters[
-        Math.floor(
-          Math.random() *
-            characters.length
-        )
-      ]
-  ).join("");
-}
-
-function createTrackingCode() {
-  const year = new Date().getFullYear();
-
-  return `LUX-${year}-${createRandomSegment(
-    8
-  )}`;
-}
-
-function createUniqueTrackingCode(
-  existingOrders: Order[]
-) {
-  let trackingCode = createTrackingCode();
-
-  while (
-    existingOrders.some(
-      (order) =>
-        order.trackingCode === trackingCode
-    )
-  ) {
-    trackingCode = createTrackingCode();
-  }
-
-  return trackingCode;
-}
-
-function createOrderId() {
-  if (
-    typeof window !== "undefined" &&
-    window.crypto?.randomUUID
-  ) {
-    return window.crypto.randomUUID();
-  }
-
-  return `order-${Date.now()}-${createRandomSegment(
-    10
-  )}`;
-}
-
-function isValidOrderItem(
+function isOrderItem(
   value: unknown
 ): value is OrderItem {
   if (
@@ -236,30 +241,49 @@ function isValidOrderItem(
     return false;
   }
 
-  const item = value as Partial<OrderItem>;
+  const item =
+    value as Partial<OrderItem>;
+
+  if (
+    typeof item.name !==
+      "object" ||
+    item.name === null
+  ) {
+    return false;
+  }
 
   return (
     typeof item.id === "string" &&
-    typeof item.productId === "string" &&
+    typeof item.productId ===
+      "string" &&
     typeof item.slug === "string" &&
     typeof item.image === "string" &&
     typeof item.color === "string" &&
-    typeof item.quantity === "number" &&
-    Number.isInteger(item.quantity) &&
+    typeof item.quantity ===
+      "number" &&
+    Number.isInteger(
+      item.quantity
+    ) &&
     item.quantity > 0 &&
-    typeof item.unitPrice === "number" &&
-    Number.isFinite(item.unitPrice) &&
+    typeof item.unitPrice ===
+      "number" &&
+    Number.isFinite(
+      item.unitPrice
+    ) &&
     item.unitPrice >= 0 &&
-    isCurrency(item.currency) &&
-    typeof item.name === "object" &&
-    item.name !== null &&
-    typeof item.name.tr === "string" &&
-    typeof item.name.en === "string" &&
-    typeof item.name.ar === "string"
+    isCurrency(
+      item.currency
+    ) &&
+    typeof item.name.tr ===
+      "string" &&
+    typeof item.name.en ===
+      "string" &&
+    typeof item.name.ar ===
+      "string"
   );
 }
 
-function isValidOrderCustomer(
+function isOrderCustomer(
   value: unknown
 ): value is OrderCustomer {
   if (
@@ -273,16 +297,18 @@ function isValidOrderCustomer(
     value as Partial<OrderCustomer>;
 
   return (
-    typeof customer.email === "string" &&
+    typeof customer.email ===
+      "string" &&
     typeof customer.firstName ===
       "string" &&
     typeof customer.lastName ===
       "string" &&
-    typeof customer.phone === "string"
+    typeof customer.phone ===
+      "string"
   );
 }
 
-function isValidShippingAddress(
+function isShippingAddress(
   value: unknown
 ): value is OrderShippingAddress {
   if (
@@ -296,19 +322,30 @@ function isValidShippingAddress(
     value as Partial<OrderShippingAddress>;
 
   return (
-    typeof address.country === "string" &&
-    typeof address.address === "string" &&
-    typeof address.city === "string" &&
-    typeof address.postalCode === "string" &&
-    (address.addressLineTwo === undefined ||
+    typeof address.country ===
+      "string" &&
+    typeof address.address ===
+      "string" &&
+    typeof address.city ===
+      "string" &&
+    typeof address.postalCode ===
+      "string" &&
+    (
+      address.addressLineTwo ===
+        undefined ||
       typeof address.addressLineTwo ===
-        "string") &&
-    (address.state === undefined ||
-      typeof address.state === "string")
+        "string"
+    ) &&
+    (
+      address.state ===
+        undefined ||
+      typeof address.state ===
+        "string"
+    )
   );
 }
 
-function isValidStatusHistoryEntry(
+function isStatusHistoryEntry(
   value: unknown
 ): value is OrderStatusHistory {
   if (
@@ -322,337 +359,779 @@ function isValidStatusHistoryEntry(
     value as Partial<OrderStatusHistory>;
 
   return (
-    isOrderStatus(entry.status) &&
+    isOrderStatus(
+      entry.status
+    ) &&
     typeof entry.date === "string"
   );
 }
 
-function normalizeStoredOrder(
+function isOrder(
   value: unknown
-): Order | null {
+): value is Order {
   if (
     typeof value !== "object" ||
     value === null
   ) {
-    return null;
+    return false;
   }
 
-  const order = value as Partial<Order>;
+  const order =
+    value as Partial<Order>;
 
-  if (
-    typeof order.id !== "string" ||
-    typeof order.trackingCode !==
-      "string" ||
-    !isOrderStatus(order.status) ||
-    typeof order.createdAt !==
-      "string" ||
-    typeof order.updatedAt !==
-      "string" ||
-    !Array.isArray(order.items) ||
-    !isValidOrderCustomer(
+  return (
+    typeof order.id === "string" &&
+    typeof order.trackingCode ===
+      "string" &&
+
+    isOrderCustomer(
       order.customer
-    ) ||
-    !isValidShippingAddress(
+    ) &&
+
+    isShippingAddress(
       order.shippingAddress
-    )
-  ) {
-    return null;
-  }
+    ) &&
 
-  const validItems =
-    order.items.filter(isValidOrderItem);
+    Array.isArray(
+      order.items
+    ) &&
 
-  if (
-    validItems.length !==
-      order.items.length ||
-    validItems.length === 0
-  ) {
-    return null;
-  }
+    order.items.every(
+      isOrderItem
+    ) &&
 
-  const subtotal =
-    typeof order.subtotal === "number" &&
-    Number.isFinite(order.subtotal)
-      ? order.subtotal
-      : validItems.reduce(
-          (total, item) =>
-            total +
-            item.unitPrice * item.quantity,
-          0
-        );
+    order.items.length > 0 &&
 
-  const shippingCost =
+    typeof order.subtotal ===
+      "number" &&
+
+    Number.isFinite(
+      order.subtotal
+    ) &&
+
     typeof order.shippingCost ===
       "number" &&
-    Number.isFinite(order.shippingCost)
-      ? Math.max(0, order.shippingCost)
-      : 0;
 
-  const total =
-    typeof order.total === "number" &&
-    Number.isFinite(order.total)
-      ? order.total
-      : subtotal + shippingCost;
+    Number.isFinite(
+      order.shippingCost
+    ) &&
 
-  const currency: Currency =
-    isCurrency(order.currency)
-      ? order.currency
-      : validItems[0]?.currency ?? "USD";
+    typeof order.total ===
+      "number" &&
 
-  const statusHistory =
-    Array.isArray(order.statusHistory)
-      ? order.statusHistory.filter(
-          isValidStatusHistoryEntry
-        )
-      : [];
+    Number.isFinite(
+      order.total
+    ) &&
 
-  return {
-    id: order.id,
-    trackingCode: order.trackingCode,
+    isCurrency(
+      order.currency
+    ) &&
 
-    customer: order.customer,
-    shippingAddress:
-      order.shippingAddress,
-    items: validItems,
+    isOrderStatus(
+      order.status
+    ) &&
 
-    subtotal,
-    shippingCost,
-    total,
-    currency,
+    Array.isArray(
+      order.statusHistory
+    ) &&
 
-    status: order.status,
+    order.statusHistory.every(
+      isStatusHistoryEntry
+    ) &&
 
-    statusHistory:
-      statusHistory.length > 0
-        ? statusHistory
-        : [
-            {
-              status: order.status,
-              date: order.createdAt,
-            },
-          ],
+    typeof order.createdAt ===
+      "string" &&
 
-    createdAt: order.createdAt,
-    updatedAt: order.updatedAt,
-  };
+    typeof order.updatedAt ===
+      "string"
+  );
 }
+
+/*
+ * =============================================================
+ * RESPONSE HELPERS
+ * =============================================================
+ */
+
+async function readJsonResponse(
+  response: Response
+): Promise<unknown> {
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
+function getApiErrorMessage(
+  data: unknown,
+  fallback: string
+) {
+  if (
+    typeof data === "object" &&
+    data !== null &&
+    "message" in data &&
+    typeof (
+      data as {
+        message?: unknown;
+      }
+    ).message === "string"
+  ) {
+    return (
+      data as {
+        message: string;
+      }
+    ).message;
+  }
+
+  return fallback;
+}
+
+/*
+ * =============================================================
+ * PROVIDER
+ * =============================================================
+ */
 
 export function OrderProvider({
   children,
 }: OrderProviderProps) {
-  const [orders, setOrders] =
-    useState<Order[]>([]);
+  const [
+    orders,
+    setOrders,
+  ] = useState<Order[]>([]);
 
-  const [isLoaded, setIsLoaded] =
-    useState(false);
+  const [
+    isLoaded,
+    setIsLoaded,
+  ] = useState(false);
 
-  useEffect(() => {
-    try {
-      const storedOrders =
-        window.localStorage.getItem(
-          ORDERS_STORAGE_KEY
-        );
+  const [
+    isLoading,
+    setIsLoading,
+  ] = useState(false);
 
-      if (!storedOrders) {
-        return;
-      }
-
-      const parsedOrders: unknown =
-        JSON.parse(storedOrders);
-
-      if (!Array.isArray(parsedOrders)) {
-        return;
-      }
-
-      const validOrders = parsedOrders
-        .map(normalizeStoredOrder)
-        .filter(
-          (
-            order
-          ): order is Order =>
-            order !== null
-        );
-
-      setOrders(validOrders);
-    } catch (error) {
-      console.error(
-        "Siparişler yüklenemedi:",
-        error
-      );
-
-      setOrders([]);
-    } finally {
-      setIsLoaded(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!isLoaded) {
-      return;
-    }
-
-    try {
-      window.localStorage.setItem(
-        ORDERS_STORAGE_KEY,
-        JSON.stringify(orders)
-      );
-    } catch (error) {
-      console.error(
-        "Siparişler kaydedilemedi:",
-        error
-      );
-    }
-  }, [orders, isLoaded]);
-
-  const createOrder = useCallback(
-    (input: CreateOrderInput): Order => {
-      const now =
-        new Date().toISOString();
-
-      const shippingCost = Math.max(
-        0,
-        input.shippingCost ?? 0
-      );
-
-      const subtotal = Math.max(
-        0,
-        input.subtotal
-      );
-
-      const trackingCode =
-        createUniqueTrackingCode(orders);
-
-      const newOrder: Order = {
-        id: createOrderId(),
-        trackingCode,
-
-        customer: input.customer,
-        shippingAddress:
-          input.shippingAddress,
-        items: input.items,
-
-        subtotal,
-        shippingCost,
-        total: subtotal + shippingCost,
-        currency: input.currency,
-
-        status: "received",
-
-        statusHistory: [
-          {
-            status: "received",
-            date: now,
-          },
-        ],
-
-        createdAt: now,
-        updatedAt: now,
-      };
-
-      setOrders((currentOrders) => [
-        newOrder,
-        ...currentOrders,
-      ]);
-
-      return newOrder;
-    },
-    [orders]
+  const [
+    error,
+    setError,
+  ] = useState<string | null>(
+    null
   );
+
+  /*
+   * ===========================================================
+   * REFRESH ORDERS
+   *
+   * GET /api/orders
+   *
+   * Admin ekranı ve context'in genel sipariş listesi
+   * PostgreSQL'den buradan yüklenir.
+   * ===========================================================
+   */
+
+  const refreshOrders =
+    useCallback(
+      async () => {
+        setIsLoading(true);
+        setError(null);
+
+        try {
+          const response =
+            await fetch(
+              "/api/orders",
+              {
+                method: "GET",
+
+                cache:
+                  "no-store",
+
+                credentials:
+                  "same-origin",
+              }
+            );
+
+          const data =
+            (await readJsonResponse(
+              response
+            )) as
+              | OrdersApiResponse
+              | null;
+
+          if (
+            !response.ok ||
+            !data?.success
+          ) {
+            throw new Error(
+              getApiErrorMessage(
+                data,
+                "Siparişler alınamadı."
+              )
+            );
+          }
+
+          const receivedOrders =
+            Array.isArray(
+              data.orders
+            )
+              ? data.orders.filter(
+                  isOrder
+                )
+              : [];
+
+          setOrders(
+            receivedOrders
+          );
+        } catch (requestError) {
+          console.error(
+            "Siparişler alınamadı:",
+            requestError
+          );
+
+          setOrders([]);
+
+          setError(
+            requestError instanceof
+              Error
+              ? requestError.message
+              : "Siparişler alınamadı."
+          );
+        } finally {
+          setIsLoading(false);
+          setIsLoaded(true);
+        }
+      },
+      []
+    );
+
+  /*
+   * Provider açıldığında siparişleri PostgreSQL'den al.
+   */
+
+  useEffect(() => {
+    void refreshOrders();
+  }, [refreshOrders]);
+
+  /*
+   * ===========================================================
+   * CREATE ORDER
+   *
+   * POST /api/orders
+   *
+   * Burada client fiyatlarına güvenilmiyor.
+   * API gerçek fiyatı PostgreSQL'den hesaplıyor.
+   * ===========================================================
+   */
+
+  const createOrder =
+    useCallback(
+      async (
+        input: CreateOrderInput
+      ): Promise<Order> => {
+        setError(null);
+
+        /*
+         * API'nin ihtiyacı olan minimum item
+         * bilgisini gönderiyoruz.
+         *
+         * name/image/unitPrice/subtotal gibi
+         * bilgiler server tarafından DB'den alınır.
+         */
+
+        const payload = {
+          customer:
+            input.customer,
+
+          shippingAddress:
+            input.shippingAddress,
+
+          items:
+            input.items.map(
+              (item) => ({
+                productId:
+                  item.productId,
+
+                color:
+                  item.color,
+
+                quantity:
+                  item.quantity,
+              })
+            ),
+
+          /*
+           * API bunlara güvenmiyor.
+           * Mevcut frontend uyumluluğu için
+           * şimdilik gönderiyoruz.
+           */
+          subtotal:
+            input.subtotal,
+
+          shippingCost:
+            input.shippingCost ??
+            0,
+
+          currency:
+            input.currency,
+        };
+
+        const response =
+          await fetch(
+            "/api/orders",
+            {
+              method: "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+
+              credentials:
+                "same-origin",
+
+              body:
+                JSON.stringify(
+                  payload
+                ),
+            }
+          );
+
+        const data =
+          (await readJsonResponse(
+            response
+          )) as
+            | OrderApiResponse
+            | null;
+
+        if (
+          !response.ok ||
+          !data?.success ||
+          !data.order
+        ) {
+          const message =
+            getApiErrorMessage(
+              data,
+              "Sipariş oluşturulamadı."
+            );
+
+          setError(message);
+
+          throw new Error(
+            message
+          );
+        }
+
+        if (
+          !isOrder(
+            data.order
+          )
+        ) {
+          const message =
+            "Sunucudan geçersiz sipariş verisi alındı.";
+
+          setError(message);
+
+          throw new Error(
+            message
+          );
+        }
+
+        const createdOrder =
+          data.order;
+
+        /*
+         * Yeni siparişi context'e anında ekliyoruz.
+         *
+         * Böylece order-complete ekranına geçerken
+         * tekrar tüm listeyi beklememiz gerekmez.
+         */
+
+        setOrders(
+          (currentOrders) => {
+            const withoutDuplicate =
+              currentOrders.filter(
+                (order) =>
+                  order.id !==
+                  createdOrder.id
+              );
+
+            return [
+              createdOrder,
+              ...withoutDuplicate,
+            ];
+          }
+        );
+
+        return createdOrder;
+      },
+      []
+    );
+
+  /*
+   * ===========================================================
+   * FIND ORDER FROM CURRENT STATE
+   *
+   * Senkron fonksiyonu koruyoruz.
+   *
+   * Mevcut componentlerin kırılmaması için
+   * halen kullanılabilir.
+   * ===========================================================
+   */
 
   const findOrderByTrackingCode =
     useCallback(
-      (trackingCode: string) => {
+      (
+        trackingCode: string
+      ) => {
         const normalizedCode =
           trackingCode
             .trim()
             .toUpperCase();
 
-        if (!normalizedCode) {
+        if (
+          !normalizedCode
+        ) {
           return undefined;
         }
 
         return orders.find(
           (order) =>
-            order.trackingCode.toUpperCase() ===
+            order.trackingCode
+              .trim()
+              .toUpperCase() ===
             normalizedCode
         );
       },
       [orders]
     );
 
-  const updateOrderStatus =
+  /*
+   * ===========================================================
+   * FETCH ORDER BY TRACKING CODE
+   *
+   * GET /api/orders/tracking/[trackingCode]
+   *
+   * Bu fonksiyon public sipariş takip ekranında
+   * kullanılacak.
+   * ===========================================================
+   */
+
+  const fetchOrderByTrackingCode =
     useCallback(
-      (
-        orderId: string,
-        status: OrderStatus
-      ) => {
-        const now =
-          new Date().toISOString();
+      async (
+        trackingCode: string
+      ): Promise<
+        Order | undefined
+      > => {
+        const normalizedCode =
+          trackingCode
+            .trim()
+            .toUpperCase();
 
-        setOrders((currentOrders) =>
-          currentOrders.map((order) => {
-            if (
-              order.id !== orderId ||
-              order.status === status
-            ) {
-              return order;
+        if (
+          !normalizedCode
+        ) {
+          return undefined;
+        }
+
+        setError(null);
+
+        const response =
+          await fetch(
+            `/api/orders/tracking/${encodeURIComponent(
+              normalizedCode
+            )}`,
+            {
+              method: "GET",
+
+              cache:
+                "no-store",
+
+              credentials:
+                "same-origin",
             }
+          );
 
-            const statusAlreadyExists =
-              order.statusHistory.some(
-                (entry) =>
-                  entry.status === status
+        /*
+         * Takip kodu bulunamadıysa bunu
+         * uygulama hatası olarak değil,
+         * "sipariş bulunamadı" sonucu olarak
+         * değerlendiriyoruz.
+         */
+
+        if (
+          response.status ===
+          404
+        ) {
+          return undefined;
+        }
+
+        const data =
+          (await readJsonResponse(
+            response
+          )) as
+            | OrderApiResponse
+            | null;
+
+        if (
+          !response.ok ||
+          !data?.success ||
+          !data.order
+        ) {
+          const message =
+            getApiErrorMessage(
+              data,
+              "Sipariş bilgisi alınamadı."
+            );
+
+          setError(message);
+
+          throw new Error(
+            message
+          );
+        }
+
+        if (
+          !isOrder(
+            data.order
+          )
+        ) {
+          const message =
+            "Sunucudan geçersiz sipariş verisi alındı.";
+
+          setError(message);
+
+          throw new Error(
+            message
+          );
+        }
+
+        const fetchedOrder =
+          data.order;
+
+        /*
+         * Gelen siparişi context state'e de yaz.
+         */
+
+        setOrders(
+          (currentOrders) => {
+            const existingIndex =
+              currentOrders.findIndex(
+                (order) =>
+                  order.id ===
+                  fetchedOrder.id
               );
 
-            return {
-              ...order,
-              status,
-              updatedAt: now,
+            if (
+              existingIndex ===
+              -1
+            ) {
+              return [
+                fetchedOrder,
+                ...currentOrders,
+              ];
+            }
 
-              statusHistory:
-                statusAlreadyExists
-                  ? order.statusHistory
-                  : [
-                      ...order.statusHistory,
-                      {
-                        status,
-                        date: now,
-                      },
-                    ],
-            };
-          })
+            return currentOrders.map(
+              (order) =>
+                order.id ===
+                fetchedOrder.id
+                  ? fetchedOrder
+                  : order
+            );
+          }
         );
+
+        return fetchedOrder;
       },
       []
     );
+
+  /*
+   * ===========================================================
+   * UPDATE ORDER STATUS
+   *
+   * PATCH /api/orders/[orderId]
+   *
+   * Admin tarafından kullanılır.
+   * ===========================================================
+   */
+
+  const updateOrderStatus =
+    useCallback(
+      async (
+        orderId: string,
+        status: OrderStatus
+      ): Promise<Order> => {
+        const normalizedOrderId =
+          orderId.trim();
+
+        if (
+          !normalizedOrderId
+        ) {
+          throw new Error(
+            "Sipariş kimliği geçersiz."
+          );
+        }
+
+        if (
+          !isOrderStatus(
+            status
+          )
+        ) {
+          throw new Error(
+            "Sipariş durumu geçersiz."
+          );
+        }
+
+        setError(null);
+
+        const response =
+          await fetch(
+            `/api/orders/${encodeURIComponent(
+              normalizedOrderId
+            )}`,
+            {
+              method: "PATCH",
+
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+
+              credentials:
+                "same-origin",
+
+              body:
+                JSON.stringify({
+                  status,
+                }),
+            }
+          );
+
+        const data =
+          (await readJsonResponse(
+            response
+          )) as
+            | OrderApiResponse
+            | null;
+
+        if (
+          !response.ok ||
+          !data?.success ||
+          !data.order
+        ) {
+          const message =
+            getApiErrorMessage(
+              data,
+              "Sipariş durumu güncellenemedi."
+            );
+
+          setError(message);
+
+          throw new Error(
+            message
+          );
+        }
+
+        if (
+          !isOrder(
+            data.order
+          )
+        ) {
+          const message =
+            "Sunucudan geçersiz sipariş verisi alındı.";
+
+          setError(message);
+
+          throw new Error(
+            message
+          );
+        }
+
+        const updatedOrder =
+          data.order;
+
+        /*
+         * PostgreSQL'den dönen gerçek güncel
+         * sipariş ile state'i değiştiriyoruz.
+         */
+
+        setOrders(
+          (currentOrders) =>
+            currentOrders.map(
+              (order) =>
+                order.id ===
+                updatedOrder.id
+                  ? updatedOrder
+                  : order
+            )
+        );
+
+        return updatedOrder;
+      },
+      []
+    );
+
+  /*
+   * ===========================================================
+   * CONTEXT VALUE
+   * ===========================================================
+   */
 
   const value =
     useMemo<OrderContextValue>(
       () => ({
         orders,
+
         isLoaded,
+
+        isLoading,
+
+        error,
+
+        refreshOrders,
+
         createOrder,
+
         findOrderByTrackingCode,
+
+        fetchOrderByTrackingCode,
+
         updateOrderStatus,
       }),
       [
         orders,
         isLoaded,
+        isLoading,
+        error,
+        refreshOrders,
         createOrder,
         findOrderByTrackingCode,
+        fetchOrderByTrackingCode,
         updateOrderStatus,
       ]
     );
 
   return (
-    <OrderContext.Provider value={value}>
+    <OrderContext.Provider
+      value={value}
+    >
       {children}
     </OrderContext.Provider>
   );
 }
 
+/*
+ * =============================================================
+ * HOOK
+ * =============================================================
+ */
+
 export function useOrders() {
-  const context = useContext(OrderContext);
+  const context =
+    useContext(
+      OrderContext
+    );
 
   if (!context) {
     throw new Error(

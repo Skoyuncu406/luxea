@@ -15,6 +15,12 @@ import type {
   LocalizedText,
 } from "@/types/category";
 
+/*
+ * =============================================================
+ * TYPES
+ * =============================================================
+ */
+
 export type CreateCategoryInput = {
   slug: string;
 
@@ -38,20 +44,20 @@ type CategoryContextValue = {
 
   createCategory: (
     input: CreateCategoryInput
-  ) => Category;
+  ) => Promise<Category>;
 
   updateCategory: (
     categoryId: string,
     input: UpdateCategoryInput
-  ) => Category | undefined;
+  ) => Promise<Category | undefined>;
 
   deleteCategory: (
     categoryId: string
-  ) => void;
+  ) => Promise<void>;
 
   toggleCategoryActive: (
     categoryId: string
-  ) => void;
+  ) => Promise<void>;
 
   findCategoryById: (
     categoryId: string
@@ -61,49 +67,43 @@ type CategoryContextValue = {
     slug: string
   ) => Category | undefined;
 
-  resetCategories: () => void;
+  refreshCategories: () => Promise<void>;
+
+  resetCategories: () => Promise<void>;
 };
 
 type CategoryProviderProps = {
   children: ReactNode;
 };
 
-const CATEGORIES_STORAGE_KEY =
-  "luxea-categories";
+type CategoriesApiResponse = {
+  success: boolean;
+
+  categories?: Category[];
+
+  message?: string;
+};
+
+type CategoryApiResponse = {
+  success: boolean;
+
+  category?: Category;
+
+  message?: string;
+
+  code?: string;
+};
+
+/*
+ * =============================================================
+ * CONTEXT
+ * =============================================================
+ */
 
 const CategoryContext =
   createContext<CategoryContextValue | null>(
     null
   );
-
-/*
- * =============================================================
- * KATEGORİ ADI NORMALİZASYONU
- *
- * TR / EN tamamen büyük harfe çevrilir.
- * Arapçada büyük-küçük harf olmadığı için değişmez.
- * =============================================================
- */
-
-function normalizeCategoryName(
-  value: string,
-  locale: "tr" | "en" | "ar"
-) {
-  const trimmed =
-    value.trim();
-
-  if (
-    locale === "ar"
-  ) {
-    return trimmed;
-  }
-
-  return trimmed.toLocaleUpperCase(
-    locale === "tr"
-      ? "tr-TR"
-      : "en-US"
-  );
-}
 
 /*
  * =============================================================
@@ -137,201 +137,20 @@ function normalizeSlug(
 
 /*
  * =============================================================
- * CATEGORY ID
+ * RESPONSE OKUMA
  * =============================================================
  */
 
-function createCategoryId() {
-  if (
-    typeof window !==
-      "undefined" &&
-    window.crypto
-      ?.randomUUID
-  ) {
-    return `category-${window.crypto.randomUUID()}`;
-  }
-
-  return `category-${Date.now()}-${Math.random()
-    .toString(36)
-    .slice(2, 10)}`;
-}
-
-/*
- * =============================================================
- * LOCALIZED TEXT DOĞRULAMA
- * =============================================================
- */
-
-function isLocalizedText(
-  value: unknown
-): value is LocalizedText {
-  if (
-    typeof value !== "object" ||
-    value === null
-  ) {
-    return false;
-  }
-
-  const text =
-    value as Partial<LocalizedText>;
-
-  return (
-    typeof text.tr ===
-      "string" &&
-    typeof text.en ===
-      "string" &&
-    typeof text.ar ===
-      "string"
-  );
-}
-
-/*
- * =============================================================
- * CATEGORY DOĞRULAMA
- * =============================================================
- */
-
-function isValidCategory(
-  value: unknown
-): value is Category {
-  if (
-    typeof value !== "object" ||
-    value === null
-  ) {
-    return false;
-  }
-
-  const category =
-    value as Partial<Category>;
-
-  return (
-    typeof category.id ===
-      "string" &&
-    typeof category.slug ===
-      "string" &&
-    isLocalizedText(
-      category.name
-    ) &&
-    isLocalizedText(
-      category.eyebrow
-    ) &&
-    typeof category.image ===
-      "string" &&
-    typeof category.order ===
-      "number" &&
-    Number.isFinite(
-      category.order
-    ) &&
-    typeof category.isActive ===
-      "boolean"
-  );
-}
-
-/*
- * =============================================================
- * CATEGORY INPUT NORMALİZASYONU
- * =============================================================
- */
-
-function normalizeCategoryInput(
-  input: CreateCategoryInput
-): CreateCategoryInput {
-  return {
-    slug: normalizeSlug(
-      input.slug
-    ),
-
-    /*
-     * Admin küçük/büyük harf fark etmeksizin
-     * yazabilir.
-     *
-     * Kaydedildiğinde TR ve EN tamamen
-     * büyük harfe dönüştürülür.
-     */
-    name: {
-      tr: normalizeCategoryName(
-        input.name.tr,
-        "tr"
-      ),
-
-      en: normalizeCategoryName(
-        input.name.en,
-        "en"
-      ),
-
-      ar: normalizeCategoryName(
-        input.name.ar,
-        "ar"
-      ),
-    },
-
-    eyebrow: {
-      tr: input.eyebrow.tr.trim(),
-      en: input.eyebrow.en.trim(),
-      ar: input.eyebrow.ar.trim(),
-    },
-
-    image:
-      input.image.trim(),
-
-    order: Math.max(
-      0,
-      Math.trunc(
-        input.order
-      )
-    ),
-
-    isActive:
-      input.isActive,
-  };
-}
-
-/*
- * =============================================================
- * UNIQUE SLUG
- * =============================================================
- */
-
-function createUniqueSlug(
-  requestedSlug: string,
-  categories: Category[],
-  ignoredCategoryId?: string
-) {
-  const baseSlug =
-    normalizeSlug(
-      requestedSlug
-    ) || "category";
-
-  const exists = (
-    candidate: string
-  ) =>
-    categories.some(
-      (category) =>
-        category.id !==
-          ignoredCategoryId &&
-        category.slug ===
-          candidate
+async function readJsonResponse<T>(
+  response: Response
+): Promise<T> {
+  try {
+    return (await response.json()) as T;
+  } catch {
+    throw new Error(
+      "Sunucudan geçersiz bir cevap alındı."
     );
-
-  if (
-    !exists(
-      baseSlug
-    )
-  ) {
-    return baseSlug;
   }
-
-  let suffix = 2;
-
-  while (
-    exists(
-      `${baseSlug}-${suffix}`
-    )
-  ) {
-    suffix += 1;
-  }
-
-  return `${baseSlug}-${suffix}`;
 }
 
 /*
@@ -344,10 +163,19 @@ export function CategoryProvider({
   children,
 }: CategoryProviderProps) {
   /*
-   * Demo kategori yok.
+   * Artık demo kategori veya localStorage kullanılmıyor.
    *
-   * Sistem sıfır kategori ile başlar.
+   * Tek gerçek veri kaynağı:
+   *
+   * Neon PostgreSQL
+   *       ↓
+   * Prisma
+   *       ↓
+   * /api/categories
+   *       ↓
+   * CategoryContext
    */
+
   const [
     categories,
     setCategories,
@@ -360,122 +188,142 @@ export function CategoryProvider({
 
   /*
    * =========================================================
-   * LOCAL STORAGE'DAN KATEGORİLERİ YÜKLE
+   * KATEGORİLERİ DATABASE'DEN GETİR
    * =========================================================
    */
 
-  useEffect(() => {
-    try {
-      const storedCategories =
-        window.localStorage.getItem(
-          CATEGORIES_STORAGE_KEY
-        );
+  const refreshCategories =
+    useCallback(
+      async () => {
+        try {
+          const response =
+            await fetch(
+              "/api/categories",
+              {
+                method: "GET",
 
-      /*
-       * Veri yoksa kategori listesi boş kalır.
-       * Demo kategori yüklenmez.
-       */
-      if (
-        !storedCategories
-      ) {
-        setCategories([]);
-        return;
-      }
+                cache: "no-store",
 
-      const parsed:
-        unknown =
-        JSON.parse(
-          storedCategories
-        );
+                headers: {
+                  Accept:
+                    "application/json",
+                },
+              }
+            );
 
-      if (
-        !Array.isArray(
-          parsed
-        )
-      ) {
-        setCategories([]);
-        return;
-      }
+          const data =
+            await readJsonResponse<CategoriesApiResponse>(
+              response
+            );
 
-      /*
-       * Yalnızca geçerli admin kategorilerini yükle.
-       */
-      const validCategories =
-        parsed.filter(
-          isValidCategory
-        );
+          if (
+            !response.ok ||
+            !data.success
+          ) {
+            throw new Error(
+              data.message ||
+                "Kategoriler alınamadı."
+            );
+          }
 
-      /*
-       * Mevcut eski kayıtlar varsa kategori
-       * isimlerini de normalleştiriyoruz.
-       */
-      const normalizedCategories =
-        validCategories.map(
-          (category) => ({
-            ...category,
+          const receivedCategories =
+            Array.isArray(
+              data.categories
+            )
+              ? data.categories
+              : [];
 
-            name: {
-              tr: normalizeCategoryName(
-                category.name.tr,
-                "tr"
-              ),
+          setCategories(
+            receivedCategories
+          );
+        } catch (error) {
+          console.error(
+            "Kategoriler database'den yüklenemedi:",
+            error
+          );
 
-              en: normalizeCategoryName(
-                category.name.en,
-                "en"
-              ),
+          setCategories([]);
 
-              ar: normalizeCategoryName(
-                category.name.ar,
-                "ar"
-              ),
-            },
-          })
-        );
-
-      setCategories(
-        normalizedCategories
-      );
-    } catch (error) {
-      console.error(
-        "Kategoriler yüklenemedi:",
-        error
-      );
-
-      setCategories([]);
-    } finally {
-      setIsLoaded(true);
-    }
-  }, []);
+          throw error;
+        }
+      },
+      []
+    );
 
   /*
    * =========================================================
-   * KATEGORİLERİ LOCAL STORAGE'A KAYDET
+   * İLK YÜKLEME
    * =========================================================
    */
 
   useEffect(() => {
-    if (!isLoaded) {
-      return;
+    let isMounted = true;
+
+    async function loadCategories() {
+      try {
+        const response =
+          await fetch(
+            "/api/categories",
+            {
+              method: "GET",
+
+              cache: "no-store",
+
+              headers: {
+                Accept:
+                  "application/json",
+              },
+            }
+          );
+
+        const data =
+          await readJsonResponse<CategoriesApiResponse>(
+            response
+          );
+
+        if (
+          !response.ok ||
+          !data.success
+        ) {
+          throw new Error(
+            data.message ||
+              "Kategoriler alınamadı."
+          );
+        }
+
+        if (!isMounted) {
+          return;
+        }
+
+        setCategories(
+          Array.isArray(
+            data.categories
+          )
+            ? data.categories
+            : []
+        );
+      } catch (error) {
+        console.error(
+          "Kategoriler yüklenemedi:",
+          error
+        );
+
+        if (isMounted) {
+          setCategories([]);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoaded(true);
+        }
+      }
     }
 
-    try {
-      window.localStorage.setItem(
-        CATEGORIES_STORAGE_KEY,
-        JSON.stringify(
-          categories
-        )
-      );
-    } catch (error) {
-      console.error(
-        "Kategoriler kaydedilemedi:",
-        error
-      );
-    }
-  }, [
-    categories,
-    isLoaded,
-  ]);
+    void loadCategories();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   /*
    * =========================================================
@@ -485,39 +333,70 @@ export function CategoryProvider({
 
   const createCategory =
     useCallback(
-      (
+      async (
         input: CreateCategoryInput
-      ): Category => {
-        const normalized =
-          normalizeCategoryInput(
-            input
+      ): Promise<Category> => {
+        const response =
+          await fetch(
+            "/api/categories",
+            {
+              method: "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json",
+
+                Accept:
+                  "application/json",
+              },
+
+              body: JSON.stringify(
+                input
+              ),
+            }
           );
 
-        const newCategory:
-          Category =
-          {
-            id: createCategoryId(),
+        const data =
+          await readJsonResponse<CategoryApiResponse>(
+            response
+          );
 
-            ...normalized,
+        if (
+          !response.ok ||
+          !data.success ||
+          !data.category
+        ) {
+          throw new Error(
+            data.message ||
+              "Kategori oluşturulamadı."
+          );
+        }
 
-            slug: createUniqueSlug(
-              normalized.slug,
-              categories
-            ),
-          };
+        const newCategory =
+          data.category;
+
+        /*
+         * Database başarılı olduktan sonra
+         * client state güncellenir.
+         */
 
         setCategories(
           (
             currentCategories
-          ) => [
-            ...currentCategories,
-            newCategory,
-          ]
+          ) =>
+            [
+              ...currentCategories,
+              newCategory,
+            ].sort(
+              (a, b) =>
+                a.order -
+                b.order
+            )
         );
 
         return newCategory;
       },
-      [categories]
+      []
     );
 
   /*
@@ -528,10 +407,12 @@ export function CategoryProvider({
 
   const updateCategory =
     useCallback(
-      (
+      async (
         categoryId: string,
         input: UpdateCategoryInput
-      ) => {
+      ): Promise<
+        Category | undefined
+      > => {
         const currentCategory =
           categories.find(
             (category) =>
@@ -539,69 +420,68 @@ export function CategoryProvider({
               categoryId
           );
 
-        if (
-          !currentCategory
-        ) {
+        if (!currentCategory) {
           return undefined;
         }
 
-        const mergedInput:
-          CreateCategoryInput =
-          {
-            slug:
-              input.slug ??
-              currentCategory.slug,
+        const response =
+          await fetch(
+            `/api/categories/${encodeURIComponent(
+              categoryId
+            )}`,
+            {
+              method: "PATCH",
 
-            name:
-              input.name ??
-              currentCategory.name,
+              headers: {
+                "Content-Type":
+                  "application/json",
 
-            eyebrow:
-              input.eyebrow ??
-              currentCategory.eyebrow,
+                Accept:
+                  "application/json",
+              },
 
-            image:
-              input.image ??
-              currentCategory.image,
-
-            order:
-              input.order ??
-              currentCategory.order,
-
-            isActive:
-              input.isActive ??
-              currentCategory.isActive,
-          };
-
-        const normalized =
-          normalizeCategoryInput(
-            mergedInput
+              body: JSON.stringify(
+                input
+              ),
+            }
           );
 
-        const updatedCategory:
-          Category =
-          {
-            ...currentCategory,
-            ...normalized,
+        const data =
+          await readJsonResponse<CategoryApiResponse>(
+            response
+          );
 
-            slug: createUniqueSlug(
-              normalized.slug,
-              categories,
-              categoryId
-            ),
-          };
+        if (
+          !response.ok ||
+          !data.success ||
+          !data.category
+        ) {
+          throw new Error(
+            data.message ||
+              "Kategori güncellenemedi."
+          );
+        }
+
+        const updatedCategory =
+          data.category;
 
         setCategories(
           (
             currentCategories
           ) =>
-            currentCategories.map(
-              (category) =>
-                category.id ===
-                categoryId
-                  ? updatedCategory
-                  : category
-            )
+            currentCategories
+              .map(
+                (category) =>
+                  category.id ===
+                  categoryId
+                    ? updatedCategory
+                    : category
+              )
+              .sort(
+                (a, b) =>
+                  a.order -
+                  b.order
+              )
         );
 
         return updatedCategory;
@@ -617,9 +497,44 @@ export function CategoryProvider({
 
   const deleteCategory =
     useCallback(
-      (
+      async (
         categoryId: string
-      ) => {
+      ): Promise<void> => {
+        const response =
+          await fetch(
+            `/api/categories/${encodeURIComponent(
+              categoryId
+            )}`,
+            {
+              method: "DELETE",
+
+              headers: {
+                Accept:
+                  "application/json",
+              },
+            }
+          );
+
+        const data =
+          await readJsonResponse<CategoryApiResponse>(
+            response
+          );
+
+        if (
+          !response.ok ||
+          !data.success
+        ) {
+          throw new Error(
+            data.message ||
+              "Kategori silinemedi."
+          );
+        }
+
+        /*
+         * Database silme başarılı olduktan
+         * sonra state'ten çıkar.
+         */
+
         setCategories(
           (
             currentCategories
@@ -642,9 +557,64 @@ export function CategoryProvider({
 
   const toggleCategoryActive =
     useCallback(
-      (
+      async (
         categoryId: string
-      ) => {
+      ): Promise<void> => {
+        const currentCategory =
+          categories.find(
+            (category) =>
+              category.id ===
+              categoryId
+          );
+
+        if (!currentCategory) {
+          throw new Error(
+            "Kategori bulunamadı."
+          );
+        }
+
+        const response =
+          await fetch(
+            `/api/categories/${encodeURIComponent(
+              categoryId
+            )}`,
+            {
+              method: "PATCH",
+
+              headers: {
+                "Content-Type":
+                  "application/json",
+
+                Accept:
+                  "application/json",
+              },
+
+              body: JSON.stringify({
+                isActive:
+                  !currentCategory.isActive,
+              }),
+            }
+          );
+
+        const data =
+          await readJsonResponse<CategoryApiResponse>(
+            response
+          );
+
+        if (
+          !response.ok ||
+          !data.success ||
+          !data.category
+        ) {
+          throw new Error(
+            data.message ||
+              "Kategori durumu değiştirilemedi."
+          );
+        }
+
+        const updatedCategory =
+          data.category;
+
         setCategories(
           (
             currentCategories
@@ -653,17 +623,12 @@ export function CategoryProvider({
               (category) =>
                 category.id ===
                 categoryId
-                  ? {
-                      ...category,
-
-                      isActive:
-                        !category.isActive,
-                    }
+                  ? updatedCategory
                   : category
             )
         );
       },
-      []
+      [categories]
     );
 
   /*
@@ -713,15 +678,25 @@ export function CategoryProvider({
   /*
    * =========================================================
    * TÜM KATEGORİLERİ TEMİZLE
+   * =========================================================
    *
-   * Demo kategoriye dönmez.
+   * Eski sistemde bu yalnızca localStorage/state temizliyordu.
+   *
+   * Database sisteminde reset işleminin yanlışlıkla bütün
+   * production kategorilerini silmesini istemiyoruz.
+   *
+   * Bu nedenle resetCategories yalnızca mevcut state'i
+   * database'den tekrar senkronize eder.
    * =========================================================
    */
 
   const resetCategories =
-    useCallback(() => {
-      setCategories([]);
-    }, []);
+    useCallback(
+      async (): Promise<void> => {
+        await refreshCategories();
+      },
+      [refreshCategories]
+    );
 
   /*
    * =========================================================
@@ -733,31 +708,43 @@ export function CategoryProvider({
     useMemo<CategoryContextValue>(
       () => ({
         categories,
+
         isLoaded,
 
         createCategory,
+
         updateCategory,
+
         deleteCategory,
 
         toggleCategoryActive,
 
         findCategoryById,
+
         findCategoryBySlug,
+
+        refreshCategories,
 
         resetCategories,
       }),
       [
         categories,
+
         isLoaded,
 
         createCategory,
+
         updateCategory,
+
         deleteCategory,
 
         toggleCategoryActive,
 
         findCategoryById,
+
         findCategoryBySlug,
+
+        refreshCategories,
 
         resetCategories,
       ]

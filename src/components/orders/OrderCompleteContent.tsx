@@ -1,8 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import {
+  useEffect,
+  useState,
+} from "react";
+
 import Image from "next/image";
 import Link from "next/link";
+
 import {
   Check,
   Clipboard,
@@ -11,7 +16,11 @@ import {
   Search,
 } from "lucide-react";
 
-import { useOrders } from "@/contexts/OrderContext";
+import {
+  useOrders,
+  type Order,
+} from "@/contexts/OrderContext";
+
 import { formatPrice } from "@/lib/format-price";
 import type { Locale } from "@/lib/i18n/config";
 
@@ -46,14 +55,146 @@ export default function OrderCompleteContent({
   trackingCode,
   dictionary,
 }: OrderCompleteContentProps) {
-  const { isLoaded, findOrderByTrackingCode } =
-    useOrders();
+  const {
+    findOrderByTrackingCode,
+    fetchOrderByTrackingCode,
+  } = useOrders();
 
-  const [isCopied, setIsCopied] =
-    useState(false);
+  /*
+   * Checkout'tan hemen gelindiyse sipariş
+   * context içerisinde zaten bulunabilir.
+   *
+   * Bu durumda kullanıcıya bekleme ekranı
+   * göstermeden siparişi doğrudan gösteriyoruz.
+   */
+  const cachedOrder =
+    findOrderByTrackingCode(
+      trackingCode
+    );
 
-  const order =
-    findOrderByTrackingCode(trackingCode);
+  const [
+    order,
+    setOrder,
+  ] = useState<Order | undefined>(
+    cachedOrder
+  );
+
+  const [
+    isLoading,
+    setIsLoading,
+  ] = useState(
+    !cachedOrder
+  );
+
+  const [
+    isNotFound,
+    setIsNotFound,
+  ] = useState(false);
+
+  const [
+    isCopied,
+    setIsCopied,
+  ] = useState(false);
+
+  /*
+   * ===========================================================
+   * POSTGRESQL'DEN SİPARİŞİ GETİR
+   * ===========================================================
+   *
+   * Sayfa F5 ile yenilense bile sipariş:
+   *
+   * trackingCode
+   *      ↓
+   * /api/orders/tracking/[trackingCode]
+   *      ↓
+   * PostgreSQL
+   *
+   * üzerinden tekrar bulunur.
+   */
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    async function loadOrder() {
+      /*
+       * Context içerisinde sipariş zaten varsa
+       * tekrar API isteği yapmak zorunda değiliz.
+       */
+      const existingOrder =
+        findOrderByTrackingCode(
+          trackingCode
+        );
+
+      if (existingOrder) {
+        if (!isCancelled) {
+          setOrder(
+            existingOrder
+          );
+
+          setIsLoading(false);
+          setIsNotFound(false);
+        }
+
+        return;
+      }
+
+      setIsLoading(true);
+      setIsNotFound(false);
+
+      try {
+        const fetchedOrder =
+          await fetchOrderByTrackingCode(
+            trackingCode
+          );
+
+        if (isCancelled) {
+          return;
+        }
+
+        if (!fetchedOrder) {
+          setOrder(undefined);
+          setIsNotFound(true);
+          return;
+        }
+
+        setOrder(
+          fetchedOrder
+        );
+
+        setIsNotFound(false);
+      } catch (error) {
+        console.error(
+          "Sipariş bilgisi yüklenemedi:",
+          error
+        );
+
+        if (!isCancelled) {
+          setOrder(undefined);
+          setIsNotFound(true);
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    void loadOrder();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [
+    trackingCode,
+    findOrderByTrackingCode,
+    fetchOrderByTrackingCode,
+  ]);
+
+  /*
+   * ===========================================================
+   * TAKİP KODUNU KOPYALA
+   * ===========================================================
+   */
 
   async function copyTrackingCode() {
     if (!order) {
@@ -80,7 +221,13 @@ export default function OrderCompleteContent({
     }
   }
 
-  if (!isLoaded) {
+  /*
+   * ===========================================================
+   * LOADING
+   * ===========================================================
+   */
+
+  if (isLoading) {
     return (
       <div className="flex min-h-[520px] items-center justify-center border-y border-border">
         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
@@ -90,7 +237,16 @@ export default function OrderCompleteContent({
     );
   }
 
-  if (!order) {
+  /*
+   * ===========================================================
+   * NOT FOUND
+   * ===========================================================
+   */
+
+  if (
+    isNotFound ||
+    !order
+  ) {
     return (
       <div className="flex min-h-[520px] flex-col items-center justify-center border-y border-border px-5 text-center">
         <Search
@@ -123,6 +279,12 @@ export default function OrderCompleteContent({
     );
   }
 
+  /*
+   * ===========================================================
+   * VIEW DATA
+   * ===========================================================
+   */
+
   const customerName = [
     order.customer.firstName,
     order.customer.lastName,
@@ -130,13 +292,23 @@ export default function OrderCompleteContent({
     .filter(Boolean)
     .join(" ");
 
-  const trackingPageUrl = `/${locale}/account/orders?code=${encodeURIComponent(
-    order.trackingCode
-  )}`;
+  const trackingPageUrl =
+    `/${locale}/account/orders?code=${encodeURIComponent(
+      order.trackingCode
+    )}`;
+
+  /*
+   * ===========================================================
+   * PAGE
+   * ===========================================================
+   */
 
   return (
     <div>
-      {/* Başarı alanı */}
+      {/* =======================================================
+          BAŞARI ALANI
+      ======================================================= */}
+
       <div className="flex flex-col items-center border-y border-border px-5 py-14 text-center sm:py-20">
         <span className="flex h-20 w-20 items-center justify-center rounded-full border border-success/30 bg-success/10 text-success">
           <PackageCheck
@@ -157,7 +329,10 @@ export default function OrderCompleteContent({
           {dictionary.description}
         </p>
 
-        {/* Takip kodu */}
+        {/* =====================================================
+            TAKİP KODU
+        ===================================================== */}
+
         <div className="mt-10 w-full max-w-xl border border-accent/30 bg-surface/65 p-5 sm:p-7">
           <p className="text-[9px] font-semibold uppercase tracking-[0.22em] text-muted">
             {dictionary.trackingCode}
@@ -172,7 +347,9 @@ export default function OrderCompleteContent({
 
           <button
             type="button"
-            onClick={copyTrackingCode}
+            onClick={
+              copyTrackingCode
+            }
             aria-label={
               isCopied
                 ? dictionary.copied
@@ -213,11 +390,17 @@ export default function OrderCompleteContent({
         </div>
       </div>
 
-      {/* Sipariş bilgileri */}
+      {/* =======================================================
+          SİPARİŞ BİLGİLERİ
+      ======================================================= */}
+
       <div className="grid gap-10 py-12 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-16">
         <div className="min-w-0">
           <div className="grid gap-6 sm:grid-cols-2">
-            {/* Sipariş numarası */}
+            {/* =================================================
+                SİPARİŞ NUMARASI
+            ================================================= */}
+
             <section className="min-w-0 border border-border bg-surface/40 p-6">
               <p className="text-[8px] font-semibold uppercase tracking-[0.2em] text-accent">
                 {dictionary.orderNumber}
@@ -242,7 +425,10 @@ export default function OrderCompleteContent({
               </div>
             </section>
 
-            {/* Müşteri */}
+            {/* =================================================
+                MÜŞTERİ
+            ================================================= */}
+
             <section className="min-w-0 border border-border bg-surface/40 p-6">
               <p className="text-[8px] font-semibold uppercase tracking-[0.2em] text-accent">
                 {dictionary.customer}
@@ -262,7 +448,10 @@ export default function OrderCompleteContent({
             </section>
           </div>
 
-          {/* Teslimat adresi */}
+          {/* ===================================================
+              TESLİMAT ADRESİ
+          =================================================== */}
+
           <section className="mt-6 border border-border bg-surface/40 p-6">
             <p className="text-[8px] font-semibold uppercase tracking-[0.2em] text-accent">
               {dictionary.deliveryAddress}
@@ -270,7 +459,10 @@ export default function OrderCompleteContent({
 
             <address className="mt-4 not-italic text-sm leading-7 text-foreground-soft">
               <p>
-                {order.shippingAddress.address}
+                {
+                  order.shippingAddress
+                    .address
+                }
               </p>
 
               {order.shippingAddress
@@ -288,10 +480,14 @@ export default function OrderCompleteContent({
                   order.shippingAddress
                     .postalCode
                 }{" "}
-                {order.shippingAddress.city}
+                {
+                  order.shippingAddress
+                    .city
+                }
               </p>
 
-              {order.shippingAddress.state && (
+              {order.shippingAddress
+                .state && (
                 <p>
                   {
                     order.shippingAddress
@@ -301,73 +497,94 @@ export default function OrderCompleteContent({
               )}
 
               <p>
-                {order.shippingAddress.country}
+                {
+                  order.shippingAddress
+                    .country
+                }
               </p>
             </address>
           </section>
         </div>
 
-        {/* Sipariş özeti */}
+        {/* =====================================================
+            SİPARİŞ ÖZETİ
+        ===================================================== */}
+
         <aside className="min-w-0 border border-border bg-surface/55 p-6 sm:p-7">
           <h2 className="font-heading text-4xl leading-none text-foreground">
             {dictionary.orderSummary}
           </h2>
 
           <div className="mt-7 space-y-5">
-            {order.items.map((item) => (
-              <article
-                key={item.id}
-                className={[
-                  "grid min-w-0",
-                  "grid-cols-[72px_minmax(0,1fr)]",
-                  "gap-4 border-b border-border",
-                  "pb-5",
-                ].join(" ")}
-              >
-                <Link
-                  href={`/${locale}/products/${item.slug}`}
-                  className="relative aspect-[4/5] overflow-hidden bg-background"
+            {order.items.map(
+              (item) => (
+                <article
+                  key={item.id}
+                  className={[
+                    "grid min-w-0",
+                    "grid-cols-[72px_minmax(0,1fr)]",
+                    "gap-4 border-b border-border",
+                    "pb-5",
+                  ].join(" ")}
                 >
-                  <Image
-                    src={item.image}
-                    alt={item.name[locale]}
-                    fill
-                    sizes="72px"
-                    className="object-cover object-center"
-                  />
-
-                  <span className="absolute end-1 top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-foreground px-1 text-[8px] font-semibold text-white">
-                    {item.quantity}
-                  </span>
-                </Link>
-
-                <div className="min-w-0">
                   <Link
                     href={`/${locale}/products/${item.slug}`}
-                    className="block break-words font-heading text-xl leading-none text-foreground transition-colors duration-300 hover:text-accent"
+                    className="relative aspect-[4/5] overflow-hidden bg-background"
                   >
-                    {item.name[locale]}
+                    <Image
+                      src={
+                        item.image
+                      }
+                      alt={
+                        item.name[
+                          locale
+                        ]
+                      }
+                      fill
+                      sizes="72px"
+                      className="object-cover object-center"
+                    />
+
+                    <span className="absolute end-1 top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-foreground px-1 text-[8px] font-semibold text-white">
+                      {
+                        item.quantity
+                      }
+                    </span>
                   </Link>
 
-                  <span
-                    aria-hidden="true"
-                    className="mt-3 block h-3.5 w-3.5 rounded-full border border-black/15"
-                    style={{
-                      backgroundColor: item.color,
-                    }}
-                  />
+                  <div className="min-w-0">
+                    <Link
+                      href={`/${locale}/products/${item.slug}`}
+                      className="block break-words font-heading text-xl leading-none text-foreground transition-colors duration-300 hover:text-accent"
+                    >
+                      {
+                        item.name[
+                          locale
+                        ]
+                      }
+                    </Link>
 
-                  <p className="mt-3 text-[10px] font-semibold text-foreground">
-                    {formatPrice(
-                      item.unitPrice *
-                        item.quantity,
-                      item.currency,
-                      locale
-                    )}
-                  </p>
-                </div>
-              </article>
-            ))}
+                    <span
+                      aria-hidden="true"
+                      className="mt-3 block h-3.5 w-3.5 rounded-full border border-black/15"
+                      style={{
+                        backgroundColor:
+                          item.color,
+                      }}
+                    />
+
+                    <p className="mt-3 text-[10px] font-semibold text-foreground">
+                      {formatPrice(
+                        item.unitPrice *
+                          item.quantity,
+                        item.currency,
+                        locale
+                      )}
+                    </p>
+                  </div>
+                </article>
+              )
+            )}
           </div>
 
           <div className="mt-6 flex items-end justify-between gap-6 border-t border-border pt-6">
@@ -386,10 +603,15 @@ export default function OrderCompleteContent({
         </aside>
       </div>
 
-      {/* Alt aksiyonlar */}
+      {/* =======================================================
+          ALT AKSİYONLAR
+      ======================================================= */}
+
       <div className="flex flex-col gap-4 border-t border-border py-10 sm:flex-row sm:justify-center">
         <Link
-          href={trackingPageUrl}
+          href={
+            trackingPageUrl
+          }
           className={[
             "inline-flex min-h-14",
             "items-center justify-center",
@@ -423,7 +645,9 @@ export default function OrderCompleteContent({
             "hover:!text-[#F3F0EA]",
           ].join(" ")}
         >
-          {dictionary.continueShopping}
+          {
+            dictionary.continueShopping
+          }
         </Link>
       </div>
     </div>

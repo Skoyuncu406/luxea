@@ -15,6 +15,12 @@ import type {
   ProductLocalizedText,
 } from "@/types/product";
 
+/*
+ * =============================================================
+ * TYPES
+ * =============================================================
+ */
+
 export type ProductCurrency =
   Product["currency"];
 
@@ -56,16 +62,16 @@ type ProductContextValue = {
 
   createProduct: (
     input: CreateProductInput
-  ) => Product;
+  ) => Promise<Product>;
 
   updateProduct: (
     productId: string,
     input: UpdateProductInput
-  ) => Product | undefined;
+  ) => Promise<Product | undefined>;
 
   deleteProduct: (
     productId: string
-  ) => void;
+  ) => Promise<void>;
 
   findProductById: (
     productId: string
@@ -77,15 +83,15 @@ type ProductContextValue = {
 
   toggleProductActive: (
     productId: string
-  ) => void;
+  ) => Promise<void>;
 
   toggleProductFeatured: (
     productId: string
-  ) => void;
+  ) => Promise<void>;
 
   toggleProductNew: (
     productId: string
-  ) => void;
+  ) => Promise<void>;
 
   decreaseProductStocks: (
     items: ProductStockItem[]
@@ -95,150 +101,37 @@ type ProductContextValue = {
     items: ProductStockItem[]
   ) => void;
 
-  resetProducts: () => void;
+  refreshProducts: () => Promise<void>;
+
+  resetProducts: () => Promise<void>;
 };
 
 type ProductProviderProps = {
   children: ReactNode;
 };
 
-const PRODUCTS_STORAGE_KEY =
-  "luxea-products";
+type ProductsApiResponse = {
+  success: boolean;
+  products?: Product[];
+  message?: string;
+};
 
-const SUPPORTED_CURRENCIES: ProductCurrency[] =
-  [
-    "EUR",
-    "USD",
-    "GBP",
-  ];
+type ProductApiResponse = {
+  success: boolean;
+  product?: Product;
+  message?: string;
+};
+
+/*
+ * =============================================================
+ * CONTEXT
+ * =============================================================
+ */
 
 const ProductContext =
   createContext<ProductContextValue | null>(
     null
   );
-
-/*
- * =============================================================
- * PARA BİRİMİ DOĞRULAMA
- * =============================================================
- */
-
-function isProductCurrency(
-  value: unknown
-): value is ProductCurrency {
-  return (
-    typeof value === "string" &&
-    SUPPORTED_CURRENCIES.includes(
-      value as ProductCurrency
-    )
-  );
-}
-
-/*
- * =============================================================
- * ÇOK DİLLİ METİN DOĞRULAMA
- * =============================================================
- */
-
-function isLocalizedText(
-  value: unknown
-): value is ProductLocalizedText {
-  if (
-    typeof value !== "object" ||
-    value === null
-  ) {
-    return false;
-  }
-
-  const localizedValue =
-    value as Partial<ProductLocalizedText>;
-
-  return (
-    typeof localizedValue.tr ===
-      "string" &&
-    typeof localizedValue.en ===
-      "string" &&
-    typeof localizedValue.ar ===
-      "string"
-  );
-}
-
-/*
- * =============================================================
- * PRODUCT DOĞRULAMA
- * =============================================================
- */
-
-function isValidProduct(
-  value: unknown
-): value is Product {
-  if (
-    typeof value !== "object" ||
-    value === null
-  ) {
-    return false;
-  }
-
-  const product =
-    value as Partial<Product>;
-
-  return (
-    typeof product.id ===
-      "string" &&
-    typeof product.slug ===
-      "string" &&
-    typeof product.categoryId ===
-      "string" &&
-    isLocalizedText(
-      product.name
-    ) &&
-    isLocalizedText(
-      product.shortDescription
-    ) &&
-    typeof product.image ===
-      "string" &&
-    (
-      product.hoverImage ===
-        undefined ||
-      typeof product.hoverImage ===
-        "string"
-    ) &&
-    typeof product.price ===
-      "number" &&
-    Number.isFinite(
-      product.price
-    ) &&
-    product.price >= 0 &&
-    isProductCurrency(
-      product.currency
-    ) &&
-    Array.isArray(
-      product.colors
-    ) &&
-    product.colors.every(
-      (color) =>
-        typeof color ===
-        "string"
-    ) &&
-    typeof product.order ===
-      "number" &&
-    Number.isFinite(
-      product.order
-    ) &&
-    typeof product.stock ===
-      "number" &&
-    Number.isFinite(
-      product.stock
-    ) &&
-    product.stock >= 0 &&
-    typeof product.isActive ===
-      "boolean" &&
-    typeof product.isFeatured ===
-      "boolean" &&
-    typeof product.isNew ===
-      "boolean"
-  );
-}
 
 /*
  * =============================================================
@@ -272,145 +165,7 @@ function normalizeSlug(
 
 /*
  * =============================================================
- * PRODUCT INPUT NORMALİZASYONU
- * =============================================================
- */
-
-function normalizeProductInput(
-  input: CreateProductInput
-): CreateProductInput {
-  return {
-    ...input,
-
-    slug: normalizeSlug(
-      input.slug
-    ),
-
-    categoryId:
-      input.categoryId.trim(),
-
-    name: {
-      tr: input.name.tr.trim(),
-      en: input.name.en.trim(),
-      ar: input.name.ar.trim(),
-    },
-
-    shortDescription: {
-      tr: input.shortDescription.tr.trim(),
-      en: input.shortDescription.en.trim(),
-      ar: input.shortDescription.ar.trim(),
-    },
-
-    image:
-      input.image.trim(),
-
-    hoverImage:
-      input.hoverImage?.trim() ||
-      undefined,
-
-    price: Math.max(
-      0,
-      input.price
-    ),
-
-    colors: Array.from(
-      new Set(
-        input.colors
-          .map((color) =>
-            color.trim()
-          )
-          .filter(Boolean)
-      )
-    ),
-
-    order: Math.max(
-      0,
-      Math.trunc(
-        input.order
-      )
-    ),
-
-    stock: Math.max(
-      0,
-      Math.trunc(
-        input.stock
-      )
-    ),
-  };
-}
-
-/*
- * =============================================================
- * PRODUCT ID
- * =============================================================
- */
-
-function createProductId() {
-  if (
-    typeof window !==
-      "undefined" &&
-    window.crypto
-      ?.randomUUID
-  ) {
-    return `product-${window.crypto.randomUUID()}`;
-  }
-
-  return `product-${Date.now()}-${Math.random()
-    .toString(36)
-    .slice(2, 10)}`;
-}
-
-/*
- * =============================================================
- * UNIQUE SLUG
- * =============================================================
- */
-
-function createUniqueSlug(
-  requestedSlug: string,
-  products: Product[],
-  ignoredProductId?: string
-) {
-  const baseSlug =
-    normalizeSlug(
-      requestedSlug
-    ) || "product";
-
-  const slugExists = (
-    candidateSlug: string
-  ) =>
-    products.some(
-      (product) =>
-        product.id !==
-          ignoredProductId &&
-        product.slug ===
-          candidateSlug
-    );
-
-  if (
-    !slugExists(
-      baseSlug
-    )
-  ) {
-    return baseSlug;
-  }
-
-  let suffix = 2;
-
-  while (
-    slugExists(
-      `${baseSlug}-${suffix}`
-    )
-  ) {
-    suffix += 1;
-  }
-
-  return `${baseSlug}-${suffix}`;
-}
-
-/*
- * =============================================================
- * STOK ITEM NORMALİZASYONU
+ * STOCK NORMALIZATION
  * =============================================================
  */
 
@@ -429,9 +184,7 @@ function normalizeStockItems(
         ) &&
         item.quantity > 0
     )
-    .reduce<
-      ProductStockItem[]
-    >(
+    .reduce<ProductStockItem[]>(
       (
         result,
         item
@@ -443,9 +196,7 @@ function normalizeStockItems(
               item.productId
           );
 
-        if (
-          existingItem
-        ) {
+        if (existingItem) {
           existingItem.quantity +=
             item.quantity;
 
@@ -467,7 +218,25 @@ function normalizeStockItems(
 
 /*
  * =============================================================
- * PRODUCT PROVIDER
+ * RESPONSE
+ * =============================================================
+ */
+
+async function readJsonResponse<T>(
+  response: Response
+): Promise<T> {
+  try {
+    return (await response.json()) as T;
+  } catch {
+    throw new Error(
+      "Sunucudan geçersiz bir cevap alındı."
+    );
+  }
+}
+
+/*
+ * =============================================================
+ * PROVIDER
  * =============================================================
  */
 
@@ -475,10 +244,19 @@ export function ProductProvider({
   children,
 }: ProductProviderProps) {
   /*
-   * Demo ürün yok.
+   * Artık demo ürün ve localStorage yok.
    *
-   * Sistem her zaman boş ürün listesiyle başlar.
+   * Veri kaynağı:
+   *
+   * Neon PostgreSQL
+   *       ↓
+   * Prisma
+   *       ↓
+   * /api/products
+   *       ↓
+   * ProductContext
    */
+
   const [
     products,
     setProducts,
@@ -491,97 +269,128 @@ export function ProductProvider({
 
   /*
    * =========================================================
-   * LOCAL STORAGE'DAN ÜRÜNLERİ YÜKLE
+   * ÜRÜNLERİ YENİDEN GETİR
    * =========================================================
    */
 
-  useEffect(() => {
-    try {
-      const storedProducts =
-        window.localStorage.getItem(
-          PRODUCTS_STORAGE_KEY
+  const refreshProducts =
+    useCallback(
+      async () => {
+        const response =
+          await fetch(
+            "/api/products",
+            {
+              method: "GET",
+
+              cache: "no-store",
+
+              headers: {
+                Accept:
+                  "application/json",
+              },
+            }
+          );
+
+        const data =
+          await readJsonResponse<ProductsApiResponse>(
+            response
+          );
+
+        if (
+          !response.ok ||
+          !data.success
+        ) {
+          throw new Error(
+            data.message ||
+              "Ürünler alınamadı."
+          );
+        }
+
+        setProducts(
+          Array.isArray(
+            data.products
+          )
+            ? data.products
+            : []
         );
-
-      /*
-       * Hiç kayıt yoksa sistem boş kalır.
-       * Demo ürün yüklenmez.
-       */
-      if (
-        !storedProducts
-      ) {
-        setProducts([]);
-        return;
-      }
-
-      const parsedProducts:
-        unknown =
-        JSON.parse(
-          storedProducts
-        );
-
-      /*
-       * Geçersiz veri varsa yine boş liste.
-       */
-      if (
-        !Array.isArray(
-          parsedProducts
-        )
-      ) {
-        setProducts([]);
-        return;
-      }
-
-      /*
-       * Yalnızca geçerli admin ürünlerini yükle.
-       */
-      const validProducts =
-        parsedProducts.filter(
-          isValidProduct
-        );
-
-      setProducts(
-        validProducts
-      );
-    } catch (error) {
-      console.error(
-        "Ürünler yüklenemedi:",
-        error
-      );
-
-      setProducts([]);
-    } finally {
-      setIsLoaded(true);
-    }
-  }, []);
+      },
+      []
+    );
 
   /*
    * =========================================================
-   * ÜRÜNLERİ LOCAL STORAGE'A KAYDET
+   * İLK YÜKLEME
    * =========================================================
    */
 
   useEffect(() => {
-    if (!isLoaded) {
-      return;
+    let isMounted = true;
+
+    async function loadProducts() {
+      try {
+        const response =
+          await fetch(
+            "/api/products",
+            {
+              method: "GET",
+
+              cache: "no-store",
+
+              headers: {
+                Accept:
+                  "application/json",
+              },
+            }
+          );
+
+        const data =
+          await readJsonResponse<ProductsApiResponse>(
+            response
+          );
+
+        if (
+          !response.ok ||
+          !data.success
+        ) {
+          throw new Error(
+            data.message ||
+              "Ürünler alınamadı."
+          );
+        }
+
+        if (!isMounted) {
+          return;
+        }
+
+        setProducts(
+          Array.isArray(
+            data.products
+          )
+            ? data.products
+            : []
+        );
+      } catch (error) {
+        console.error(
+          "Ürünler database'den yüklenemedi:",
+          error
+        );
+
+        if (isMounted) {
+          setProducts([]);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoaded(true);
+        }
+      }
     }
 
-    try {
-      window.localStorage.setItem(
-        PRODUCTS_STORAGE_KEY,
-        JSON.stringify(
-          products
-        )
-      );
-    } catch (error) {
-      console.error(
-        "Ürünler kaydedilemedi:",
-        error
-      );
-    }
-  }, [
-    products,
-    isLoaded,
-  ]);
+    void loadProducts();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   /*
    * =========================================================
@@ -591,38 +400,66 @@ export function ProductProvider({
 
   const createProduct =
     useCallback(
-      (
+      async (
         input: CreateProductInput
-      ): Product => {
-        const normalizedInput =
-          normalizeProductInput(
-            input
+      ): Promise<Product> => {
+        const response =
+          await fetch(
+            "/api/products",
+            {
+              method: "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json",
+
+                Accept:
+                  "application/json",
+              },
+
+              body:
+                JSON.stringify(
+                  input
+                ),
+            }
           );
 
-        const newProduct: Product =
-          {
-            id: createProductId(),
+        const data =
+          await readJsonResponse<ProductApiResponse>(
+            response
+          );
 
-            ...normalizedInput,
+        if (
+          !response.ok ||
+          !data.success ||
+          !data.product
+        ) {
+          throw new Error(
+            data.message ||
+              "Ürün oluşturulamadı."
+          );
+        }
 
-            slug: createUniqueSlug(
-              normalizedInput.slug,
-              products
-            ),
-          };
+        const newProduct =
+          data.product;
 
         setProducts(
           (
             currentProducts
-          ) => [
-            newProduct,
-            ...currentProducts,
-          ]
+          ) =>
+            [
+              newProduct,
+              ...currentProducts,
+            ].sort(
+              (a, b) =>
+                a.order -
+                b.order
+            )
         );
 
         return newProduct;
       },
-      [products]
+      []
     );
 
   /*
@@ -633,10 +470,12 @@ export function ProductProvider({
 
   const updateProduct =
     useCallback(
-      (
+      async (
         productId: string,
         input: UpdateProductInput
-      ) => {
+      ): Promise<
+        Product | undefined
+      > => {
         const currentProduct =
           products.find(
             (product) =>
@@ -644,101 +483,69 @@ export function ProductProvider({
               productId
           );
 
-        if (
-          !currentProduct
-        ) {
+        if (!currentProduct) {
           return undefined;
         }
 
-        const mergedInput:
-          CreateProductInput =
-          {
-            slug:
-              input.slug ??
-              currentProduct.slug,
+        const response =
+          await fetch(
+            `/api/products/${encodeURIComponent(
+              productId
+            )}`,
+            {
+              method: "PATCH",
 
-            categoryId:
-              input.categoryId ??
-              currentProduct.categoryId,
+              headers: {
+                "Content-Type":
+                  "application/json",
 
-            name:
-              input.name ??
-              currentProduct.name,
+                Accept:
+                  "application/json",
+              },
 
-            shortDescription:
-              input.shortDescription ??
-              currentProduct.shortDescription,
-
-            image:
-              input.image ??
-              currentProduct.image,
-
-            hoverImage:
-              input.hoverImage ??
-              currentProduct.hoverImage,
-
-            price:
-              input.price ??
-              currentProduct.price,
-
-            currency:
-              input.currency ??
-              currentProduct.currency,
-
-            colors:
-              input.colors ??
-              currentProduct.colors,
-
-            order:
-              input.order ??
-              currentProduct.order,
-
-            stock:
-              input.stock ??
-              currentProduct.stock,
-
-            isActive:
-              input.isActive ??
-              currentProduct.isActive,
-
-            isFeatured:
-              input.isFeatured ??
-              currentProduct.isFeatured,
-
-            isNew:
-              input.isNew ??
-              currentProduct.isNew,
-          };
-
-        const normalizedInput =
-          normalizeProductInput(
-            mergedInput
+              body:
+                JSON.stringify(
+                  input
+                ),
+            }
           );
 
-        const updatedProduct:
-          Product =
-          {
-            ...currentProduct,
-            ...normalizedInput,
+        const data =
+          await readJsonResponse<ProductApiResponse>(
+            response
+          );
 
-            slug: createUniqueSlug(
-              normalizedInput.slug,
-              products,
-              productId
-            ),
-          };
+        if (
+          !response.ok ||
+          !data.success ||
+          !data.product
+        ) {
+          throw new Error(
+            data.message ||
+              "Ürün güncellenemedi."
+          );
+        }
+
+        const updatedProduct =
+          data.product;
 
         setProducts(
           (
             currentProducts
           ) =>
-            currentProducts.map(
-              (product) =>
-                product.id ===
-                productId
-                  ? updatedProduct
-                  : product
-            )
+            currentProducts
+              .map(
+                (product) =>
+                  product.id ===
+                  productId
+                    ? updatedProduct
+                    : product
+              )
+              .sort(
+                (a, b) =>
+                  a.order -
+                  b.order
+              )
         );
 
         return updatedProduct;
@@ -754,9 +561,39 @@ export function ProductProvider({
 
   const deleteProduct =
     useCallback(
-      (
+      async (
         productId: string
-      ) => {
+      ): Promise<void> => {
+        const response =
+          await fetch(
+            `/api/products/${encodeURIComponent(
+              productId
+            )}`,
+            {
+              method: "DELETE",
+
+              headers: {
+                Accept:
+                  "application/json",
+              },
+            }
+          );
+
+        const data =
+          await readJsonResponse<ProductApiResponse>(
+            response
+          );
+
+        if (
+          !response.ok ||
+          !data.success
+        ) {
+          throw new Error(
+            data.message ||
+              "Ürün silinemedi."
+          );
+        }
+
         setProducts(
           (
             currentProducts
@@ -817,100 +654,252 @@ export function ProductProvider({
 
   /*
    * =========================================================
-   * AKTİF / PASİF
+   * ACTIVE
    * =========================================================
    */
 
   const toggleProductActive =
     useCallback(
-      (
+      async (
         productId: string
-      ) => {
+      ): Promise<void> => {
+        const product =
+          products.find(
+            (item) =>
+              item.id ===
+              productId
+          );
+
+        if (!product) {
+          throw new Error(
+            "Ürün bulunamadı."
+          );
+        }
+
+        const response =
+          await fetch(
+            `/api/products/${encodeURIComponent(
+              productId
+            )}`,
+            {
+              method: "PATCH",
+
+              headers: {
+                "Content-Type":
+                  "application/json",
+
+                Accept:
+                  "application/json",
+              },
+
+              body:
+                JSON.stringify({
+                  isActive:
+                    !product.isActive,
+                }),
+            }
+          );
+
+        const data =
+          await readJsonResponse<ProductApiResponse>(
+            response
+          );
+
+        if (
+          !response.ok ||
+          !data.success ||
+          !data.product
+        ) {
+          throw new Error(
+            data.message ||
+              "Ürün durumu değiştirilemedi."
+          );
+        }
+
         setProducts(
           (
             currentProducts
           ) =>
             currentProducts.map(
-              (product) =>
-                product.id ===
+              (item) =>
+                item.id ===
                 productId
-                  ? {
-                      ...product,
-                      isActive:
-                        !product.isActive,
-                    }
-                  : product
+                  ? data.product!
+                  : item
             )
         );
       },
-      []
+      [products]
     );
 
   /*
    * =========================================================
-   * ÖNE ÇIKAN
+   * FEATURED
    * =========================================================
    */
 
   const toggleProductFeatured =
     useCallback(
-      (
+      async (
         productId: string
-      ) => {
+      ): Promise<void> => {
+        const product =
+          products.find(
+            (item) =>
+              item.id ===
+              productId
+          );
+
+        if (!product) {
+          throw new Error(
+            "Ürün bulunamadı."
+          );
+        }
+
+        const response =
+          await fetch(
+            `/api/products/${encodeURIComponent(
+              productId
+            )}`,
+            {
+              method: "PATCH",
+
+              headers: {
+                "Content-Type":
+                  "application/json",
+
+                Accept:
+                  "application/json",
+              },
+
+              body:
+                JSON.stringify({
+                  isFeatured:
+                    !product.isFeatured,
+                }),
+            }
+          );
+
+        const data =
+          await readJsonResponse<ProductApiResponse>(
+            response
+          );
+
+        if (
+          !response.ok ||
+          !data.success ||
+          !data.product
+        ) {
+          throw new Error(
+            data.message ||
+              "Öne çıkan ürün durumu değiştirilemedi."
+          );
+        }
+
         setProducts(
           (
             currentProducts
           ) =>
             currentProducts.map(
-              (product) =>
-                product.id ===
+              (item) =>
+                item.id ===
                 productId
-                  ? {
-                      ...product,
-                      isFeatured:
-                        !product.isFeatured,
-                    }
-                  : product
+                  ? data.product!
+                  : item
             )
         );
       },
-      []
+      [products]
     );
 
   /*
    * =========================================================
-   * YENİ ÜRÜN
+   * NEW
    * =========================================================
    */
 
   const toggleProductNew =
     useCallback(
-      (
+      async (
         productId: string
-      ) => {
+      ): Promise<void> => {
+        const product =
+          products.find(
+            (item) =>
+              item.id ===
+              productId
+          );
+
+        if (!product) {
+          throw new Error(
+            "Ürün bulunamadı."
+          );
+        }
+
+        const response =
+          await fetch(
+            `/api/products/${encodeURIComponent(
+              productId
+            )}`,
+            {
+              method: "PATCH",
+
+              headers: {
+                "Content-Type":
+                  "application/json",
+
+                Accept:
+                  "application/json",
+              },
+
+              body:
+                JSON.stringify({
+                  isNew:
+                    !product.isNew,
+                }),
+            }
+          );
+
+        const data =
+          await readJsonResponse<ProductApiResponse>(
+            response
+          );
+
+        if (
+          !response.ok ||
+          !data.success ||
+          !data.product
+        ) {
+          throw new Error(
+            data.message ||
+              "Yeni ürün durumu değiştirilemedi."
+          );
+        }
+
         setProducts(
           (
             currentProducts
           ) =>
             currentProducts.map(
-              (product) =>
-                product.id ===
+              (item) =>
+                item.id ===
                 productId
-                  ? {
-                      ...product,
-                      isNew:
-                        !product.isNew,
-                    }
-                  : product
+                  ? data.product!
+                  : item
             )
         );
       },
-      []
+      [products]
     );
 
   /*
    * =========================================================
    * STOK DÜŞÜR
+   *
+   * ŞİMDİLİK CLIENT STATE ÜZERİNDE.
+   *
+   * Sipariş sistemini PostgreSQL'e taşıdığımız aşamada
+   * bu fonksiyon gerçek transaction sistemine geçecek.
    * =========================================================
    */
 
@@ -931,10 +920,6 @@ export function ProductProvider({
           return false;
         }
 
-        /*
-         * Önce tüm ürünlerde yeterli stok
-         * bulunduğunu kontrol ediyoruz.
-         */
         const hasEnoughStock =
           normalizedItems.every(
             (item) => {
@@ -947,9 +932,7 @@ export function ProductProvider({
                     item.productId
                 );
 
-              if (
-                !product
-              ) {
+              if (!product) {
                 return false;
               }
 
@@ -966,13 +949,7 @@ export function ProductProvider({
             }
           );
 
-        /*
-         * Bir ürün bile yetersizse
-         * hiçbir stok değişmez.
-         */
-        if (
-          !hasEnoughStock
-        ) {
+        if (!hasEnoughStock) {
           return false;
         }
 
@@ -989,20 +966,19 @@ export function ProductProvider({
                       product.id
                   );
 
-                if (
-                  !stockItem
-                ) {
+                if (!stockItem) {
                   return product;
                 }
 
                 return {
                   ...product,
 
-                  stock: Math.max(
-                    0,
-                    product.stock -
-                      stockItem.quantity
-                  ),
+                  stock:
+                    Math.max(
+                      0,
+                      product.stock -
+                        stockItem.quantity
+                    ),
                 };
               }
             )
@@ -1016,6 +992,8 @@ export function ProductProvider({
   /*
    * =========================================================
    * STOK GERİ YÜKLE
+   *
+   * ŞİMDİLİK CLIENT STATE ÜZERİNDE.
    * =========================================================
    */
 
@@ -1049,9 +1027,7 @@ export function ProductProvider({
                       product.id
                   );
 
-                if (
-                  !stockItem
-                ) {
+                if (!stockItem) {
                   return product;
                 }
 
@@ -1071,20 +1047,24 @@ export function ProductProvider({
 
   /*
    * =========================================================
-   * TÜM ÜRÜNLERİ TEMİZLE
+   * RESET
    *
-   * Demo ürüne dönmez.
+   * Database'i silmez.
+   * Sadece yeniden senkronize eder.
    * =========================================================
    */
 
   const resetProducts =
-    useCallback(() => {
-      setProducts([]);
-    }, []);
+    useCallback(
+      async (): Promise<void> => {
+        await refreshProducts();
+      },
+      [refreshProducts]
+    );
 
   /*
    * =========================================================
-   * CONTEXT VALUE
+   * VALUE
    * =========================================================
    */
 
@@ -1092,41 +1072,59 @@ export function ProductProvider({
     useMemo<ProductContextValue>(
       () => ({
         products,
+
         isLoaded,
 
         createProduct,
+
         updateProduct,
+
         deleteProduct,
 
         findProductById,
+
         findProductBySlug,
 
         toggleProductActive,
+
         toggleProductFeatured,
+
         toggleProductNew,
 
         decreaseProductStocks,
+
         restoreProductStocks,
+
+        refreshProducts,
 
         resetProducts,
       }),
       [
         products,
+
         isLoaded,
 
         createProduct,
+
         updateProduct,
+
         deleteProduct,
 
         findProductById,
+
         findProductBySlug,
 
         toggleProductActive,
+
         toggleProductFeatured,
+
         toggleProductNew,
 
         decreaseProductStocks,
+
         restoreProductStocks,
+
+        refreshProducts,
 
         resetProducts,
       ]

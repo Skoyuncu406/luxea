@@ -5,13 +5,16 @@ import {
   useState,
   type FormEvent,
 } from "react";
+
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+
 import {
   ArrowLeft,
   ChevronDown,
   CreditCard,
+  LoaderCircle,
   LockKeyhole,
   ShoppingBag,
 } from "lucide-react";
@@ -19,9 +22,17 @@ import {
 import { useCart } from "@/contexts/CartContext";
 import { useOrders } from "@/contexts/OrderContext";
 import { useProducts } from "@/contexts/ProductContext";
+
 import { formatPrice } from "@/lib/format-price";
+
 import type { Locale } from "@/lib/i18n/config";
 import type { Product } from "@/types/product";
+
+/*
+ * =============================================================
+ * DICTIONARY
+ * =============================================================
+ */
 
 type CheckoutDictionary = {
   completeOrder: string;
@@ -63,27 +74,53 @@ type CheckoutDictionary = {
   emptyCart: string;
 };
 
+/*
+ * =============================================================
+ * PROPS
+ * =============================================================
+ */
+
 type CheckoutContentProps = {
   locale: Locale;
   dictionary: CheckoutDictionary;
 };
 
+/*
+ * =============================================================
+ * FORM TYPES
+ * =============================================================
+ */
+
 type CheckoutFormState = {
   email: string;
+
   firstName: string;
   lastName: string;
+
   country: string;
+
   address: string;
   addressLineTwo: string;
+
   city: string;
   state: string;
   postalCode: string;
+
   phone: string;
 };
 
 type FormErrors = Partial<
-  Record<keyof CheckoutFormState, string>
+  Record<
+    keyof CheckoutFormState,
+    string
+  >
 >;
+
+/*
+ * =============================================================
+ * COUNTRIES
+ * =============================================================
+ */
 
 const COUNTRIES = [
   {
@@ -178,18 +215,35 @@ const COUNTRIES = [
   },
 ] as const;
 
+/*
+ * =============================================================
+ * INITIAL FORM
+ * =============================================================
+ */
+
 const initialFormState: CheckoutFormState = {
   email: "",
+
   firstName: "",
   lastName: "",
+
   country: "",
+
   address: "",
   addressLineTwo: "",
+
   city: "",
   state: "",
   postalCode: "",
+
   phone: "",
 };
+
+/*
+ * =============================================================
+ * CHECKOUT CONTENT
+ * =============================================================
+ */
 
 export default function CheckoutContent({
   locale,
@@ -202,9 +256,13 @@ export default function CheckoutContent({
    * CART
    * ============================================================
    */
+
   const {
     cartItems,
-    isLoaded: isCartLoaded,
+
+    isLoaded:
+      isCartLoaded,
+
     clearCart,
   } = useCart();
 
@@ -212,15 +270,19 @@ export default function CheckoutContent({
    * ============================================================
    * PRODUCTS
    *
-   * Ürünler artık statik olarak prop üzerinden gelmiyor.
-   * ProductContext kullanıldığı için admin panelinden eklenen
-   * yeni ürünler de checkout tarafından görülebilir.
+   * Ürünler artık PostgreSQL → API → ProductContext
+   * üzerinden geliyor.
    * ============================================================
    */
+
   const {
     products,
-    isLoaded: areProductsLoaded,
+
+    isLoaded:
+      areProductsLoaded,
+
     decreaseProductStocks,
+
     restoreProductStocks,
   } = useProducts();
 
@@ -229,9 +291,12 @@ export default function CheckoutContent({
    * ORDERS
    * ============================================================
    */
+
   const {
     createOrder,
-    isLoaded: areOrdersLoaded,
+
+    isLoaded:
+      areOrdersLoaded,
   } = useOrders();
 
   /*
@@ -239,19 +304,49 @@ export default function CheckoutContent({
    * FORM STATE
    * ============================================================
    */
-  const [form, setForm] =
-    useState<CheckoutFormState>(initialFormState);
 
-  const [errors, setErrors] =
+  const [
+    form,
+    setForm,
+  ] =
+    useState<CheckoutFormState>(
+      initialFormState
+    );
+
+  const [
+    errors,
+    setErrors,
+  ] =
     useState<FormErrors>({});
 
-  const [isSubmitting, setIsSubmitting] =
-    useState(false);
+  /*
+   * Form gönderiliyor.
+   */
+  const [
+    isSubmitting,
+    setIsSubmitting,
+  ] = useState(false);
 
   /*
-   * Sepet, ürünler ve sipariş sistemi tamamen yüklenmeden
-   * checkout içeriğini göstermiyoruz.
+   * ============================================================
+   * SİPARİŞ TAMAMLAMA MODU
+   * ============================================================
+   *
+   * Sipariş oluşturulduktan sonra sepet temizlendiğinde
+   * checkout'un "boş sepet" ekranını göstermesini engeller.
    */
+
+  const [
+    isCompletingOrder,
+    setIsCompletingOrder,
+  ] = useState(false);
+
+  /*
+   * ============================================================
+   * GLOBAL LOAD
+   * ============================================================
+   */
+
   const isLoaded =
     isCartLoaded &&
     areProductsLoaded &&
@@ -262,74 +357,107 @@ export default function CheckoutContent({
    * SEPET ÜRÜNLERİNİ GÜNCEL PRODUCT CONTEXT İLE EŞLEŞTİR
    * ============================================================
    */
-  const resolvedCartItems = useMemo(() => {
-    return cartItems
-      .map((cartItem) => {
-        const product = products.find(
-          (currentProduct) =>
-            currentProduct.id ===
-              cartItem.productId &&
-            currentProduct.isActive
+
+  const resolvedCartItems =
+    useMemo(() => {
+      return cartItems
+        .map(
+          (cartItem) => {
+            const product =
+              products.find(
+                (
+                  currentProduct
+                ) =>
+                  currentProduct.id ===
+                    cartItem.productId &&
+                  currentProduct.isActive
+              );
+
+            if (!product) {
+              return null;
+            }
+
+            return {
+              cartItem,
+              product,
+            };
+          }
+        )
+        .filter(
+          (
+            item
+          ): item is {
+            cartItem: (typeof cartItems)[number];
+
+            product: Product;
+          } =>
+            item !== null
         );
-
-        if (!product) {
-          return null;
-        }
-
-        return {
-          cartItem,
-          product,
-        };
-      })
-      .filter(
-        (
-          item
-        ): item is {
-          cartItem: (typeof cartItems)[number];
-          product: Product;
-        } => item !== null
-      );
-  }, [cartItems, products]);
+    }, [
+      cartItems,
+      products,
+    ]);
 
   /*
    * ============================================================
    * ARA TOPLAM
    * ============================================================
    */
-  const subtotal = useMemo(() => {
-    return resolvedCartItems.reduce(
-      (total, { cartItem, product }) =>
-        total +
-        product.price * cartItem.quantity,
-      0
-    );
-  }, [resolvedCartItems]);
+
+  const subtotal =
+    useMemo(() => {
+      return resolvedCartItems.reduce(
+        (
+          total,
+          {
+            cartItem,
+            product,
+          }
+        ) =>
+          total +
+          product.price *
+            cartItem.quantity,
+        0
+      );
+    }, [resolvedCartItems]);
 
   /*
-   * Şimdilik sepetin ilk ürününün para birimi kullanılıyor.
+   * Şimdilik sepetin ilk ürününün
+   * para birimi kullanılıyor.
    */
+
   const currency =
-    resolvedCartItems[0]?.product.currency ??
+    resolvedCartItems[0]
+      ?.product.currency ??
     "USD";
 
   /*
    * ============================================================
-   * FORM ALANI GÜNCELLEME
+   * FORM ALANI GÜNCELLE
    * ============================================================
    */
+
   function updateField(
-    field: keyof CheckoutFormState,
+    field:
+      keyof CheckoutFormState,
     value: string
   ) {
-    setForm((current) => ({
-      ...current,
-      [field]: value,
-    }));
+    setForm(
+      (current) => ({
+        ...current,
 
-    setErrors((current) => ({
-      ...current,
-      [field]: undefined,
-    }));
+        [field]: value,
+      })
+    );
+
+    setErrors(
+      (current) => ({
+        ...current,
+
+        [field]:
+          undefined,
+      })
+    );
   }
 
   /*
@@ -337,8 +465,10 @@ export default function CheckoutContent({
    * FORM DOĞRULAMA
    * ============================================================
    */
+
   function validateForm() {
-    const nextErrors: FormErrors = {};
+    const nextErrors:
+      FormErrors = {};
 
     const requiredFields: Array<
       keyof CheckoutFormState
@@ -353,30 +483,41 @@ export default function CheckoutContent({
       "phone",
     ];
 
-    requiredFields.forEach((field) => {
-      if (!form[field].trim()) {
-        nextErrors[field] =
-          field === "country"
-            ? dictionary.countryRequired
-            : dictionary.requiredField;
+    requiredFields.forEach(
+      (field) => {
+        if (
+          !form[field].trim()
+        ) {
+          nextErrors[field] =
+            field ===
+            "country"
+              ? dictionary.countryRequired
+              : dictionary.requiredField;
+        }
       }
-    });
+    );
 
     const emailPattern =
       /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (
       form.email.trim() &&
-      !emailPattern.test(form.email.trim())
+      !emailPattern.test(
+        form.email.trim()
+      )
     ) {
       nextErrors.email =
         dictionary.invalidEmail;
     }
 
-    setErrors(nextErrors);
+    setErrors(
+      nextErrors
+    );
 
     return (
-      Object.keys(nextErrors).length === 0
+      Object.keys(
+        nextErrors
+      ).length === 0
     );
   }
 
@@ -385,32 +526,60 @@ export default function CheckoutContent({
    * SİPARİŞ OLUŞTUR
    * ============================================================
    */
-  function handleSubmit(
-    event: FormEvent<HTMLFormElement>
+
+  async function handleSubmit(
+    event:
+      FormEvent<HTMLFormElement>
   ) {
     event.preventDefault();
 
-    if (isSubmitting) {
+    /*
+     * Double submit engelle.
+     */
+
+    if (
+      isSubmitting ||
+      isCompletingOrder
+    ) {
       return;
     }
 
-    const formIsValid = validateForm();
+    /*
+     * Form kontrolü.
+     */
+
+    const formIsValid =
+      validateForm();
 
     if (!formIsValid) {
       return;
     }
 
-    if (resolvedCartItems.length === 0) {
+    /*
+     * Sepet kontrolü.
+     */
+
+    if (
+      resolvedCartItems.length ===
+      0
+    ) {
       return;
     }
 
     /*
-     * Sipariş oluşturulmadan hemen önce stokları tekrar kontrol et.
+     * ==========================================================
+     * STOK KONTROLÜ
+     * ==========================================================
      */
+
     const hasInvalidStock =
       resolvedCartItems.some(
-        ({ cartItem, product }) =>
-          product.stock < cartItem.quantity
+        ({
+          cartItem,
+          product,
+        }) =>
+          product.stock <
+          cartItem.quantity
       );
 
     if (hasInvalidStock) {
@@ -420,11 +589,12 @@ export default function CheckoutContent({
     setIsSubmitting(true);
 
     /*
-     * Stok düşürme işlemi başarılı olduktan sonra sipariş
-     * oluşturulurken hata oluşursa stokları geri yüklemek için
-     * bu bilgiyi tutuyoruz.
+     * Sipariş oluşturulamazsa
+     * stokları geri yükleyebilmek için.
      */
-    let stocksDecreased = false;
+
+    let stocksDecreased =
+      false;
 
     try {
       /*
@@ -432,89 +602,176 @@ export default function CheckoutContent({
        * STOKLARI DÜŞÜR
        * ========================================================
        */
-      decreaseProductStocks(
-        resolvedCartItems.map(
-          ({ cartItem, product }) => ({
-            productId: product.id,
-            quantity: cartItem.quantity,
-          })
-        )
-      );
 
-      stocksDecreased = true;
+      const stockResult =
+        decreaseProductStocks(
+          resolvedCartItems.map(
+            ({
+              cartItem,
+              product,
+            }) => ({
+              productId:
+                product.id,
+
+              quantity:
+                cartItem.quantity,
+            })
+          )
+        );
+
+      /*
+       * Stok düşürülemediyse
+       * sipariş oluşturma.
+       */
+
+      if (!stockResult) {
+        setIsSubmitting(
+          false
+        );
+
+        return;
+      }
+
+      stocksDecreased =
+        true;
 
       /*
        * ========================================================
        * ORDER ITEMS
        * ========================================================
        */
+
       const orderItems =
         resolvedCartItems.map(
-          ({ cartItem, product }) => ({
-            id: cartItem.id,
-            productId: product.id,
-            slug: product.slug,
-            name: product.name,
-            image: product.image,
-            color: cartItem.color,
-            quantity: cartItem.quantity,
-            unitPrice: product.price,
-            currency: product.currency,
+          ({
+            cartItem,
+            product,
+          }) => ({
+            id:
+              cartItem.id,
+
+            productId:
+              product.id,
+
+            slug:
+              product.slug,
+
+            name:
+              product.name,
+
+            image:
+              product.image,
+
+            color:
+              cartItem.color,
+
+            quantity:
+              cartItem.quantity,
+
+            unitPrice:
+              product.price,
+
+            currency:
+              product.currency,
           })
         );
 
       /*
        * ========================================================
-       * SİPARİŞİ OLUŞTUR
+       * SİPARİŞ OLUŞTUR
        * ========================================================
        */
-      const order = createOrder({
-        customer: {
-          email: form.email.trim(),
-          firstName: form.firstName.trim(),
-          lastName: form.lastName.trim(),
-          phone: form.phone.trim(),
-        },
 
-        shippingAddress: {
-          country: form.country,
-          address: form.address.trim(),
-          addressLineTwo:
-            form.addressLineTwo.trim() ||
-            undefined,
-          city: form.city.trim(),
-          state:
-            form.state.trim() || undefined,
-          postalCode:
-            form.postalCode.trim(),
-        },
+      const order =
+        await createOrder({
+          customer: {
+            email:
+              form.email.trim(),
 
-        items: orderItems,
+            firstName:
+              form.firstName.trim(),
 
-        subtotal,
+            lastName:
+              form.lastName.trim(),
 
-        shippingCost: 0,
+            phone:
+              form.phone.trim(),
+          },
 
-        currency,
-      });
+          shippingAddress: {
+            country:
+              form.country,
+
+            address:
+              form.address.trim(),
+
+            addressLineTwo:
+              form.addressLineTwo.trim() ||
+              undefined,
+
+            city:
+              form.city.trim(),
+
+            state:
+              form.state.trim() ||
+              undefined,
+
+            postalCode:
+              form.postalCode.trim(),
+          },
+
+          items:
+            orderItems,
+
+          subtotal,
+
+          shippingCost: 0,
+
+          currency,
+        });
 
       /*
        * ========================================================
-       * SEPETİ TEMİZLE
+       * SİPARİŞ TAMAMLAMA MODUNA GEÇ
        * ========================================================
+       *
+       * Bu state clearCart'tan ÖNCE aktif olur.
+       *
+       * Böylece cartItems [] olduğunda CheckoutContent
+       * boş sepet ekranına geçmez.
        */
-      clearCart();
+
+      setIsCompletingOrder(
+        true
+      );
 
       /*
        * ========================================================
        * SİPARİŞ TAMAMLANDI SAYFASINA GİT
        * ========================================================
+       *
+       * push yerine replace kullanıyoruz.
+       *
+       * Kullanıcı browser Back butonuyla
+       * tamamlanmış checkout'a dönemez.
        */
-      router.push(
+
+      router.replace(
         `/${locale}/order-complete/${encodeURIComponent(
           order.trackingCode
         )}`
       );
+
+      /*
+       * ========================================================
+       * SEPETİ TEMİZLE
+       * ========================================================
+       *
+       * isCompletingOrder artık true olduğu için
+       * bu işlem boş sepet ekranını tetiklemez.
+       */
+
+      clearCart();
     } catch (error) {
       console.error(
         "Sipariş oluşturulamadı:",
@@ -522,19 +779,32 @@ export default function CheckoutContent({
       );
 
       /*
-       * Sipariş oluşturulamadıysa düşürülen stokları geri yükle.
+       * ========================================================
+       * STOKLARI GERİ YÜKLE
+       * ========================================================
        */
-      if (stocksDecreased) {
+
+      if (
+        stocksDecreased
+      ) {
         try {
           restoreProductStocks(
             resolvedCartItems.map(
-              ({ cartItem, product }) => ({
-                productId: product.id,
-                quantity: cartItem.quantity,
+              ({
+                cartItem,
+                product,
+              }) => ({
+                productId:
+                  product.id,
+
+                quantity:
+                  cartItem.quantity,
               })
             )
           );
-        } catch (restoreError) {
+        } catch (
+          restoreError
+        ) {
           console.error(
             "Ürün stokları geri yüklenemedi:",
             restoreError
@@ -542,8 +812,44 @@ export default function CheckoutContent({
         }
       }
 
-      setIsSubmitting(false);
+      setIsCompletingOrder(
+        false
+      );
+
+      setIsSubmitting(
+        false
+      );
     }
+  }
+
+  /*
+   * ============================================================
+   * SİPARİŞ TAMAMLANIYOR
+   * ============================================================
+   *
+   * Bu kontrol boş sepet kontrolünden ÖNCE olmalıdır.
+   */
+
+  if (isCompletingOrder) {
+    return (
+      <div className="mt-12 flex min-h-[480px] flex-col items-center justify-center border-y border-border px-5 text-center">
+        <span className="flex h-20 w-20 items-center justify-center rounded-full border border-accent/30 bg-accent/10">
+          <LoaderCircle
+            size={28}
+            strokeWidth={
+              1.3
+            }
+            className="animate-spin text-accent"
+          />
+        </span>
+
+        <p className="mt-7 text-[10px] font-semibold uppercase tracking-[0.2em] text-accent">
+          {
+            dictionary.creatingOrder
+          }
+        </p>
+      </div>
+    );
   }
 
   /*
@@ -551,13 +857,17 @@ export default function CheckoutContent({
    * LOADING
    * ============================================================
    */
+
   if (!isLoaded) {
     return (
       <div className="mt-12 grid animate-pulse gap-10 lg:grid-cols-[minmax(0,1fr)_400px]">
         <div className="space-y-5">
           <div className="h-16 bg-surface-strong/40" />
+
           <div className="h-16 bg-surface-strong/40" />
+
           <div className="h-16 bg-surface-strong/40" />
+
           <div className="h-16 bg-surface-strong/40" />
         </div>
 
@@ -571,36 +881,54 @@ export default function CheckoutContent({
    * BOŞ SEPET
    * ============================================================
    */
-  if (resolvedCartItems.length === 0) {
+
+  if (
+    resolvedCartItems.length ===
+    0
+  ) {
     return (
       <div className="mt-12 flex min-h-[480px] flex-col items-center justify-center border-y border-border px-5 text-center">
         <span className="flex h-20 w-20 items-center justify-center rounded-full border border-border bg-surface/50">
           <ShoppingBag
             size={29}
-            strokeWidth={1.1}
+            strokeWidth={
+              1.1
+            }
             className="text-accent"
           />
         </span>
 
         <h2 className="mt-8 max-w-xl font-heading text-4xl leading-none text-foreground sm:text-5xl">
-          {dictionary.emptyCart}
+          {
+            dictionary.emptyCart
+          }
         </h2>
 
         <Link
           href={`/${locale}/products`}
           className={[
             "mt-9 inline-flex min-h-14",
+
             "items-center justify-center",
+
             "border border-foreground",
+
             "bg-foreground px-8",
+
             "text-[10px] font-semibold uppercase",
+
             "tracking-[0.17em] !text-[#F3F0EA]",
+
             "transition-all duration-300",
+
             "hover:border-accent hover:bg-accent",
+
             "hover:!text-white",
           ].join(" ")}
         >
-          {dictionary.backToCart}
+          {
+            dictionary.backToCart
+          }
         </Link>
       </div>
     );
@@ -611,23 +939,32 @@ export default function CheckoutContent({
    * CHECKOUT
    * ============================================================
    */
+
   return (
     <form
-      onSubmit={handleSubmit}
+      onSubmit={
+        handleSubmit
+      }
       noValidate
       className={[
         "mt-12 grid gap-12",
+
         "lg:grid-cols-[minmax(0,1fr)_400px]",
+
         "lg:gap-16",
+
         "xl:grid-cols-[minmax(0,1fr)_440px]",
       ].join(" ")}
     >
       {/* ======================================================
           SOL TARAF
       ====================================================== */}
-      <div className="min-w-0">
 
-        {/* İletişim */}
+      <div className="min-w-0">
+        {/* ====================================================
+            İLETİŞİM
+        ==================================================== */}
+
         <section>
           <div className="flex items-center gap-4 border-b border-border pb-5">
             <span className="flex h-8 w-8 items-center justify-center border border-accent text-[10px] font-semibold text-accent">
@@ -635,19 +972,32 @@ export default function CheckoutContent({
             </span>
 
             <h2 className="font-heading text-3xl leading-none text-foreground sm:text-4xl">
-              {dictionary.contactTitle}
+              {
+                dictionary.contactTitle
+              }
             </h2>
           </div>
 
           <div className="mt-6">
             <CheckoutInput
               type="email"
-              value={form.email}
-              label={dictionary.email}
-              error={errors.email}
+              value={
+                form.email
+              }
+              label={
+                dictionary.email
+              }
+              error={
+                errors.email
+              }
               autoComplete="email"
-              onChange={(value) =>
-                updateField("email", value)
+              onChange={(
+                value
+              ) =>
+                updateField(
+                  "email",
+                  value
+                )
               }
             />
           </div>
@@ -656,6 +1006,7 @@ export default function CheckoutContent({
         {/* ====================================================
             TESLİMAT
         ==================================================== */}
+
         <section className="mt-12">
           <div className="flex items-center gap-4 border-b border-border pb-5">
             <span className="flex h-8 w-8 items-center justify-center border border-accent text-[10px] font-semibold text-accent">
@@ -663,17 +1014,29 @@ export default function CheckoutContent({
             </span>
 
             <h2 className="font-heading text-3xl leading-none text-foreground sm:text-4xl">
-              {dictionary.shippingTitle}
+              {
+                dictionary.shippingTitle
+              }
             </h2>
           </div>
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            {/* İsim */}
+
             <CheckoutInput
-              value={form.firstName}
-              label={dictionary.firstName}
-              error={errors.firstName}
+              value={
+                form.firstName
+              }
+              label={
+                dictionary.firstName
+              }
+              error={
+                errors.firstName
+              }
               autoComplete="given-name"
-              onChange={(value) =>
+              onChange={(
+                value
+              ) =>
                 updateField(
                   "firstName",
                   value
@@ -681,12 +1044,22 @@ export default function CheckoutContent({
               }
             />
 
+            {/* Soyisim */}
+
             <CheckoutInput
-              value={form.lastName}
-              label={dictionary.lastName}
-              error={errors.lastName}
+              value={
+                form.lastName
+              }
+              label={
+                dictionary.lastName
+              }
+              error={
+                errors.lastName
+              }
               autoComplete="family-name"
-              onChange={(value) =>
+              onChange={(
+                value
+              ) =>
                 updateField(
                   "lastName",
                   value
@@ -695,69 +1068,110 @@ export default function CheckoutContent({
             />
 
             {/* Ülke */}
+
             <div className="relative sm:col-span-2">
               <select
-                value={form.country}
-                onChange={(event) =>
+                value={
+                  form.country
+                }
+                onChange={(
+                  event
+                ) =>
                   updateField(
                     "country",
-                    event.target.value
+                    event.target
+                      .value
                   )
                 }
-                aria-label={dictionary.country}
+                aria-label={
+                  dictionary.country
+                }
                 className={[
                   "h-16 w-full appearance-none",
+
                   "border bg-surface/55",
+
                   "px-5 pe-12 pt-5",
+
                   "text-sm text-foreground",
+
                   "outline-none transition-all duration-300",
+
                   "focus:border-accent focus:bg-surface",
+
                   errors.country
                     ? "border-danger"
                     : "border-border hover:border-border-strong",
                 ].join(" ")}
               >
                 <option value="">
-                  {dictionary.selectCountry}
+                  {
+                    dictionary.selectCountry
+                  }
                 </option>
 
                 {COUNTRIES.map(
-                  (country) => (
+                  (
+                    country
+                  ) => (
                     <option
-                      key={country.code}
-                      value={country.code}
+                      key={
+                        country.code
+                      }
+                      value={
+                        country.code
+                      }
                     >
-                      {country[locale]}
+                      {
+                        country[
+                          locale
+                        ]
+                      }
                     </option>
                   )
                 )}
               </select>
 
               <span className="pointer-events-none absolute start-5 top-2 text-[8px] font-semibold uppercase tracking-[0.18em] text-muted">
-                {dictionary.country}
+                {
+                  dictionary.country
+                }
               </span>
 
               <ChevronDown
                 size={15}
-                strokeWidth={1.4}
+                strokeWidth={
+                  1.4
+                }
                 className="pointer-events-none absolute end-5 top-1/2 -translate-y-1/2 text-muted"
               />
 
               {errors.country && (
                 <p className="mt-2 text-[10px] text-danger">
-                  {errors.country}
+                  {
+                    errors.country
+                  }
                 </p>
               )}
             </div>
 
             {/* Adres */}
+
             <div className="sm:col-span-2">
               <CheckoutInput
-                value={form.address}
-                label={dictionary.address}
-                error={errors.address}
+                value={
+                  form.address
+                }
+                label={
+                  dictionary.address
+                }
+                error={
+                  errors.address
+                }
                 autoComplete="address-line1"
-                onChange={(value) =>
+                onChange={(
+                  value
+                ) =>
                   updateField(
                     "address",
                     value
@@ -767,6 +1181,7 @@ export default function CheckoutContent({
             </div>
 
             {/* Adres 2 */}
+
             <div className="sm:col-span-2">
               <CheckoutInput
                 value={
@@ -776,7 +1191,9 @@ export default function CheckoutContent({
                   dictionary.addressLineTwo
                 }
                 autoComplete="address-line2"
-                onChange={(value) =>
+                onChange={(
+                  value
+                ) =>
                   updateField(
                     "addressLineTwo",
                     value
@@ -786,34 +1203,67 @@ export default function CheckoutContent({
             </div>
 
             {/* Şehir */}
+
             <CheckoutInput
-              value={form.city}
-              label={dictionary.city}
-              error={errors.city}
+              value={
+                form.city
+              }
+              label={
+                dictionary.city
+              }
+              error={
+                errors.city
+              }
               autoComplete="address-level2"
-              onChange={(value) =>
-                updateField("city", value)
+              onChange={(
+                value
+              ) =>
+                updateField(
+                  "city",
+                  value
+                )
               }
             />
 
             {/* Eyalet */}
+
             <CheckoutInput
-              value={form.state}
-              label={dictionary.state}
-              error={errors.state}
+              value={
+                form.state
+              }
+              label={
+                dictionary.state
+              }
+              error={
+                errors.state
+              }
               autoComplete="address-level1"
-              onChange={(value) =>
-                updateField("state", value)
+              onChange={(
+                value
+              ) =>
+                updateField(
+                  "state",
+                  value
+                )
               }
             />
 
             {/* Posta kodu */}
+
             <CheckoutInput
-              value={form.postalCode}
-              label={dictionary.postalCode}
-              error={errors.postalCode}
+              value={
+                form.postalCode
+              }
+              label={
+                dictionary.postalCode
+              }
+              error={
+                errors.postalCode
+              }
               autoComplete="postal-code"
-              onChange={(value) =>
+              onChange={(
+                value
+              ) =>
                 updateField(
                   "postalCode",
                   value
@@ -822,22 +1272,37 @@ export default function CheckoutContent({
             />
 
             {/* Telefon */}
+
             <CheckoutInput
               type="tel"
-              value={form.phone}
-              label={dictionary.phone}
-              error={errors.phone}
+              value={
+                form.phone
+              }
+              label={
+                dictionary.phone
+              }
+              error={
+                errors.phone
+              }
               autoComplete="tel"
-              onChange={(value) =>
-                updateField("phone", value)
+              onChange={(
+                value
+              ) =>
+                updateField(
+                  "phone",
+                  value
+                )
               }
             />
           </div>
 
           {/* Türkiye satış uyarısı */}
+
           <div className="mt-5 border-s-2 border-accent bg-surface/45 px-5 py-4">
             <p className="text-xs leading-6 text-foreground-soft">
-              {dictionary.turkeyUnavailable}
+              {
+                dictionary.turkeyUnavailable
+              }
             </p>
           </div>
         </section>
@@ -845,16 +1310,21 @@ export default function CheckoutContent({
         {/* ====================================================
             GÜVENLİ ÖDEME
         ==================================================== */}
+
         <div className="mt-10 flex items-start gap-4 border-y border-border py-6">
           <LockKeyhole
             size={20}
-            strokeWidth={1.25}
+            strokeWidth={
+              1.25
+            }
             className="mt-0.5 shrink-0 text-accent"
           />
 
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.17em] text-foreground">
-              {dictionary.securePayment}
+              {
+                dictionary.securePayment
+              }
             </p>
 
             <p className="mt-2 text-xs leading-6 text-foreground-soft">
@@ -868,54 +1338,90 @@ export default function CheckoutContent({
         {/* ====================================================
             ALT BUTONLAR
         ==================================================== */}
+
         <div className="mt-8 flex flex-col-reverse gap-4 sm:flex-row sm:items-center sm:justify-between">
           <Link
             href={`/${locale}/cart`}
             className={[
               "group inline-flex min-h-12",
+
               "items-center justify-center gap-3",
+
               "text-[9px] font-semibold uppercase",
+
               "tracking-[0.17em] text-foreground",
+
               "transition-colors duration-300",
+
               "hover:text-accent",
+
               "sm:justify-start",
             ].join(" ")}
           >
             <ArrowLeft
               size={14}
-              strokeWidth={1.4}
+              strokeWidth={
+                1.4
+              }
               className={[
                 "transition-transform duration-300",
+
                 "group-hover:-translate-x-1",
+
                 "rtl:rotate-180",
+
                 "rtl:group-hover:translate-x-1",
               ].join(" ")}
             />
 
             <span>
-              {dictionary.backToCart}
+              {
+                dictionary.backToCart
+              }
             </span>
           </Link>
 
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={
+              isSubmitting ||
+              isCompletingOrder
+            }
             className={[
               "inline-flex min-h-14",
+
               "items-center justify-center gap-3",
+
               "border px-8",
+
               "text-[10px] font-semibold uppercase",
+
               "tracking-[0.17em]",
+
               "transition-all duration-300",
-              isSubmitting
+
+              isSubmitting ||
+              isCompletingOrder
                 ? "cursor-wait border-border bg-surface-strong text-muted"
                 : "border-[#242320] bg-[#242320] !text-[#F3F0EA] hover:border-accent hover:bg-accent hover:!text-white",
             ].join(" ")}
           >
-            <CreditCard
-              size={17}
-              strokeWidth={1.4}
-            />
+            {isSubmitting ? (
+              <LoaderCircle
+                size={17}
+                strokeWidth={
+                  1.4
+                }
+                className="animate-spin"
+              />
+            ) : (
+              <CreditCard
+                size={17}
+                strokeWidth={
+                  1.4
+                }
+              />
+            )}
 
             <span>
               {isSubmitting
@@ -929,6 +1435,7 @@ export default function CheckoutContent({
       {/* ======================================================
           SAĞ TARAF - SİPARİŞ ÖZETİ
       ====================================================== */}
+
       <aside className="min-w-0 lg:sticky lg:top-[116px] lg:self-start">
         <div className="border border-border bg-surface/60 p-5 sm:p-7">
           <p className="text-[9px] font-semibold uppercase tracking-[0.24em] text-accent">
@@ -936,28 +1443,46 @@ export default function CheckoutContent({
           </p>
 
           <h2 className="mt-3 font-heading text-4xl leading-none text-foreground">
-            {dictionary.orderSummary}
+            {
+              dictionary.orderSummary
+            }
           </h2>
 
-          {/* Ürünler */}
+          {/* ==================================================
+              ÜRÜNLER
+          ================================================== */}
+
           <div className="mt-7 max-h-[390px] space-y-5 overflow-y-auto pe-2">
             {resolvedCartItems.map(
-              ({ cartItem, product }) => (
+              ({
+                cartItem,
+                product,
+              }) => (
                 <article
-                  key={cartItem.id}
+                  key={
+                    cartItem.id
+                  }
                   className={[
                     "grid",
+
                     "grid-cols-[78px_minmax(0,1fr)]",
+
                     "gap-4 border-b border-border",
+
                     "pb-5",
                   ].join(" ")}
                 >
                   {/* Görsel */}
+
                   <div className="relative aspect-[4/5] overflow-hidden bg-background">
                     <Image
-                      src={product.image}
+                      src={
+                        product.image
+                      }
                       alt={
-                        product.name[locale]
+                        product.name[
+                          locale
+                        ]
                       }
                       fill
                       sizes="78px"
@@ -965,21 +1490,28 @@ export default function CheckoutContent({
                     />
 
                     <span className="absolute end-1 top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-foreground px-1 text-[8px] font-semibold text-white">
-                      {cartItem.quantity}
+                      {
+                        cartItem.quantity
+                      }
                     </span>
                   </div>
 
                   {/* Ürün bilgileri */}
+
                   <div className="min-w-0">
                     <h3 className="font-heading text-xl leading-none text-foreground">
                       {
-                        product.name[locale]
+                        product.name[
+                          locale
+                        ]
                       }
                     </h3>
 
                     <div className="mt-3 flex items-center gap-2">
                       <span className="text-[8px] font-semibold uppercase tracking-[0.14em] text-muted">
-                        {dictionary.color}
+                        {
+                          dictionary.color
+                        }
                       </span>
 
                       <span
@@ -996,7 +1528,9 @@ export default function CheckoutContent({
                       {formatPrice(
                         product.price *
                           cartItem.quantity,
+
                         product.currency,
+
                         locale
                       )}
                     </p>
@@ -1009,10 +1543,13 @@ export default function CheckoutContent({
           {/* ==================================================
               TUTARLAR
           ================================================== */}
+
           <div className="mt-7 space-y-4 border-y border-border py-6">
             <div className="flex items-center justify-between gap-6">
               <span className="text-[10px] uppercase tracking-[0.15em] text-muted">
-                {dictionary.subtotal}
+                {
+                  dictionary.subtotal
+                }
               </span>
 
               <span className="text-sm font-semibold text-foreground">
@@ -1026,7 +1563,9 @@ export default function CheckoutContent({
 
             <div className="flex items-center justify-between gap-6">
               <span className="text-[10px] uppercase tracking-[0.15em] text-muted">
-                {dictionary.shipping}
+                {
+                  dictionary.shipping
+                }
               </span>
 
               <span className="text-end text-[10px] text-muted">
@@ -1037,10 +1576,15 @@ export default function CheckoutContent({
             </div>
           </div>
 
-          {/* Toplam */}
+          {/* ==================================================
+              TOPLAM
+          ================================================== */}
+
           <div className="flex items-end justify-between gap-6 pt-6">
             <span className="text-[10px] font-semibold uppercase tracking-[0.17em] text-foreground">
-              {dictionary.total}
+              {
+                dictionary.total
+              }
             </span>
 
             <strong className="font-heading text-3xl font-medium leading-none text-foreground">
@@ -1062,13 +1606,24 @@ export default function CheckoutContent({
  * CHECKOUT INPUT
  * =============================================================
  */
+
 type CheckoutInputProps = {
   value: string;
+
   label: string;
+
   error?: string;
-  type?: "text" | "email" | "tel";
+
+  type?:
+    | "text"
+    | "email"
+    | "tel";
+
   autoComplete?: string;
-  onChange: (value: string) => void;
+
+  onChange: (
+    value: string
+  ) => void;
 };
 
 function CheckoutInput({
@@ -1089,18 +1644,30 @@ function CheckoutInput({
         <input
           type={type}
           value={value}
-          onChange={(event) =>
-            onChange(event.target.value)
+          onChange={(
+            event
+          ) =>
+            onChange(
+              event.target.value
+            )
           }
           placeholder=" "
-          autoComplete={autoComplete}
+          autoComplete={
+            autoComplete
+          }
           className={[
             "peer h-16 w-full border",
+
             "bg-surface/55 px-5 pt-5",
+
             "text-sm text-foreground",
+
             "outline-none transition-all duration-300",
+
             "hover:border-border-strong",
+
             "focus:border-accent focus:bg-surface",
+
             error
               ? "border-danger"
               : "border-border",
@@ -1110,23 +1677,37 @@ function CheckoutInput({
         <span
           className={[
             "pointer-events-none absolute",
+
             "start-5 top-1/2 -translate-y-1/2",
+
             "text-xs text-muted",
+
             "transition-all duration-200",
 
             "peer-focus:top-3",
+
             "peer-focus:translate-y-0",
+
             "peer-focus:text-[8px]",
+
             "peer-focus:font-semibold",
+
             "peer-focus:uppercase",
+
             "peer-focus:tracking-[0.16em]",
+
             "peer-focus:text-accent",
 
             "peer-[:not(:placeholder-shown)]:top-3",
+
             "peer-[:not(:placeholder-shown)]:translate-y-0",
+
             "peer-[:not(:placeholder-shown)]:text-[8px]",
+
             "peer-[:not(:placeholder-shown)]:font-semibold",
+
             "peer-[:not(:placeholder-shown)]:uppercase",
+
             "peer-[:not(:placeholder-shown)]:tracking-[0.16em]",
           ].join(" ")}
         >

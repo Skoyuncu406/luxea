@@ -1,12 +1,15 @@
 "use client";
 
 import {
-  useMemo,
+  useCallback,
+  useEffect,
   useState,
   type FormEvent,
 } from "react";
+
 import Image from "next/image";
 import Link from "next/link";
+
 import {
   Check,
   Circle,
@@ -21,24 +24,37 @@ import {
   type Order,
   type OrderStatus,
 } from "@/contexts/OrderContext";
+
 import { formatPrice } from "@/lib/format-price";
 import type { Locale } from "@/lib/i18n/config";
+
+/*
+ * =============================================================
+ * TYPES
+ * =============================================================
+ */
 
 type OrderTrackingDictionary = {
   searchTitle: string;
   searchDescription: string;
+
   trackingCode: string;
   trackingPlaceholder: string;
   searchButton: string;
+
   requiredCode: string;
+
   notFound: string;
   notFoundDescription: string;
 
   currentStatus: string;
   orderDate: string;
+
   customer: string;
   deliveryAddress: string;
+
   orderSummary: string;
+
   total: string;
   quantity: string;
   color: string;
@@ -59,28 +75,48 @@ type OrderTrackingDictionary = {
 
   continueShopping: string;
   clearSearch: string;
+
   loading: string;
 };
 
 type OrderTrackingContentProps = {
   locale: Locale;
-  dictionary: OrderTrackingDictionary;
+
+  dictionary:
+    OrderTrackingDictionary;
+
   initialTrackingCode?: string;
 };
 
 type OrderTrackingResultProps = {
   locale: Locale;
+
   order: Order;
-  dictionary: OrderTrackingDictionary;
+
+  dictionary:
+    OrderTrackingDictionary;
 };
 
-const ORDER_STEPS: OrderStatus[] = [
-  "received",
-  "payment-confirmed",
-  "preparing",
-  "shipped",
-  "delivered",
-];
+/*
+ * =============================================================
+ * ORDER STEPS
+ * =============================================================
+ */
+
+const ORDER_STEPS:
+  OrderStatus[] = [
+    "received",
+    "payment-confirmed",
+    "preparing",
+    "shipped",
+    "delivered",
+  ];
+
+/*
+ * =============================================================
+ * MAIN COMPONENT
+ * =============================================================
+ */
 
 export default function OrderTrackingContent({
   locale,
@@ -88,119 +124,390 @@ export default function OrderTrackingContent({
   initialTrackingCode = "",
 }: OrderTrackingContentProps) {
   const {
-    isLoaded,
     findOrderByTrackingCode,
+    fetchOrderByTrackingCode,
   } = useOrders();
 
+  /*
+   * ===========================================================
+   * INITIAL CODE
+   * ===========================================================
+   */
+
   const normalizedInitialCode =
-    initialTrackingCode.trim().toUpperCase();
+    initialTrackingCode
+      .trim()
+      .toUpperCase();
 
-  const [trackingCode, setTrackingCode] =
-    useState(normalizedInitialCode);
+  /*
+   * ===========================================================
+   * STATE
+   * ===========================================================
+   */
 
-  const [searchedCode, setSearchedCode] =
-    useState(normalizedInitialCode);
+  const [
+    trackingCode,
+    setTrackingCode,
+  ] = useState(
+    normalizedInitialCode
+  );
 
-  const [error, setError] = useState("");
+  const [
+    searchedCode,
+    setSearchedCode,
+  ] = useState(
+    normalizedInitialCode
+  );
 
-  const order = useMemo(() => {
-    if (!searchedCode) {
+  const [
+    order,
+    setOrder,
+  ] = useState<
+    Order | undefined
+  >(() => {
+    if (
+      !normalizedInitialCode
+    ) {
       return undefined;
     }
 
     return findOrderByTrackingCode(
-      searchedCode
+      normalizedInitialCode
     );
-  }, [
-    searchedCode,
-    findOrderByTrackingCode,
-  ]);
+  });
 
-  function handleSubmit(
-    event: FormEvent<HTMLFormElement>
-  ) {
-    event.preventDefault();
+  const [
+    error,
+    setError,
+  ] = useState("");
 
-    const normalizedCode = trackingCode
-      .trim()
-      .toUpperCase();
+  const [
+    isSearching,
+    setIsSearching,
+  ] = useState(false);
 
-    if (!normalizedCode) {
-      setError(dictionary.requiredCode);
-      setSearchedCode("");
+  const [
+    hasSearched,
+    setHasSearched,
+  ] = useState(
+    Boolean(
+      normalizedInitialCode
+    )
+  );
 
+  /*
+   * ===========================================================
+   * SEARCH ORDER
+   *
+   * Önce context state kontrol edilir.
+   *
+   * Yoksa:
+   *
+   * GET /api/orders/tracking/[trackingCode]
+   *                    ↓
+   *                Prisma
+   *                    ↓
+   *            Neon PostgreSQL
+   * ===========================================================
+   */
+
+  const searchOrder =
+    useCallback(
+      async (
+        code: string
+      ) => {
+        const normalizedCode =
+          code
+            .trim()
+            .toUpperCase();
+
+        /*
+         * -----------------------------------------------------
+         * REQUIRED
+         * -----------------------------------------------------
+         */
+
+        if (
+          !normalizedCode
+        ) {
+          setError(
+            dictionary.requiredCode
+          );
+
+          setSearchedCode(
+            ""
+          );
+
+          setOrder(
+            undefined
+          );
+
+          setHasSearched(
+            false
+          );
+
+          return;
+        }
+
+        /*
+         * -----------------------------------------------------
+         * SEARCH STATE
+         * -----------------------------------------------------
+         */
+
+        setError("");
+
+        setTrackingCode(
+          normalizedCode
+        );
+
+        setSearchedCode(
+          normalizedCode
+        );
+
+        setHasSearched(
+          true
+        );
+
+        /*
+         * -----------------------------------------------------
+         * CONTEXT CACHE
+         * -----------------------------------------------------
+         *
+         * Sipariş checkout'tan yeni oluşturulduysa
+         * veya daha önce sorgulandıysa context içerisinde
+         * bulunabilir.
+         */
+
+        const cachedOrder =
+          findOrderByTrackingCode(
+            normalizedCode
+          );
+
+        if (cachedOrder) {
+          setOrder(
+            cachedOrder
+          );
+
+          setIsSearching(
+            false
+          );
+
+          return;
+        }
+
+        /*
+         * -----------------------------------------------------
+         * POSTGRESQL
+         * -----------------------------------------------------
+         */
+
+        setOrder(
+          undefined
+        );
+
+        setIsSearching(
+          true
+        );
+
+        try {
+          const fetchedOrder =
+            await fetchOrderByTrackingCode(
+              normalizedCode
+            );
+
+          setOrder(
+            fetchedOrder
+          );
+        } catch (requestError) {
+          console.error(
+            "Sipariş takip sorgusu başarısız:",
+            requestError
+          );
+
+          setOrder(
+            undefined
+          );
+        } finally {
+          setIsSearching(
+            false
+          );
+        }
+      },
+      [
+        dictionary.requiredCode,
+        fetchOrderByTrackingCode,
+        findOrderByTrackingCode,
+      ]
+    );
+
+  /*
+   * ===========================================================
+   * QUERY STRING'DEN OTOMATİK ARAMA
+   * ===========================================================
+   *
+   * Örnek:
+   *
+   * /tr/account/orders?code=LUX-2026-XXXXXXXXXX
+   *
+   * Sipariş tamamlandı sayfasındaki
+   * "Siparişi Takip Et" butonundan gelindiğinde
+   * müşteri tekrar arama butonuna basmaz.
+   * ===========================================================
+   */
+
+  useEffect(() => {
+    if (
+      !normalizedInitialCode
+    ) {
       return;
     }
 
-    setError("");
-    setTrackingCode(normalizedCode);
-    setSearchedCode(normalizedCode);
-  }
+    void searchOrder(
+      normalizedInitialCode
+    );
+  }, [
+    normalizedInitialCode,
+    searchOrder,
+  ]);
 
-  function clearInput() {
-    setTrackingCode("");
-    setError("");
-  }
+  /*
+   * ===========================================================
+   * SUBMIT
+   * ===========================================================
+   */
 
-  function clearSearch() {
-    setTrackingCode("");
-    setSearchedCode("");
-    setError("");
-  }
+  function handleSubmit(
+    event:
+      FormEvent<HTMLFormElement>
+  ) {
+    event.preventDefault();
 
-  if (!isLoaded) {
-    return (
-      <div className="mt-12 flex min-h-[420px] w-full items-center justify-center border-y border-border px-5 text-center">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-          {dictionary.loading}
-        </p>
-      </div>
+    if (isSearching) {
+      return;
+    }
+
+    void searchOrder(
+      trackingCode
     );
   }
 
+  /*
+   * ===========================================================
+   * INPUT CLEAR
+   *
+   * Sadece input değerini temizler.
+   * Mevcut sonucu hemen kaldırmaz.
+   * ===========================================================
+   */
+
+  function clearInput() {
+    setTrackingCode("");
+
+    setError("");
+  }
+
+  /*
+   * ===========================================================
+   * SEARCH CLEAR
+   *
+   * Sonucu ve arama kodunu tamamen temizler.
+   * ===========================================================
+   */
+
+  function clearSearch() {
+    setTrackingCode("");
+
+    setSearchedCode("");
+
+    setOrder(
+      undefined
+    );
+
+    setError("");
+
+    setHasSearched(
+      false
+    );
+
+    setIsSearching(
+      false
+    );
+  }
+
+  /*
+   * ===========================================================
+   * RENDER
+   * ===========================================================
+   */
+
   return (
     <div className="mt-12 w-full">
-      {/* Arama alanı */}
+      {/* =====================================================
+          ARAMA ALANI
+      ===================================================== */}
+
       <section className="mx-auto w-full max-w-[900px] border-y border-border px-4 py-12 text-center sm:px-8 sm:py-16">
         <div className="mx-auto flex w-full max-w-[680px] flex-col items-center text-center">
           <span className="flex h-20 w-20 items-center justify-center rounded-full border border-border bg-surface/55 text-accent">
             <Package
               size={29}
-              strokeWidth={1.15}
+              strokeWidth={
+                1.15
+              }
             />
           </span>
 
           <h2 className="mt-7 w-full text-balance text-center font-heading text-4xl leading-none text-foreground sm:text-5xl lg:text-6xl">
-            {dictionary.searchTitle}
+            {
+              dictionary.searchTitle
+            }
           </h2>
 
           <p className="mx-auto mt-5 w-full max-w-[580px] text-center text-sm leading-7 text-foreground-soft sm:text-base sm:leading-8">
-            {dictionary.searchDescription}
+            {
+              dictionary.searchDescription
+            }
           </p>
         </div>
 
+        {/* ===================================================
+            SEARCH FORM
+        =================================================== */}
+
         <form
-          onSubmit={handleSubmit}
+          onSubmit={
+            handleSubmit
+          }
           className="mx-auto mt-10 flex w-full max-w-[620px] flex-col items-center"
         >
           <label className="block w-full text-center">
             <span className="mb-3 block w-full text-center text-[9px] font-semibold uppercase tracking-[0.2em] text-muted">
-              {dictionary.trackingCode}
+              {
+                dictionary.trackingCode
+              }
             </span>
 
             <div className="relative w-full">
               <Search
                 size={18}
-                strokeWidth={1.35}
+                strokeWidth={
+                  1.35
+                }
                 className="pointer-events-none absolute start-5 top-1/2 z-10 -translate-y-1/2 text-accent"
               />
 
               <input
                 type="text"
-                value={trackingCode}
-                onChange={(event) => {
+                value={
+                  trackingCode
+                }
+                onChange={(
+                  event
+                ) => {
                   setTrackingCode(
-                    event.target.value
+                    event.target
+                      .value
                   );
 
                   setError("");
@@ -211,32 +518,52 @@ export default function OrderTrackingContent({
                 aria-label={
                   dictionary.trackingCode
                 }
-                aria-invalid={Boolean(error)}
+                aria-invalid={
+                  Boolean(
+                    error
+                  )
+                }
                 autoComplete="off"
-                spellCheck={false}
+                spellCheck={
+                  false
+                }
                 dir="ltr"
                 className={[
                   "block h-16 w-full min-w-0",
+
                   "border bg-[#EEEAE3]",
+
                   "ps-14 pe-14",
+
                   "text-center text-sm uppercase",
+
                   "tracking-[0.08em] text-[#242320]",
+
                   "outline-none",
+
                   "transition-all duration-300",
+
                   "placeholder:text-center",
+
                   "placeholder:normal-case",
+
                   "placeholder:tracking-normal",
+
                   "placeholder:text-[#777269]",
+
                   error
                     ? "border-danger"
                     : "border-border hover:border-border-strong focus:border-accent",
                 ].join(" ")}
               />
 
-              {trackingCode.length > 0 && (
+              {trackingCode.length >
+                0 && (
                 <button
                   type="button"
-                  onClick={clearInput}
+                  onClick={
+                    clearInput
+                  }
                   aria-label={
                     dictionary.clearSearch
                   }
@@ -244,7 +571,9 @@ export default function OrderTrackingContent({
                 >
                   <X
                     size={16}
-                    strokeWidth={1.4}
+                    strokeWidth={
+                      1.4
+                    }
                   />
                 </button>
               )}
@@ -257,85 +586,177 @@ export default function OrderTrackingContent({
             )}
           </label>
 
+          {/* Search */}
+
           <button
             type="submit"
+            disabled={
+              isSearching
+            }
             className={[
               "mt-4 inline-flex min-h-14",
+
               "w-full items-center justify-center",
+
               "gap-3 border border-[#242320]",
+
               "bg-[#242320] px-8",
+
               "text-center text-[10px]",
+
               "font-semibold uppercase",
+
               "tracking-[0.17em]",
+
               "!text-[#F3F0EA]",
+
               "transition-all duration-300",
+
               "hover:border-accent",
+
               "hover:bg-accent",
+
               "hover:!text-white",
+
+              "disabled:cursor-wait",
+
+              "disabled:opacity-60",
             ].join(" ")}
           >
             <Search
               size={16}
-              strokeWidth={1.4}
+              strokeWidth={
+                1.4
+              }
+              className={
+                isSearching
+                  ? "animate-pulse"
+                  : ""
+              }
             />
 
             <span>
-              {dictionary.searchButton}
+              {isSearching
+                ? dictionary.loading
+                : dictionary.searchButton}
             </span>
           </button>
         </form>
       </section>
 
-      {/* Sipariş bulunamadı */}
-      {searchedCode && !order && (
-        <section className="mx-auto mt-10 flex min-h-[340px] w-full max-w-[900px] flex-col items-center justify-center border-y border-border px-5 py-12 text-center">
-          <span className="flex h-16 w-16 items-center justify-center rounded-full border border-border bg-surface/50 text-accent">
-            <Search
-              size={27}
-              strokeWidth={1.1}
-            />
-          </span>
+      {/* =====================================================
+          ARANIYOR
+      ===================================================== */}
 
-          <h2 className="mt-7 w-full text-center font-heading text-4xl leading-none text-foreground sm:text-5xl">
-            {dictionary.notFound}
-          </h2>
+      {isSearching && (
+        <section className="mx-auto mt-10 flex min-h-[260px] w-full max-w-[900px] flex-col items-center justify-center border-y border-border px-5 text-center">
+          <Search
+            size={27}
+            strokeWidth={
+              1.1
+            }
+            className="animate-pulse text-accent"
+          />
 
-          <p className="mx-auto mt-5 max-w-xl text-center text-sm leading-7 text-foreground-soft sm:text-base">
-            {dictionary.notFoundDescription}
+          <p className="mt-5 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+            {
+              dictionary.loading
+            }
           </p>
-
-          <button
-            type="button"
-            onClick={clearSearch}
-            className={[
-              "mt-8 inline-flex min-h-12",
-              "items-center justify-center",
-              "border border-foreground px-7",
-              "text-center text-[9px]",
-              "font-semibold uppercase",
-              "tracking-[0.16em]",
-              "text-foreground",
-              "transition-all duration-300",
-              "hover:bg-foreground",
-              "hover:!text-[#F3F0EA]",
-            ].join(" ")}
-          >
-            {dictionary.clearSearch}
-          </button>
         </section>
       )}
 
-      {/* Sipariş sonucu */}
-      {order && (
-        <OrderTrackingResult
-          locale={locale}
-          order={order}
-          dictionary={dictionary}
-        />
-      )}
+      {/* =====================================================
+          SİPARİŞ BULUNAMADI
+      ===================================================== */}
+
+      {!isSearching &&
+        hasSearched &&
+        searchedCode &&
+        !order && (
+          <section className="mx-auto mt-10 flex min-h-[340px] w-full max-w-[900px] flex-col items-center justify-center border-y border-border px-5 py-12 text-center">
+            <span className="flex h-16 w-16 items-center justify-center rounded-full border border-border bg-surface/50 text-accent">
+              <Search
+                size={27}
+                strokeWidth={
+                  1.1
+                }
+              />
+            </span>
+
+            <h2 className="mt-7 w-full text-center font-heading text-4xl leading-none text-foreground sm:text-5xl">
+              {
+                dictionary.notFound
+              }
+            </h2>
+
+            <p className="mx-auto mt-5 max-w-xl text-center text-sm leading-7 text-foreground-soft sm:text-base">
+              {
+                dictionary.notFoundDescription
+              }
+            </p>
+
+            <button
+              type="button"
+              onClick={
+                clearSearch
+              }
+              className={[
+                "mt-8 inline-flex min-h-12",
+
+                "items-center justify-center",
+
+                "border border-foreground px-7",
+
+                "text-center text-[9px]",
+
+                "font-semibold uppercase",
+
+                "tracking-[0.16em]",
+
+                "text-foreground",
+
+                "transition-all duration-300",
+
+                "hover:bg-foreground",
+
+                "hover:!text-[#F3F0EA]",
+              ].join(" ")}
+            >
+              {
+                dictionary.clearSearch
+              }
+            </button>
+          </section>
+        )}
+
+      {/* =====================================================
+          SİPARİŞ SONUCU
+      ===================================================== */}
+
+      {!isSearching &&
+        order && (
+          <OrderTrackingResult
+            locale={
+              locale
+            }
+            order={
+              order
+            }
+            dictionary={
+              dictionary
+            }
+          />
+        )}
     </div>
   );
 }
+
+/*
+ * =============================================================
+ * ORDER TRACKING RESULT
+ * =============================================================
+ */
 
 function OrderTrackingResult({
   locale,
@@ -343,21 +764,35 @@ function OrderTrackingResult({
   dictionary,
 }: OrderTrackingResultProps) {
   const isCancelled =
-    order.status === "cancelled";
+    order.status ===
+    "cancelled";
 
   const currentStepIndex =
-    ORDER_STEPS.indexOf(order.status);
+    ORDER_STEPS.indexOf(
+      order.status
+    );
 
-  const statusLabel = getStatusLabel(
-    order.status,
-    dictionary
-  );
+  const statusLabel =
+    getStatusLabel(
+      order.status,
+      dictionary
+    );
 
   const formattedDate =
-    new Intl.DateTimeFormat(locale, {
-      dateStyle: "long",
-      timeStyle: "short",
-    }).format(new Date(order.createdAt));
+    new Intl.DateTimeFormat(
+      locale,
+      {
+        dateStyle:
+          "long",
+
+        timeStyle:
+          "short",
+      }
+    ).format(
+      new Date(
+        order.createdAt
+      )
+    );
 
   const customerName = [
     order.customer.firstName,
@@ -368,67 +803,100 @@ function OrderTrackingResult({
 
   return (
     <div className="mt-12 w-full">
-      {/* Sipariş üst bilgisi */}
+      {/* =====================================================
+          SİPARİŞ ÜST BİLGİSİ
+      ===================================================== */}
+
       <section className="w-full border-y border-border py-10 text-center">
         <div className="grid w-full gap-8 md:grid-cols-3">
+          {/* Tracking */}
+
           <div className="flex min-w-0 flex-col items-center text-center">
             <p className="text-[8px] font-semibold uppercase tracking-[0.2em] text-accent">
-              {dictionary.trackingCode}
+              {
+                dictionary.trackingCode
+              }
             </p>
 
             <p
               dir="ltr"
               className="mt-3 w-full break-all text-center font-heading text-2xl tracking-[0.06em] text-foreground"
             >
-              {order.trackingCode}
+              {
+                order.trackingCode
+              }
             </p>
           </div>
 
+          {/* Date */}
+
           <div className="flex min-w-0 flex-col items-center text-center">
             <p className="text-[8px] font-semibold uppercase tracking-[0.2em] text-accent">
-              {dictionary.orderDate}
+              {
+                dictionary.orderDate
+              }
             </p>
 
             <p className="mt-3 text-center text-sm leading-6 text-foreground-soft">
-              {formattedDate}
+              {
+                formattedDate
+              }
             </p>
           </div>
 
+          {/* Status */}
+
           <div className="flex min-w-0 flex-col items-center text-center">
             <p className="text-[8px] font-semibold uppercase tracking-[0.2em] text-accent">
-              {dictionary.currentStatus}
+              {
+                dictionary.currentStatus
+              }
             </p>
 
             <p
               className={[
                 "mt-3 inline-flex min-h-9",
+
                 "items-center justify-center",
+
                 "border px-4 text-center",
+
                 "text-[9px] font-semibold uppercase",
+
                 "tracking-[0.15em]",
+
                 isCancelled
                   ? "border-danger/30 bg-danger/10 text-danger"
                   : "border-success/30 bg-success/10 text-success",
               ].join(" ")}
             >
-              {statusLabel}
+              {
+                statusLabel
+              }
             </p>
           </div>
         </div>
       </section>
 
-      {/* Sipariş aşamaları */}
+      {/* =====================================================
+          SİPARİŞ AŞAMALARI
+      ===================================================== */}
+
       <section className="w-full py-12">
         {isCancelled ? (
           <div className="mx-auto flex max-w-[760px] flex-col items-center justify-center gap-5 border border-danger/25 bg-danger/10 p-6 text-center text-danger">
             <X
               size={23}
-              strokeWidth={1.3}
+              strokeWidth={
+                1.3
+              }
             />
 
             <div className="text-center">
               <h2 className="font-heading text-3xl leading-none">
-                {dictionary.cancelled}
+                {
+                  dictionary.cancelled
+                }
               </h2>
 
               <p className="mx-auto mt-3 max-w-xl text-center text-sm leading-7">
@@ -441,43 +909,62 @@ function OrderTrackingResult({
         ) : (
           <div className="mx-auto grid w-full max-w-[1200px] gap-0 lg:grid-cols-5">
             {ORDER_STEPS.map(
-              (status, index) => {
+              (
+                status,
+                index
+              ) => {
                 const isCompleted =
-                  index <= currentStepIndex;
+                  index <=
+                  currentStepIndex;
 
                 const isCurrent =
-                  index === currentStepIndex;
+                  index ===
+                  currentStepIndex;
 
                 const historyEntry =
                   order.statusHistory.find(
-                    (entry) =>
-                      entry.status === status
+                    (
+                      entry
+                    ) =>
+                      entry.status ===
+                      status
                   );
 
                 return (
                   <div
-                    key={status}
+                    key={
+                      status
+                    }
                     className="relative flex flex-col items-center pb-10 text-center lg:block lg:pb-0"
                   >
                     {index <
                       ORDER_STEPS.length -
                         1 && (
                       <>
+                        {/* Mobile vertical line */}
+
                         <span
                           className={[
                             "absolute start-1/2 top-9",
+
                             "h-[calc(100%-18px)] w-px",
+
                             "-translate-x-1/2 lg:hidden",
+
                             isCompleted
                               ? "bg-accent"
                               : "bg-border-strong",
                           ].join(" ")}
                         />
 
+                        {/* Desktop horizontal line */}
+
                         <span
                           className={[
                             "absolute start-1/2 top-[17px]",
+
                             "hidden h-px w-full lg:block",
+
                             index <
                             currentStepIndex
                               ? "bg-accent"
@@ -487,46 +974,68 @@ function OrderTrackingResult({
                       </>
                     )}
 
+                    {/* Circle */}
+
                     <div className="relative z-10 flex justify-center">
                       <span
                         className={[
                           "flex h-9 w-9 items-center",
+
                           "justify-center rounded-full border",
+
                           isCompleted
                             ? "border-accent bg-accent text-white"
                             : "border-border-strong bg-background text-muted",
+
                           isCurrent
                             ? "shadow-[0_0_0_6px_rgba(146,115,74,0.12)]"
                             : "",
                         ].join(" ")}
                       >
                         {isCompleted ? (
-                          status === "shipped" ? (
+                          status ===
+                          "shipped" ? (
                             <Truck
-                              size={15}
-                              strokeWidth={1.5}
+                              size={
+                                15
+                              }
+                              strokeWidth={
+                                1.5
+                              }
                             />
                           ) : (
                             <Check
-                              size={15}
-                              strokeWidth={1.6}
+                              size={
+                                15
+                              }
+                              strokeWidth={
+                                1.6
+                              }
                             />
                           )
                         ) : (
                           <Circle
-                            size={8}
+                            size={
+                              8
+                            }
                             fill="currentColor"
-                            strokeWidth={0}
+                            strokeWidth={
+                              0
+                            }
                           />
                         )}
                       </span>
                     </div>
 
+                    {/* Text */}
+
                     <div className="relative z-10 mx-auto max-w-[230px] bg-background px-3 pt-6 text-center">
                       <h3
                         className={[
                           "text-center font-heading",
+
                           "text-2xl leading-none",
+
                           isCompleted
                             ? "text-foreground"
                             : "text-muted",
@@ -552,6 +1061,7 @@ function OrderTrackingResult({
                             {
                               dateStyle:
                                 "medium",
+
                               timeStyle:
                                 "short",
                             }
@@ -571,45 +1081,71 @@ function OrderTrackingResult({
         )}
       </section>
 
-      {/* Sipariş detayları */}
+      {/* =====================================================
+          SİPARİŞ DETAYLARI
+      ===================================================== */}
+
       <div className="grid w-full gap-10 border-t border-border pt-12 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-16">
         <div className="min-w-0">
           <div className="grid gap-6 sm:grid-cols-2">
-            {/* Müşteri */}
+            {/* =================================================
+                MÜŞTERİ
+            ================================================= */}
+
             <section className="flex flex-col items-center border border-border bg-surface/40 p-6 text-center">
               <p className="text-[8px] font-semibold uppercase tracking-[0.2em] text-accent">
-                {dictionary.customer}
+                {
+                  dictionary.customer
+                }
               </p>
 
               <p className="mt-3 break-words text-center font-heading text-2xl leading-none text-foreground">
-                {customerName}
+                {
+                  customerName
+                }
               </p>
 
               <p className="mt-3 break-all text-center text-xs leading-6 text-foreground-soft">
-                {order.customer.email}
+                {
+                  order.customer
+                    .email
+                }
               </p>
 
               <p className="mt-1 text-center text-xs leading-6 text-foreground-soft">
-                {order.customer.phone}
+                {
+                  order.customer
+                    .phone
+                }
               </p>
             </section>
 
-            {/* Teslimat adresi */}
+            {/* =================================================
+                TESLİMAT ADRESİ
+            ================================================= */}
+
             <section className="flex flex-col items-center border border-border bg-surface/40 p-6 text-center">
               <p className="text-[8px] font-semibold uppercase tracking-[0.2em] text-accent">
-                {dictionary.deliveryAddress}
+                {
+                  dictionary.deliveryAddress
+                }
               </p>
 
               <address className="mt-3 text-center text-xs leading-6 text-foreground-soft not-italic">
                 <p>
-                  {order.shippingAddress.address}
+                  {
+                    order
+                      .shippingAddress
+                      .address
+                  }
                 </p>
 
                 {order.shippingAddress
                   .addressLineTwo && (
                   <p>
                     {
-                      order.shippingAddress
+                      order
+                        .shippingAddress
                         .addressLineTwo
                     }
                   </p>
@@ -617,16 +1153,23 @@ function OrderTrackingResult({
 
                 <p>
                   {
-                    order.shippingAddress
+                    order
+                      .shippingAddress
                       .postalCode
                   }{" "}
-                  {order.shippingAddress.city}
+                  {
+                    order
+                      .shippingAddress
+                      .city
+                  }
                 </p>
 
-                {order.shippingAddress.state && (
+                {order.shippingAddress
+                  .state && (
                   <p>
                     {
-                      order.shippingAddress
+                      order
+                        .shippingAddress
                         .state
                     }
                   </p>
@@ -634,7 +1177,8 @@ function OrderTrackingResult({
 
                 <p>
                   {
-                    order.shippingAddress
+                    order
+                      .shippingAddress
                       .country
                   }
                 </p>
@@ -643,78 +1187,123 @@ function OrderTrackingResult({
           </div>
         </div>
 
-        {/* Sipariş özeti */}
+        {/* =====================================================
+            SİPARİŞ ÖZETİ
+        ===================================================== */}
+
         <aside className="min-w-0 border border-border bg-surface/55 p-6 text-center sm:p-7">
           <h2 className="text-center font-heading text-4xl leading-none text-foreground">
-            {dictionary.orderSummary}
+            {
+              dictionary.orderSummary
+            }
           </h2>
 
           <div className="mt-7 space-y-5">
-            {order.items.map((item) => (
-              <article
-                key={item.id}
-                className="grid min-w-0 grid-cols-[72px_minmax(0,1fr)] items-center gap-4 border-b border-border pb-5"
-              >
-                <Link
-                  href={`/${locale}/products/${item.slug}`}
-                  className="relative aspect-[4/5] overflow-hidden bg-background"
+            {order.items.map(
+              (item) => (
+                <article
+                  key={
+                    item.id
+                  }
+                  className="grid min-w-0 grid-cols-[72px_minmax(0,1fr)] items-center gap-4 border-b border-border pb-5"
                 >
-                  <Image
-                    src={item.image}
-                    alt={item.name[locale]}
-                    fill
-                    sizes="72px"
-                    className="object-cover object-center"
-                  />
+                  {/* Image */}
 
-                  <span className="absolute end-1 top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-foreground px-1 text-[8px] text-white">
-                    {item.quantity}
-                  </span>
-                </Link>
-
-                <div className="flex min-w-0 flex-col items-center text-center">
                   <Link
                     href={`/${locale}/products/${item.slug}`}
-                    className="block break-words text-center font-heading text-xl leading-none text-foreground transition-colors duration-300 hover:text-accent"
+                    className="relative aspect-[4/5] overflow-hidden bg-background"
                   >
-                    {item.name[locale]}
+                    <Image
+                      src={
+                        item.image
+                      }
+                      alt={
+                        item.name[
+                          locale
+                        ]
+                      }
+                      fill
+                      sizes="72px"
+                      className="object-cover object-center"
+                    />
+
+                    <span className="absolute end-1 top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-foreground px-1 text-[8px] text-white">
+                      {
+                        item.quantity
+                      }
+                    </span>
                   </Link>
 
-                  <div className="mt-3 flex items-center justify-center gap-3">
-                    <span className="text-[8px] font-semibold uppercase tracking-[0.14em] text-muted">
-                      {dictionary.color}
-                    </span>
+                  {/* Detail */}
 
-                    <span
-                      className="h-3.5 w-3.5 rounded-full border border-black/15"
-                      style={{
-                        backgroundColor:
-                          item.color,
-                      }}
-                    />
+                  <div className="flex min-w-0 flex-col items-center text-center">
+                    <Link
+                      href={`/${locale}/products/${item.slug}`}
+                      className="block break-words text-center font-heading text-xl leading-none text-foreground transition-colors duration-300 hover:text-accent"
+                    >
+                      {
+                        item.name[
+                          locale
+                        ]
+                      }
+                    </Link>
+
+                    {/* Color */}
+
+                    <div className="mt-3 flex items-center justify-center gap-3">
+                      <span className="text-[8px] font-semibold uppercase tracking-[0.14em] text-muted">
+                        {
+                          dictionary.color
+                        }
+                      </span>
+
+                      <span
+                        aria-hidden="true"
+                        className="h-3.5 w-3.5 rounded-full border border-black/15"
+                        style={{
+                          backgroundColor:
+                            item.color,
+                        }}
+                      />
+                    </div>
+
+                    {/* Quantity */}
+
+                    <p className="mt-3 text-center text-[8px] font-semibold uppercase tracking-[0.14em] text-muted">
+                      {
+                        dictionary.quantity
+                      }
+                      :{" "}
+                      {
+                        item.quantity
+                      }
+                    </p>
+
+                    {/* Price */}
+
+                    <p className="mt-3 text-center text-[10px] font-semibold text-foreground">
+                      {formatPrice(
+                        item.unitPrice *
+                          item.quantity,
+
+                        item.currency,
+
+                        locale
+                      )}
+                    </p>
                   </div>
-
-                  <p className="mt-3 text-center text-[8px] font-semibold uppercase tracking-[0.14em] text-muted">
-                    {dictionary.quantity}:{" "}
-                    {item.quantity}
-                  </p>
-
-                  <p className="mt-3 text-center text-[10px] font-semibold text-foreground">
-                    {formatPrice(
-                      item.unitPrice *
-                        item.quantity,
-                      item.currency,
-                      locale
-                    )}
-                  </p>
-                </div>
-              </article>
-            ))}
+                </article>
+              )
+            )}
           </div>
+
+          {/* Total */}
 
           <div className="mt-6 flex flex-col items-center justify-center gap-3 border-t border-border pt-6 sm:flex-row sm:justify-between">
             <span className="text-center text-[10px] font-semibold uppercase tracking-[0.17em] text-foreground">
-              {dictionary.total}
+              {
+                dictionary.total
+              }
             </span>
 
             <strong className="text-center font-heading text-3xl font-medium leading-none text-foreground">
@@ -728,54 +1317,93 @@ function OrderTrackingResult({
         </aside>
       </div>
 
+      {/* =====================================================
+          CONTINUE SHOPPING
+      ===================================================== */}
+
       <div className="flex w-full justify-center border-t border-border py-10">
         <Link
           href={`/${locale}/products`}
           className={[
             "inline-flex min-h-14",
+
             "items-center justify-center",
+
             "border border-foreground px-8",
+
             "text-center text-[10px]",
+
             "font-semibold uppercase",
+
             "tracking-[0.17em]",
+
             "text-foreground",
+
             "transition-all duration-300",
+
             "hover:bg-foreground",
+
             "hover:!text-[#F3F0EA]",
           ].join(" ")}
         >
-          {dictionary.continueShopping}
+          {
+            dictionary.continueShopping
+          }
         </Link>
       </div>
     </div>
   );
 }
 
+/*
+ * =============================================================
+ * STATUS LABEL
+ * =============================================================
+ */
+
 function getStatusLabel(
   status: OrderStatus,
-  dictionary: OrderTrackingDictionary
+  dictionary:
+    OrderTrackingDictionary
 ) {
   const labels: Record<
     OrderStatus,
     string
   > = {
-    received: dictionary.received,
+    received:
+      dictionary.received,
 
     "payment-confirmed":
       dictionary.paymentConfirmed,
 
-    preparing: dictionary.preparing,
-    shipped: dictionary.shipped,
-    delivered: dictionary.delivered,
-    cancelled: dictionary.cancelled,
+    preparing:
+      dictionary.preparing,
+
+    shipped:
+      dictionary.shipped,
+
+    delivered:
+      dictionary.delivered,
+
+    cancelled:
+      dictionary.cancelled,
   };
 
-  return labels[status];
+  return labels[
+    status
+  ];
 }
+
+/*
+ * =============================================================
+ * STATUS DESCRIPTION
+ * =============================================================
+ */
 
 function getStatusDescription(
   status: OrderStatus,
-  dictionary: OrderTrackingDictionary
+  dictionary:
+    OrderTrackingDictionary
 ) {
   const descriptions: Record<
     OrderStatus,
@@ -800,5 +1428,7 @@ function getStatusDescription(
       dictionary.cancelledDescription,
   };
 
-  return descriptions[status];
+  return descriptions[
+    status
+  ];
 }

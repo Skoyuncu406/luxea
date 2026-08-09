@@ -14,6 +14,7 @@ import {
   ChevronDown,
   Edit3,
   Heart,
+  LoaderCircle,
   PackagePlus,
   Search,
   Sparkles,
@@ -21,17 +22,41 @@ import {
   X,
 } from "lucide-react";
 
-import { useCategories } from "@/contexts/CategoryContext";
-import { useProducts } from "@/contexts/ProductContext";
+import {
+  useCategories,
+} from "@/contexts/CategoryContext";
 
-import { formatPrice } from "@/lib/format-price";
-import type { Locale } from "@/lib/i18n/config";
-import type { Product } from "@/types/product";
+import {
+  useProducts,
+} from "@/contexts/ProductContext";
+
+import {
+  formatPrice,
+} from "@/lib/format-price";
+
+import type {
+  Locale,
+} from "@/lib/i18n/config";
+
+import type {
+  Product,
+} from "@/types/product";
+
+/*
+ * =============================================================
+ * TYPES
+ * =============================================================
+ */
 
 type ProductStatusFilter =
   | "all"
   | "active"
   | "inactive";
+
+type ProductAction =
+  | "active"
+  | "featured"
+  | "new";
 
 type AdminProductsDictionary = {
   addProduct: string;
@@ -39,6 +64,7 @@ type AdminProductsDictionary = {
 
   allCategories: string;
   allStatuses: string;
+
   activeProducts: string;
   inactiveProducts: string;
 
@@ -55,6 +81,7 @@ type AdminProductsDictionary = {
 
   active: string;
   inactive: string;
+
   featured: string;
   newProduct: string;
 
@@ -66,6 +93,7 @@ type AdminProductsDictionary = {
 
   deleteTitle: string;
   deleteDescription: string;
+
   cancel: string;
   confirmDelete: string;
 
@@ -74,30 +102,64 @@ type AdminProductsDictionary = {
 
 type AdminProductsContentProps = {
   locale: Locale;
-  dictionary: AdminProductsDictionary;
+
+  dictionary:
+    AdminProductsDictionary;
 };
+
+/*
+ * =============================================================
+ * MAIN COMPONENT
+ * =============================================================
+ */
 
 export default function AdminProductsContent({
   locale,
   dictionary,
 }: AdminProductsContentProps) {
+  /*
+   * ==========================================================
+   * PRODUCT CONTEXT
+   * ==========================================================
+   */
+
   const {
     products,
-    isLoaded: productsLoaded,
+
+    isLoaded:
+      productsLoaded,
+
     deleteProduct,
+
     toggleProductActive,
+
     toggleProductFeatured,
+
     toggleProductNew,
   } = useProducts();
 
+  /*
+   * ==========================================================
+   * CATEGORY CONTEXT
+   * ==========================================================
+   */
+
   const {
     categories,
-    isLoaded: categoriesLoaded,
+
+    isLoaded:
+      categoriesLoaded,
   } = useCategories();
 
   const isLoaded =
     productsLoaded &&
     categoriesLoaded;
+
+  /*
+   * ==========================================================
+   * FILTER STATE
+   * ==========================================================
+   */
 
   const [
     searchQuery,
@@ -117,6 +179,12 @@ export default function AdminProductsContent({
       "all"
     );
 
+  /*
+   * ==========================================================
+   * DELETE STATE
+   * ==========================================================
+   */
+
   const [
     productToDelete,
     setProductToDelete,
@@ -125,16 +193,37 @@ export default function AdminProductsContent({
       null
     );
 
+  const [
+    isDeleting,
+    setIsDeleting,
+  ] = useState(false);
+
   /*
-   * =========================================================
+   * ==========================================================
+   * ASYNC ACTION STATE
+   * ==========================================================
+   */
+
+  const [
+    pendingAction,
+    setPendingAction,
+  ] =
+    useState<string | null>(
+      null
+    );
+
+  const [
+    actionError,
+    setActionError,
+  ] =
+    useState<string | null>(
+      null
+    );
+
+  /*
+   * ==========================================================
    * KATEGORİLER
-   *
-   * Artık statik @/data/categories
-   * kullanılmıyor.
-   *
-   * Adminin oluşturduğu güncel kategoriler
-   * CategoryContext üzerinden geliyor.
-   * =========================================================
+   * ==========================================================
    */
 
   const visibleCategories =
@@ -146,9 +235,9 @@ export default function AdminProductsContent({
     }, [categories]);
 
   /*
-   * =========================================================
+   * ==========================================================
    * ÜRÜN FİLTRELEME
-   * =========================================================
+   * ==========================================================
    */
 
   const filteredProducts =
@@ -227,9 +316,9 @@ export default function AdminProductsContent({
     statusFilter !== "all";
 
   /*
-   * =========================================================
+   * ==========================================================
    * KATEGORİ ADI
-   * =========================================================
+   * ==========================================================
    */
 
   function getCategoryName(
@@ -246,9 +335,9 @@ export default function AdminProductsContent({
   }
 
   /*
-   * =========================================================
+   * ==========================================================
    * FİLTRE TEMİZLE
-   * =========================================================
+   * ==========================================================
    */
 
   function clearFilters() {
@@ -264,42 +353,158 @@ export default function AdminProductsContent({
   }
 
   /*
-   * =========================================================
-   * ÜRÜN SİL
-   * =========================================================
+   * ==========================================================
+   * ASYNC ÜRÜN AKSİYONU
+   * ==========================================================
    */
 
-  function confirmDelete() {
-    if (!productToDelete) {
+  async function handleProductAction(
+    productId: string,
+    action: ProductAction
+  ) {
+    /*
+     * Aynı anda birden fazla database
+     * değişikliği yapılmasını engelliyoruz.
+     */
+
+    if (pendingAction) {
       return;
     }
 
-    deleteProduct(
-      productToDelete.id
+    const actionKey =
+      `${productId}:${action}`;
+
+    setPendingAction(
+      actionKey
     );
 
-    setProductToDelete(
-      null
-    );
+    setActionError(null);
+
+    try {
+      if (
+        action === "active"
+      ) {
+        await toggleProductActive(
+          productId
+        );
+
+        return;
+      }
+
+      if (
+        action === "featured"
+      ) {
+        await toggleProductFeatured(
+          productId
+        );
+
+        return;
+      }
+
+      await toggleProductNew(
+        productId
+      );
+    } catch (error) {
+      console.error(
+        "Ürün durumu değiştirilemedi:",
+        error
+      );
+
+      setActionError(
+        error instanceof Error &&
+          error.message
+          ? error.message
+          : "Ürün durumu değiştirilemedi."
+      );
+    } finally {
+      setPendingAction(
+        null
+      );
+    }
   }
 
   /*
-   * =========================================================
+   * ==========================================================
+   * ÜRÜN SİL
+   * ==========================================================
+   */
+
+  async function confirmDelete() {
+    if (
+      !productToDelete ||
+      isDeleting
+    ) {
+      return;
+    }
+
+    setIsDeleting(true);
+
+    setActionError(null);
+
+    try {
+      /*
+       * PostgreSQL işleminin tamamlanmasını
+       * bekliyoruz.
+       */
+
+      await deleteProduct(
+        productToDelete.id
+      );
+
+      /*
+       * Modal yalnızca database silme
+       * başarılı olursa kapanır.
+       */
+
+      setProductToDelete(
+        null
+      );
+    } catch (error) {
+      console.error(
+        "Ürün silinemedi:",
+        error
+      );
+
+      setActionError(
+        error instanceof Error &&
+          error.message
+          ? error.message
+          : "Ürün silinemedi."
+      );
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
+  /*
+   * ==========================================================
    * LOADING
-   * =========================================================
+   * ==========================================================
    */
 
   if (!isLoaded) {
     return (
       <div className="flex min-h-[420px] w-full items-center justify-center border-y border-border px-5 text-center">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-          {
-            dictionary.loading
-          }
-        </p>
+        <div>
+          <LoaderCircle
+            size={24}
+            strokeWidth={1.3}
+            className="mx-auto animate-spin text-accent"
+          />
+
+          <p className="mt-5 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+            {dictionary.loading}
+          </p>
+        </div>
       </div>
     );
   }
+
+  /*
+   * ==========================================================
+   * RENDER
+   * ==========================================================
+   */
 
   return (
     <>
@@ -307,6 +512,7 @@ export default function AdminProductsContent({
         {/* ===================================================
             ÜST AKSİYON
         =================================================== */}
+
         <div className="flex w-full justify-end">
           <Link
             href={`/${locale}/admin/products/new`}
@@ -338,8 +544,44 @@ export default function AdminProductsContent({
         </div>
 
         {/* ===================================================
+            DATABASE / API HATASI
+        =================================================== */}
+
+        {actionError && (
+          <div
+            role="alert"
+            className="mt-6 border-s-2 border-danger bg-danger/10 px-5 py-4"
+          >
+            <div className="flex items-start justify-between gap-5">
+              <p className="text-xs leading-6 text-danger">
+                {actionError}
+              </p>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setActionError(
+                    null
+                  )
+                }
+                aria-label="Kapat"
+                className="flex h-7 w-7 shrink-0 items-center justify-center text-danger/70 transition-colors hover:text-danger"
+              >
+                <X
+                  size={14}
+                  strokeWidth={
+                    1.4
+                  }
+                />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ===================================================
             ARAMA + FİLTRELER
         =================================================== */}
+
         <section className="relative z-20 mt-6 w-full border-y border-border py-5">
           <div className="grid w-full min-w-0 gap-4 xl:grid-cols-[minmax(260px,1fr)_240px_220px]">
             <SearchInput
@@ -433,6 +675,7 @@ export default function AdminProductsContent({
         {/* ===================================================
             SONUÇ
         =================================================== */}
+
         <div className="flex min-h-[76px] w-full flex-wrap items-center justify-between gap-4 border-b border-border">
           <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-muted">
             {
@@ -470,22 +713,31 @@ export default function AdminProductsContent({
         {/* ===================================================
             ÜRÜNLER
         =================================================== */}
+
         {filteredProducts.length >
         0 ? (
           <>
             {/* ===============================================
                 MASAÜSTÜ
             =============================================== */}
+
             <div className="hidden w-full min-w-0 xl:block">
               <div
                 className={[
                   "grid min-h-16 w-full",
+
                   "grid-cols-[76px_minmax(220px,1.3fr)_110px_90px_68px_minmax(220px,250px)]",
+
                   "items-center gap-4",
+
                   "border-b border-border",
+
                   "px-3",
+
                   "text-[8px] font-semibold",
+
                   "uppercase tracking-[0.16em]",
+
                   "text-muted",
                 ].join(" ")}
               >
@@ -524,8 +776,91 @@ export default function AdminProductsContent({
 
               <div className="divide-y divide-border border-b border-border">
                 {filteredProducts.map(
-                  (product) => (
-                    <DesktopProductRow
+                  (product) => {
+                    const isProductBusy =
+                      pendingAction?.startsWith(
+                        `${product.id}:`
+                      ) ??
+                      false;
+
+                    return (
+                      <DesktopProductRow
+                        key={
+                          product.id
+                        }
+                        locale={
+                          locale
+                        }
+                        product={
+                          product
+                        }
+                        dictionary={
+                          dictionary
+                        }
+                        categoryName={getCategoryName(
+                          product.categoryId
+                        )}
+                        isProcessing={
+                          isProductBusy
+                        }
+                        activeAction={
+                          pendingAction
+                        }
+                        onToggleActive={() =>
+                          void handleProductAction(
+                            product.id,
+                            "active"
+                          )
+                        }
+                        onToggleFeatured={() =>
+                          void handleProductAction(
+                            product.id,
+                            "featured"
+                          )
+                        }
+                        onToggleNew={() =>
+                          void handleProductAction(
+                            product.id,
+                            "new"
+                          )
+                        }
+                        onDelete={() => {
+                          if (
+                            isProductBusy
+                          ) {
+                            return;
+                          }
+
+                          setActionError(
+                            null
+                          );
+
+                          setProductToDelete(
+                            product
+                          );
+                        }}
+                      />
+                    );
+                  }
+                )}
+              </div>
+            </div>
+
+            {/* ===============================================
+                MOBİL + TABLET
+            =============================================== */}
+
+            <div className="grid w-full gap-5 pt-6 xl:hidden">
+              {filteredProducts.map(
+                (product) => {
+                  const isProductBusy =
+                    pendingAction?.startsWith(
+                      `${product.id}:`
+                    ) ??
+                    false;
+
+                  return (
+                    <MobileProductCard
                       key={
                         product.id
                       }
@@ -541,76 +876,48 @@ export default function AdminProductsContent({
                       categoryName={getCategoryName(
                         product.categoryId
                       )}
+                      isProcessing={
+                        isProductBusy
+                      }
+                      activeAction={
+                        pendingAction
+                      }
                       onToggleActive={() =>
-                        toggleProductActive(
-                          product.id
+                        void handleProductAction(
+                          product.id,
+                          "active"
                         )
                       }
                       onToggleFeatured={() =>
-                        toggleProductFeatured(
-                          product.id
+                        void handleProductAction(
+                          product.id,
+                          "featured"
                         )
                       }
                       onToggleNew={() =>
-                        toggleProductNew(
-                          product.id
+                        void handleProductAction(
+                          product.id,
+                          "new"
                         )
                       }
-                      onDelete={() =>
+                      onDelete={() => {
+                        if (
+                          isProductBusy
+                        ) {
+                          return;
+                        }
+
+                        setActionError(
+                          null
+                        );
+
                         setProductToDelete(
                           product
-                        )
-                      }
+                        );
+                      }}
                     />
-                  )
-                )}
-              </div>
-            </div>
-
-            {/* ===============================================
-                MOBİL + TABLET
-            =============================================== */}
-            <div className="grid w-full gap-5 pt-6 xl:hidden">
-              {filteredProducts.map(
-                (product) => (
-                  <MobileProductCard
-                    key={
-                      product.id
-                    }
-                    locale={
-                      locale
-                    }
-                    product={
-                      product
-                    }
-                    dictionary={
-                      dictionary
-                    }
-                    categoryName={getCategoryName(
-                      product.categoryId
-                    )}
-                    onToggleActive={() =>
-                      toggleProductActive(
-                        product.id
-                      )
-                    }
-                    onToggleFeatured={() =>
-                      toggleProductFeatured(
-                        product.id
-                      )
-                    }
-                    onToggleNew={() =>
-                      toggleProductNew(
-                        product.id
-                      )
-                    }
-                    onDelete={() =>
-                      setProductToDelete(
-                        product
-                      )
-                    }
-                  />
-                )
+                  );
+                }
               )}
             </div>
           </>
@@ -632,24 +939,37 @@ export default function AdminProductsContent({
       {/* =====================================================
           SİLME MODALI
       ===================================================== */}
+
       {productToDelete && (
         <DeleteProductModal
           product={
             productToDelete
           }
-          locale={
-            locale
-          }
+          locale={locale}
           dictionary={
             dictionary
           }
-          onCancel={() =>
+          isDeleting={
+            isDeleting
+          }
+          error={
+            actionError
+          }
+          onCancel={() => {
+            if (isDeleting) {
+              return;
+            }
+
+            setActionError(
+              null
+            );
+
             setProductToDelete(
               null
-            )
-          }
-          onConfirm={
-            confirmDelete
+            );
+          }}
+          onConfirm={() =>
+            void confirmDelete()
           }
         />
       )}
@@ -672,6 +992,11 @@ type ProductItemProps = {
     AdminProductsDictionary;
 
   categoryName: string;
+
+  isProcessing: boolean;
+
+  activeAction:
+    string | null;
 
   onToggleActive:
     () => void;
@@ -697,6 +1022,8 @@ function DesktopProductRow({
   product,
   dictionary,
   categoryName,
+  isProcessing,
+  activeAction,
   onToggleActive,
   onToggleFeatured,
   onToggleNew,
@@ -716,9 +1043,14 @@ function DesktopProductRow({
         "transition-colors duration-300",
 
         "hover:bg-surface/35",
+
+        isProcessing
+          ? "opacity-75"
+          : "",
       ].join(" ")}
     >
       {/* Görsel */}
+
       <div className="relative h-[100px] w-[76px] overflow-hidden bg-surface">
         <Image
           src={
@@ -736,6 +1068,7 @@ function DesktopProductRow({
       </div>
 
       {/* Kimlik */}
+
       <ProductIdentity
         product={
           product
@@ -749,11 +1082,13 @@ function DesktopProductRow({
       />
 
       {/* Kategori */}
+
       <p className="min-w-0 break-words font-heading text-lg leading-tight text-foreground">
         {categoryName}
       </p>
 
       {/* Fiyat */}
+
       <p className="whitespace-nowrap font-heading text-xl leading-none text-foreground">
         {formatPrice(
           product.price,
@@ -763,25 +1098,22 @@ function DesktopProductRow({
       </p>
 
       {/* Stok */}
+
       <div>
         <p className="font-heading text-xl leading-none text-foreground">
-          {
-            product.stock
-          }
+          {product.stock}
         </p>
 
         <p className="mt-2 whitespace-nowrap text-[6px] font-semibold uppercase tracking-[0.08em] text-muted">
           {
             dictionary.order
           }
-          :{" "}
-          {
-            product.order
-          }
+          : {product.order}
         </p>
       </div>
 
       {/* Aksiyon */}
+
       <DesktopProductActions
         locale={
           locale
@@ -791,6 +1123,15 @@ function DesktopProductRow({
         }
         dictionary={
           dictionary
+        }
+        categoryName={
+          categoryName
+        }
+        isProcessing={
+          isProcessing
+        }
+        activeAction={
+          activeAction
         }
         onToggleActive={
           onToggleActive
@@ -819,14 +1160,13 @@ function DesktopProductActions({
   locale,
   product,
   dictionary,
+  isProcessing,
+  activeAction,
   onToggleActive,
   onToggleFeatured,
   onToggleNew,
   onDelete,
-}: Omit<
-  ProductItemProps,
-  "categoryName"
->) {
+}: ProductItemProps) {
   return (
     <div className="flex min-w-0 flex-col items-end gap-2">
       <div className="flex w-full justify-end gap-2">
@@ -839,6 +1179,13 @@ function DesktopProductActions({
               ? dictionary.active
               : dictionary.inactive
           }
+          isLoading={
+            activeAction ===
+            `${product.id}:active`
+          }
+          disabled={
+            isProcessing
+          }
           onClick={
             onToggleActive
           }
@@ -850,6 +1197,13 @@ function DesktopProductActions({
           }
           label={
             dictionary.featured
+          }
+          isLoading={
+            activeAction ===
+            `${product.id}:featured`
+          }
+          disabled={
+            isProcessing
           }
           onClick={
             onToggleFeatured
@@ -865,6 +1219,13 @@ function DesktopProductActions({
           label={
             dictionary.newProduct
           }
+          isLoading={
+            activeAction ===
+            `${product.id}:new`
+          }
+          disabled={
+            isProcessing
+          }
           onClick={
             onToggleNew
           }
@@ -876,7 +1237,20 @@ function DesktopProductActions({
           title={
             dictionary.edit
           }
-          className="inline-flex h-10 w-10 shrink-0 items-center justify-center border border-border text-foreground transition-all duration-300 hover:border-accent hover:bg-accent hover:text-white"
+          className={[
+            "inline-flex h-10 w-10 shrink-0",
+            "items-center justify-center",
+            "border border-border",
+            "text-foreground",
+            "transition-all duration-300",
+            "hover:border-accent",
+            "hover:bg-accent",
+            "hover:text-white",
+
+            isProcessing
+              ? "pointer-events-none opacity-40"
+              : "",
+          ].join(" ")}
         >
           <Edit3
             size={14}
@@ -891,11 +1265,14 @@ function DesktopProductActions({
           onClick={
             onDelete
           }
+          disabled={
+            isProcessing
+          }
           aria-label={`${dictionary.delete}: ${product.name[locale]}`}
           title={
             dictionary.delete
           }
-          className="inline-flex h-10 w-10 shrink-0 items-center justify-center border border-border text-foreground transition-all duration-300 hover:border-danger hover:bg-danger hover:text-white"
+          className="inline-flex h-10 w-10 shrink-0 items-center justify-center border border-border text-foreground transition-all duration-300 hover:border-danger hover:bg-danger hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Trash2
             size={14}
@@ -920,13 +1297,27 @@ function MobileProductCard({
   product,
   dictionary,
   categoryName,
+  isProcessing,
+  activeAction,
   onToggleActive,
   onToggleFeatured,
   onToggleNew,
   onDelete,
 }: ProductItemProps) {
   return (
-    <article className="w-full min-w-0 border border-border bg-surface/35 p-4 sm:p-5">
+    <article
+      className={[
+        "w-full min-w-0",
+        "border border-border",
+        "bg-surface/35",
+        "p-4 sm:p-5",
+        "transition-opacity duration-300",
+
+        isProcessing
+          ? "opacity-75"
+          : "",
+      ].join(" ")}
+    >
       <div className="grid min-w-0 grid-cols-[76px_minmax(0,1fr)] gap-4 sm:grid-cols-[96px_minmax(0,1fr)]">
         <div className="relative aspect-[4/5] w-full overflow-hidden bg-surface">
           <Image
@@ -997,6 +1388,13 @@ function MobileProductCard({
               ? dictionary.active
               : dictionary.inactive
           }
+          isLoading={
+            activeAction ===
+            `${product.id}:active`
+          }
+          disabled={
+            isProcessing
+          }
           onClick={
             onToggleActive
           }
@@ -1008,6 +1406,13 @@ function MobileProductCard({
           }
           label={
             dictionary.featured
+          }
+          isLoading={
+            activeAction ===
+            `${product.id}:featured`
+          }
+          disabled={
+            isProcessing
           }
           onClick={
             onToggleFeatured
@@ -1021,6 +1426,13 @@ function MobileProductCard({
           label={
             dictionary.newProduct
           }
+          isLoading={
+            activeAction ===
+            `${product.id}:new`
+          }
+          disabled={
+            isProcessing
+          }
           onClick={
             onToggleNew
           }
@@ -1032,7 +1444,20 @@ function MobileProductCard({
           title={
             dictionary.edit
           }
-          className="inline-flex h-10 w-10 items-center justify-center border border-border text-foreground transition-all duration-300 hover:border-accent hover:bg-accent hover:text-white"
+          className={[
+            "inline-flex h-10 w-10",
+            "items-center justify-center",
+            "border border-border",
+            "text-foreground",
+            "transition-all duration-300",
+            "hover:border-accent",
+            "hover:bg-accent",
+            "hover:text-white",
+
+            isProcessing
+              ? "pointer-events-none opacity-40"
+              : "",
+          ].join(" ")}
         >
           <Edit3
             size={14}
@@ -1047,11 +1472,14 @@ function MobileProductCard({
           onClick={
             onDelete
           }
+          disabled={
+            isProcessing
+          }
           aria-label={`${dictionary.delete}: ${product.name[locale]}`}
           title={
             dictionary.delete
           }
-          className="inline-flex h-10 w-10 items-center justify-center border border-border text-foreground transition-all duration-300 hover:border-danger hover:bg-danger hover:text-white"
+          className="inline-flex h-10 w-10 items-center justify-center border border-border text-foreground transition-all duration-300 hover:border-danger hover:bg-danger hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Trash2
             size={14}
@@ -1279,6 +1707,10 @@ type CompactToggleButtonProps = {
 
   label: string;
 
+  isLoading?: boolean;
+
+  disabled?: boolean;
+
   onClick:
     () => void;
 };
@@ -1286,6 +1718,8 @@ type CompactToggleButtonProps = {
 function CompactToggleButton({
   active,
   label,
+  isLoading = false,
+  disabled = false,
   onClick,
 }: CompactToggleButtonProps) {
   return (
@@ -1293,6 +1727,9 @@ function CompactToggleButton({
       type="button"
       onClick={
         onClick
+      }
+      disabled={
+        disabled
       }
       className={[
         "inline-flex min-h-10 shrink-0",
@@ -1307,18 +1744,32 @@ function CompactToggleButton({
 
         "transition-all duration-300",
 
+        disabled
+          ? "cursor-wait opacity-60"
+          : "",
+
         active
           ? "border-accent bg-accent text-white"
           : "border-border text-muted hover:border-accent hover:text-accent",
       ].join(" ")}
     >
-      {active && (
-        <Check
-          size={9}
+      {isLoading ? (
+        <LoaderCircle
+          size={11}
           strokeWidth={
-            1.7
+            1.5
           }
+          className="animate-spin"
         />
+      ) : (
+        active && (
+          <Check
+            size={9}
+            strokeWidth={
+              1.7
+            }
+          />
+        )
       )}
 
       {label}
@@ -1541,6 +1992,11 @@ type DeleteProductModalProps = {
   dictionary:
     AdminProductsDictionary;
 
+  isDeleting: boolean;
+
+  error:
+    string | null;
+
   onCancel:
     () => void;
 
@@ -1552,6 +2008,8 @@ function DeleteProductModal({
   product,
   locale,
   dictionary,
+  isDeleting,
+  error,
   onCancel,
   onConfirm,
 }: DeleteProductModalProps) {
@@ -1564,12 +2022,22 @@ function DeleteProductModal({
       <div className="w-full max-w-[520px] border border-border bg-[#EEEAE3] p-6 shadow-[0_35px_100px_rgba(0,0,0,0.28)] sm:p-8">
         <div className="flex items-start justify-between gap-5">
           <span className="flex h-14 w-14 items-center justify-center border border-danger/30 bg-danger/10 text-danger">
-            <Trash2
-              size={22}
-              strokeWidth={
-                1.3
-              }
-            />
+            {isDeleting ? (
+              <LoaderCircle
+                size={22}
+                strokeWidth={
+                  1.3
+                }
+                className="animate-spin"
+              />
+            ) : (
+              <Trash2
+                size={22}
+                strokeWidth={
+                  1.3
+                }
+              />
+            )}
           </span>
 
           <button
@@ -1577,10 +2045,13 @@ function DeleteProductModal({
             onClick={
               onCancel
             }
+            disabled={
+              isDeleting
+            }
             aria-label={
               dictionary.cancel
             }
-            className="flex h-10 w-10 items-center justify-center border border-border text-muted"
+            className="flex h-10 w-10 items-center justify-center border border-border text-muted transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
           >
             <X
               size={15}
@@ -1638,13 +2109,24 @@ function DeleteProductModal({
           </div>
         </div>
 
+        {error && (
+          <div className="mt-5 border border-danger/30 bg-danger/10 px-4 py-3">
+            <p className="text-xs leading-6 text-danger">
+              {error}
+            </p>
+          </div>
+        )}
+
         <div className="mt-8 grid gap-3 sm:grid-cols-2">
           <button
             type="button"
             onClick={
               onCancel
             }
-            className="min-h-13 border border-foreground px-6 text-[9px] font-semibold uppercase tracking-[0.15em] text-foreground hover:bg-foreground hover:text-white"
+            disabled={
+              isDeleting
+            }
+            className="min-h-13 border border-foreground px-6 text-[9px] font-semibold uppercase tracking-[0.15em] text-foreground transition-all hover:bg-foreground hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
           >
             {
               dictionary.cancel
@@ -1656,8 +2138,21 @@ function DeleteProductModal({
             onClick={
               onConfirm
             }
-            className="min-h-13 border border-danger bg-danger px-6 text-[9px] font-semibold uppercase tracking-[0.15em] text-white"
+            disabled={
+              isDeleting
+            }
+            className="inline-flex min-h-13 items-center justify-center gap-2 border border-danger bg-danger px-6 text-[9px] font-semibold uppercase tracking-[0.15em] text-white transition-opacity disabled:cursor-wait disabled:opacity-60"
           >
+            {isDeleting && (
+              <LoaderCircle
+                size={14}
+                strokeWidth={
+                  1.5
+                }
+                className="animate-spin"
+              />
+            )}
+
             {
               dictionary.confirmDelete
             }

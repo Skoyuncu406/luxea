@@ -1,0 +1,226 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Currency {
+  EUR
+  USD
+  GBP
+}
+
+enum OrderStatus {
+  RECEIVED
+  PAYMENT_CONFIRMED
+  PREPARING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+model Category {
+  id   String @id @default(cuid())
+  slug String @unique
+
+  nameTr String
+  nameEn String
+  nameAr String
+
+  eyebrowTr String
+  eyebrowEn String
+  eyebrowAr String
+
+  imageUrl      String
+  imagePublicId String?
+
+  order    Int     @default(0)
+  isActive Boolean @default(true)
+
+  products Product[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([order])
+  @@index([isActive])
+}
+
+model Product {
+  id   String @id @default(cuid())
+  slug String @unique
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  nameTr String
+  nameEn String
+  nameAr String
+
+  shortDescriptionTr String
+  shortDescriptionEn String
+  shortDescriptionAr String
+
+  price    Decimal  @db.Decimal(12, 2)
+  currency Currency @default(EUR)
+
+  stock Int @default(0)
+  order Int @default(0)
+
+  isActive   Boolean @default(true)
+  isFeatured Boolean @default(false)
+  isNew      Boolean @default(false)
+
+  images     ProductImage[]
+  colors     ProductColor[]
+  orderItems OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([categoryId])
+  @@index([isActive])
+  @@index([isFeatured])
+  @@index([isNew])
+  @@index([order])
+}
+
+model ProductImage {
+  id String @id @default(cuid())
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  url      String
+  publicId String?
+
+  altTr String?
+  altEn String?
+  altAr String?
+
+  order     Int     @default(0)
+  isPrimary Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([productId])
+  @@index([productId, order])
+}
+
+model ProductColor {
+  id String @id @default(cuid())
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  value String
+  order Int    @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@unique([productId, value])
+  @@index([productId])
+}
+
+model Order {
+  id String @id @default(cuid())
+
+  orderNumber  String @unique
+  trackingCode String @unique
+
+  status        OrderStatus   @default(RECEIVED)
+  paymentStatus PaymentStatus @default(PENDING)
+
+  customerEmail     String
+  customerFirstName String
+  customerLastName  String
+  customerPhone     String
+
+  shippingCountry        String
+  shippingAddress        String
+  shippingAddressLineTwo String?
+  shippingCity           String
+  shippingState          String?
+  shippingPostalCode     String
+
+  subtotal     Decimal @db.Decimal(12, 2)
+  shippingCost Decimal @default(0) @db.Decimal(12, 2)
+  total        Decimal @db.Decimal(12, 2)
+
+  currency Currency
+
+  paymentProvider  String?
+  paymentReference String?
+
+  items         OrderItem[]
+  statusHistory OrderStatusHistory[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([customerEmail])
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id String @id @default(cuid())
+
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  // Sipariş anındaki ürün bilgileri snapshot olarak saklanır.
+  // Ürün daha sonra değiştirilse veya silinse bile sipariş geçmişi korunur.
+  productSlug String
+
+  productNameTr String
+  productNameEn String
+  productNameAr String
+
+  imageUrl String
+  color    String
+
+  quantity Int
+
+  unitPrice Decimal  @db.Decimal(12, 2)
+  currency  Currency
+
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model OrderStatusHistory {
+  id String @id @default(cuid())
+
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  status OrderStatus
+
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+  @@index([createdAt])
+}

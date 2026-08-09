@@ -489,102 +489,115 @@ export default function AdminProductForm({
     );
   }
 
-  /*
-   * ÜRÜN KAYDET
-   */
-  async function handleSubmit(
-    event: FormEvent<HTMLFormElement>
+/*
+ * =============================================================
+ * ÜRÜN KAYDET
+ * =============================================================
+ */
+
+async function handleSubmit(
+  event: FormEvent<HTMLFormElement>
+) {
+  event.preventDefault();
+
+  if (
+    isSubmitting ||
+    !validateForm()
   ) {
-    event.preventDefault();
-
-    if (
-      isSubmitting ||
-      !validateForm()
-    ) {
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      const input: CreateProductInput = {
-        slug,
-
-        categoryId,
-
-        name: {
-          tr: nameTr,
-          en: nameEn,
-          ar: nameAr,
-        },
-
-        shortDescription: {
-          tr: descriptionTr,
-          en: descriptionEn,
-          ar: descriptionAr,
-        },
-
-        image,
-
-        hoverImage:
-          hoverImage.trim() ||
-          undefined,
-
-        price: Number(price),
-
-        currency,
-
-        colors: colors
-          .map((color) =>
-            color.trim()
-          )
-          .filter(Boolean),
-
-        order: Number(order),
-
-        stock: Number(stock),
-
-        isActive,
-        isFeatured,
-        isNew,
-      };
-
-      /*
-       * EDIT MODE
-       */
-      if (product) {
-        updateProduct(
-          product.id,
-          input
-        );
-      }
-
-      /*
-       * CREATE MODE
-       */
-      else {
-        createProduct(input);
-      }
-
-      router.push(
-        `/${locale}/admin/products`
-      );
-
-      router.refresh();
-    } catch (error) {
-      console.error(
-        "Ürün kaydedilemedi:",
-        error
-      );
-
-      setErrors({
-        general:
-          dictionary.saveError,
-      });
-
-      setIsSubmitting(false);
-    }
+    return;
   }
+
+  setIsSubmitting(true);
+
+  try {
+    const input: CreateProductInput = {
+      slug,
+
+      categoryId,
+
+      name: {
+        tr: nameTr,
+        en: nameEn,
+        ar: nameAr,
+      },
+
+      shortDescription: {
+        tr: descriptionTr,
+        en: descriptionEn,
+        ar: descriptionAr,
+      },
+
+      image,
+
+      hoverImage:
+        hoverImage.trim() ||
+        undefined,
+
+      price: Number(price),
+
+      currency,
+
+      colors: colors
+        .map((color) =>
+          color.trim()
+        )
+        .filter(Boolean),
+
+      order: Number(order),
+
+      stock: Number(stock),
+
+      isActive,
+      isFeatured,
+      isNew,
+    };
+
+    /*
+     * EDIT MODE
+     */
+    if (product) {
+      await updateProduct(
+        product.id,
+        input
+      );
+    }
+
+    /*
+     * CREATE MODE
+     */
+    else {
+      await createProduct(input);
+    }
+
+    /*
+     * Database işlemi başarıyla tamamlandıktan
+     * sonra ürün listesine dönüyoruz.
+     *
+     * Artık yönlendirme API isteğinden önce
+     * gerçekleşemez.
+     */
+    router.push(
+      `/${locale}/admin/products`
+    );
+
+    router.refresh();
+  } catch (error) {
+    console.error(
+      "Ürün kaydedilemedi:",
+      error
+    );
+
+    setErrors({
+      general:
+        error instanceof Error &&
+        error.message
+          ? error.message
+          : dictionary.saveError,
+    });
+  } finally {
+    setIsSubmitting(false);
+  }
+}
 
   /*
    * RENK GÜNCELLE

@@ -244,71 +244,86 @@ export default function AdminCategoryForm({
     );
   }
 
-  async function handleSubmit(
-    event: FormEvent<HTMLFormElement>
+async function handleSubmit(
+  event: FormEvent<HTMLFormElement>
+) {
+  event.preventDefault();
+
+  if (
+    isSubmitting ||
+    !validateForm()
   ) {
-    event.preventDefault();
+    return;
+  }
 
-    if (
-      isSubmitting ||
-      !validateForm()
-    ) {
-      return;
-    }
+  setIsSubmitting(true);
 
-    setIsSubmitting(true);
+  setErrors((current) => ({
+    ...current,
+    general: undefined,
+  }));
 
-    try {
-      const input: CreateCategoryInput = {
-        slug,
+  try {
+    const input: CreateCategoryInput = {
+      slug,
 
-        name: {
-          tr: nameTr,
-          en: nameEn,
-          ar: nameAr,
-        },
+      name: {
+        tr: nameTr,
+        en: nameEn,
+        ar: nameAr,
+      },
 
-        eyebrow: {
-          tr: eyebrowTr,
-          en: eyebrowEn,
-          ar: eyebrowAr,
-        },
+      eyebrow: {
+        tr: eyebrowTr,
+        en: eyebrowEn,
+        ar: eyebrowAr,
+      },
 
-        image,
+      image,
 
-        order: Number(order),
+      order: Number(order),
 
-        isActive,
-      };
+      isActive,
+    };
 
-      if (category) {
-        updateCategory(
+    if (category) {
+      const updatedCategory =
+        await updateCategory(
           category.id,
           input
         );
-      } else {
-        createCategory(input);
+
+      if (!updatedCategory) {
+        throw new Error(
+          "Kategori güncellenemedi."
+        );
       }
-
-      router.push(
-        `/${locale}/admin/categories`
-      );
-
-      router.refresh();
-    } catch (error) {
-      console.error(
-        "Kategori kaydedilemedi:",
-        error
-      );
-
-      setErrors({
-        general:
-          dictionary.saveError,
-      });
-
-      setIsSubmitting(false);
+    } else {
+      await createCategory(input);
     }
+
+    router.push(
+      `/${locale}/admin/categories`
+    );
+
+    router.refresh();
+  } catch (error) {
+    console.error(
+      "Kategori kaydedilemedi:",
+      error
+    );
+
+    setErrors({
+      general:
+        error instanceof Error &&
+        error.message
+          ? error.message
+          : dictionary.saveError,
+    });
+
+    setIsSubmitting(false);
   }
+}
 
   return (
     <form
