@@ -53,6 +53,10 @@ import {
   getDictionary,
 } from "@/lib/i18n/get-dictionary";
 
+import WhatsAppButton from "@/components/layout/WhatsAppButton";
+
+import ContactFooter from "@/components/layout/ContactFooter";
+
 import "../globals.css";
 
 /*
@@ -336,6 +340,10 @@ export default async function LocaleLayout({
                     <PageLoader />
 
                     {children}
+                      <ContactFooter
+    locale={locale}
+  />
+                     <WhatsAppButton />
                   </OrderProvider>
                 </UserProvider>
               </CartProvider>

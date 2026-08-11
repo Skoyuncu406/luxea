@@ -2,15 +2,25 @@
 
 import Image from "next/image";
 import Link from "next/link";
+
 import {
   ArrowLeft,
+  ArrowUpRight,
+  MessageCircle,
   PackageSearch,
 } from "lucide-react";
 
-import { useCategories } from "@/contexts/CategoryContext";
-import { useProducts } from "@/contexts/ProductContext";
-import { formatPrice } from "@/lib/format-price";
-import type { Locale } from "@/lib/i18n/config";
+import {
+  useCategories,
+} from "@/contexts/CategoryContext";
+
+import {
+  useProducts,
+} from "@/contexts/ProductContext";
+
+import type {
+  Locale,
+} from "@/lib/i18n/config";
 
 type CategoryDetailDictionary = {
   viewAll: string;
@@ -25,9 +35,42 @@ type ProductsDictionary = {
 type CategoryDetailClientProps = {
   locale: Locale;
   slug: string;
-  categoryDictionary: CategoryDetailDictionary;
-  productsDictionary: ProductsDictionary;
+
+  categoryDictionary:
+    CategoryDetailDictionary;
+
+  productsDictionary:
+    ProductsDictionary;
 };
+
+const WHATSAPP_NUMBER =
+  "905453577806";
+
+const whatsappCopy = {
+  tr: {
+    priceInfo:
+      "Fiyat Bilgisi Al",
+
+    message:
+      "Merhaba LUXEA, {product} ürünü hakkında fiyat ve sipariş bilgisi almak istiyorum.",
+  },
+
+  en: {
+    priceInfo:
+      "Request Price",
+
+    message:
+      "Hello LUXEA, I would like to get price and order information about {product}.",
+  },
+
+  ar: {
+    priceInfo:
+      "طلب السعر",
+
+    message:
+      "مرحباً LUXEA، أود الحصول على معلومات السعر والطلب لمنتج {product}.",
+  },
+} as const;
 
 export default function CategoryDetailClient({
   locale,
@@ -37,16 +80,36 @@ export default function CategoryDetailClient({
 }: CategoryDetailClientProps) {
   const {
     categories,
-    isLoaded: categoriesLoaded,
+    isLoaded:
+      categoriesLoaded,
   } = useCategories();
 
   const {
     products,
-    isLoaded: productsLoaded,
+    isLoaded:
+      productsLoaded,
   } = useProducts();
 
   const isLoaded =
-    categoriesLoaded && productsLoaded;
+    categoriesLoaded &&
+    productsLoaded;
+
+  const copy =
+    whatsappCopy[locale];
+
+  function getWhatsAppUrl(
+    productName: string
+  ) {
+    const message =
+      copy.message.replace(
+        "{product}",
+        productName
+      );
+
+    return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+      message
+    )}`;
+  }
 
   if (!isLoaded) {
     return (
@@ -62,11 +125,13 @@ export default function CategoryDetailClient({
     );
   }
 
-  const category = categories.find(
-    (item) =>
-      item.slug === slug &&
-      item.isActive
-  );
+  const category =
+    categories.find(
+      (item) =>
+        item.slug ===
+          slug &&
+        item.isActive
+    );
 
   if (!category) {
     return (
@@ -76,27 +141,43 @@ export default function CategoryDetailClient({
     );
   }
 
-  const categoryProducts = [...products]
-    .filter(
-      (product) =>
-        product.categoryId ===
-          category.id &&
-        product.isActive
-    )
-    .sort(
-      (a, b) => a.order - b.order
-    );
+  const categoryProducts =
+    [...products]
+      .filter(
+        (product) =>
+          product.categoryId ===
+            category.id &&
+          product.isActive
+      )
+      .sort(
+        (a, b) =>
+          a.order -
+          b.order
+      );
 
   return (
     <div className="w-full">
-      {/* Üst başlık */}
+      {/* =====================================================
+          CATEGORY HEADER
+      ===================================================== */}
+
       <div className="mx-auto flex w-full max-w-4xl flex-col items-center text-center">
         <p className="w-full text-center text-[10px] font-semibold uppercase tracking-[0.28em] text-accent sm:text-[11px]">
-          {category.eyebrow[locale]}
+          {
+            category
+              .eyebrow[
+              locale
+            ]
+          }
         </p>
 
         <h1 className="mt-4 w-full text-center font-heading text-5xl leading-none sm:text-6xl lg:text-8xl">
-          {category.name[locale]}
+          {
+            category
+              .name[
+              locale
+            ]
+          }
         </h1>
 
         <p className="mx-auto mt-6 max-w-2xl text-center text-sm leading-7 text-foreground-soft sm:text-base sm:leading-8">
@@ -127,73 +208,361 @@ export default function CategoryDetailClient({
         </Link>
       </div>
 
-      {/* Ürünler */}
-      {categoryProducts.length > 0 ? (
+      {/* =====================================================
+          PRODUCTS
+      ===================================================== */}
+
+      {categoryProducts.length >
+      0 ? (
         <div className="mt-14 grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {categoryProducts.map(
-            (product) => (
-              <Link
-                key={product.id}
-                href={`/${locale}/products/${product.slug}`}
-                className="group block min-w-0"
-              >
-                <div className="relative aspect-[4/5] overflow-hidden bg-surface">
-                  <Image
-                    src={product.image}
-                    alt={
-                      product.name[locale]
+            (product) => {
+              const productName =
+                product.name[
+                  locale
+                ];
+
+              const whatsappUrl =
+                getWhatsAppUrl(
+                  productName
+                );
+
+              return (
+                <article
+                  key={
+                    product.id
+                  }
+                  className="group min-w-0"
+                >
+                  {/* =================================================
+                      PRODUCT IMAGE
+                  ================================================= */}
+
+                  <Link
+                    href={`/${locale}/products/${product.slug}`}
+                    className="block"
+                    aria-label={
+                      productName
                     }
-                    fill
-                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                    className="object-cover object-center transition-transform duration-700 group-hover:scale-[1.025]"
-                  />
+                  >
+                    <div className="relative aspect-[4/5] overflow-hidden bg-surface">
+                      <Image
+                        src={
+                          product.image
+                        }
+                        alt={
+                          productName
+                        }
+                        fill
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                        className={[
+                          "object-cover object-center",
+                          "transition-all duration-700 ease-out",
+                          product.hoverImage
+                            ? "group-hover:scale-[1.025] group-hover:opacity-0"
+                            : "group-hover:scale-[1.035]",
+                        ].join(
+                          " "
+                        )}
+                      />
 
-                  {product.hoverImage && (
-                    <Image
-                      src={
-                        product.hoverImage
-                      }
-                      alt={`${product.name[locale]} hover`}
-                      fill
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                      className="object-cover object-center opacity-0 transition-opacity duration-500 group-hover:opacity-100"
-                    />
-                  )}
+                      {product.hoverImage && (
+                        <Image
+                          src={
+                            product.hoverImage
+                          }
+                          alt=""
+                          fill
+                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                          className="
+                            object-cover
+                            object-center
 
-                  {product.isNew && (
-                    <span className="absolute start-4 top-4 border border-white/45 bg-black/15 px-3 py-2 text-[8px] font-semibold uppercase tracking-[0.18em] text-white backdrop-blur-md">
+                            opacity-0
+
+                            transition-all
+                            duration-700
+                            ease-out
+
+                            group-hover:scale-[1.025]
+                            group-hover:opacity-100
+                          "
+                        />
+                      )}
+
+                      {/* Premium alt gradient */}
+
+                      <div
+                        aria-hidden="true"
+                        className="
+                          pointer-events-none
+                          absolute
+                          inset-0
+
+                          bg-gradient-to-t
+                          from-[#242320]/20
+                          via-transparent
+                          to-transparent
+                        "
+                      />
+
+                      {/* Yeni ürün etiketi */}
+
+                      {product.isNew && (
+                        <span className="absolute start-4 top-4 z-10 border border-white/45 bg-black/15 px-3 py-2 text-[8px] font-semibold uppercase tracking-[0.18em] text-white backdrop-blur-md">
+                          {
+                            productsDictionary
+                              .newLabel
+                          }
+                        </span>
+                      )}
+
+                      {/* Ürünü görüntüle hover */}
+
+                      <span
+                        className="
+                          pointer-events-none
+                          absolute
+                          inset-x-4
+                          bottom-4
+
+                          translate-y-3
+
+                          border
+                          border-white/45
+
+                          bg-[#E5E0D7]/92
+
+                          px-4
+                          py-3
+
+                          text-center
+                          text-[8px]
+                          font-semibold
+                          uppercase
+                          tracking-[0.16em]
+                          text-foreground
+
+                          opacity-0
+
+                          backdrop-blur-xl
+
+                          transition-all
+                          duration-500
+
+                          group-hover:translate-y-0
+                          group-hover:opacity-100
+                        "
+                      >
+                        {
+                          productsDictionary
+                            .viewProduct
+                        }
+                      </span>
+                    </div>
+                  </Link>
+
+                  {/* =================================================
+                      PRODUCT INFO
+                  ================================================= */}
+
+                  <div className="border-b border-border pb-5 pt-5 text-center">
+                    <Link
+                      href={`/${locale}/products/${product.slug}`}
+                      className="block"
+                    >
+                      <h2
+                        className="
+                          font-heading
+                          text-2xl
+                          leading-none
+                          text-foreground
+
+                          transition-colors
+                          duration-300
+
+                          group-hover:text-accent
+                        "
+                      >
+                        {
+                          productName
+                        }
+                      </h2>
+                    </Link>
+
+                    {/* Short description */}
+
+                    <p
+                      className="
+                        mx-auto
+                        mt-3
+                        line-clamp-2
+                        max-w-[290px]
+
+                        text-xs
+                        leading-6
+                        text-foreground-soft
+                      "
+                    >
                       {
-                        productsDictionary.newLabel
+                        product
+                          .shortDescription[
+                          locale
+                        ]
                       }
-                    </span>
-                  )}
-                </div>
+                    </p>
 
-                <div className="pt-5 text-center">
-                  <h2 className="font-heading text-2xl leading-none text-foreground transition-colors duration-300 group-hover:text-accent">
-                    {
-                      product.name[
-                        locale
-                      ]
-                    }
-                  </h2>
+                    {/* Colors */}
 
-                  <p className="mt-3 text-[10px] uppercase tracking-[0.14em] text-muted">
-                    {formatPrice(
-                      product.price,
-                      product.currency,
-                      locale
+                    {product.colors.length >
+                      0 && (
+                      <div className="mt-4 flex min-h-4 items-center justify-center gap-2">
+                        {product.colors
+                          .slice(
+                            0,
+                            6
+                          )
+                          .map(
+                            (
+                              color
+                            ) => (
+                              <span
+                                key={
+                                  color
+                                }
+                                aria-hidden="true"
+                                className="
+                                  h-3
+                                  w-3
+                                  rounded-full
+                                  border
+                                  border-black/15
+                                "
+                                style={{
+                                  backgroundColor:
+                                    color,
+                                }}
+                              />
+                            )
+                          )}
+                      </div>
                     )}
-                  </p>
 
-                  <p className="mt-4 text-[8px] font-semibold uppercase tracking-[0.15em] text-accent">
-                    {
-                      productsDictionary.viewProduct
-                    }
-                  </p>
-                </div>
-              </Link>
-            )
+                    {/* =================================================
+                        WHATSAPP PRICE CTA
+                    ================================================= */}
+
+                    <a
+                      href={
+                        whatsappUrl
+                      }
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="
+                        group/price
+
+                        relative
+
+                        mx-auto
+                        mt-5
+
+                        inline-flex
+                        min-h-11
+
+                        items-center
+                        justify-center
+                        gap-3
+
+                        overflow-hidden
+
+                        border
+                        border-accent/35
+
+                        bg-accent/[0.04]
+
+                        px-5
+
+                        text-[8px]
+                        font-semibold
+                        uppercase
+                        tracking-[0.16em]
+
+                        text-accent
+
+                        transition-all
+                        duration-500
+
+                        hover:-translate-y-0.5
+                        hover:border-accent
+                        hover:bg-accent
+                        hover:!text-white
+                        hover:shadow-[0_12px_30px_rgba(146,115,74,0.15)]
+
+                        sm:text-[9px]
+                      "
+                    >
+                      {/* subtle animation */}
+
+                      <span
+                        aria-hidden="true"
+                        className="
+                          pointer-events-none
+                          absolute
+                          inset-y-0
+                          -start-20
+                          w-16
+                          skew-x-[-18deg]
+                          bg-white/15
+
+                          transition-all
+                          duration-700
+
+                          group-hover/price:start-[120%]
+                        "
+                      />
+
+                      <MessageCircle
+                        size={14}
+                        strokeWidth={1.45}
+                        className="
+                          relative
+                          z-10
+
+                          transition-transform
+                          duration-500
+
+                          group-hover/price:-rotate-6
+                          group-hover/price:scale-110
+                        "
+                      />
+
+                      <span className="relative z-10">
+                        {
+                          copy.priceInfo
+                        }
+                      </span>
+
+                      <ArrowUpRight
+                        size={13}
+                        strokeWidth={1.4}
+                        className="
+                          relative
+                          z-10
+
+                          transition-transform
+                          duration-300
+
+                          group-hover/price:-translate-y-0.5
+                          group-hover/price:translate-x-0.5
+
+                          rtl:group-hover/price:-translate-x-0.5
+                        "
+                      />
+                    </a>
+                  </div>
+                </article>
+              );
+            }
           )}
         </div>
       ) : (
@@ -222,15 +591,47 @@ export default function CategoryDetailClient({
 
           <Link
             href={`/${locale}/products`}
-            className="mt-8 inline-flex min-h-12 items-center justify-center border border-foreground px-7 text-[9px] font-semibold uppercase tracking-[0.15em] text-foreground transition-all duration-300 hover:bg-foreground hover:text-white"
+            className="
+              mt-8
+              inline-flex
+              min-h-12
+              items-center
+              justify-center
+
+              border
+              border-foreground
+
+              px-7
+
+              text-[9px]
+              font-semibold
+              uppercase
+              tracking-[0.15em]
+              text-foreground
+
+              transition-all
+              duration-300
+
+              hover:bg-foreground
+              hover:!text-white
+            "
           >
-            {categoryDictionary.viewAll}
+            {
+              categoryDictionary
+                .viewAll
+            }
           </Link>
         </div>
       )}
     </div>
   );
 }
+
+/*
+ * =============================================================
+ * CATEGORY NOT FOUND
+ * =============================================================
+ */
 
 function CategoryNotFoundState({
   locale,
@@ -264,7 +665,30 @@ function CategoryNotFoundState({
 
         <Link
           href={`/${locale}/categories`}
-          className="mt-8 inline-flex min-h-12 items-center justify-center border border-foreground px-7 text-[9px] font-semibold uppercase tracking-[0.15em] text-foreground transition-all duration-300 hover:bg-foreground hover:text-white"
+          className="
+            mt-8
+            inline-flex
+            min-h-12
+            items-center
+            justify-center
+
+            border
+            border-foreground
+
+            px-7
+
+            text-[9px]
+            font-semibold
+            uppercase
+            tracking-[0.15em]
+            text-foreground
+
+            transition-all
+            duration-300
+
+            hover:bg-foreground
+            hover:!text-white
+          "
         >
           {locale === "tr"
             ? "Kategorilere Dön"
