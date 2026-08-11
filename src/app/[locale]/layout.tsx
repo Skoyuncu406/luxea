@@ -8,7 +8,6 @@ import type {
 } from "react";
 
 import {
-  Cormorant_Garamond,
   Manrope,
   Noto_Naskh_Arabic,
   Noto_Sans_Arabic,
@@ -41,6 +40,10 @@ import {
 } from "@/contexts/ProductContext";
 
 import {
+  UserProvider,
+} from "@/contexts/UserContext";
+
+import {
   getDirection,
   isValidLocale,
   locales,
@@ -56,10 +59,22 @@ import "../globals.css";
  * =============================================================
  * FONTS
  * =============================================================
+ *
+ * Cormorant Garamond geçici olarak kaldırıldı.
+ *
+ * Google Fonts / Turbopack tarafında oluşan 404 problemi
+ * nedeniyle Latin başlıklarda da Manrope kullanıyoruz.
+ *
+ * --font-heading değişkenini koruduğumuz için mevcut
+ * font-heading Tailwind sınıflarını değiştirmemiz gerekmiyor.
+ * =============================================================
  */
 
+/*
+ * Latin başlık fontu
+ */
 const headingFont =
-  Cormorant_Garamond({
+  Manrope({
     variable:
       "--font-heading",
 
@@ -71,13 +86,15 @@ const headingFont =
       "swap",
 
     weight: [
-      "400",
       "500",
       "600",
       "700",
     ],
   });
 
+/*
+ * Latin gövde fontu
+ */
 const bodyFont =
   Manrope({
     variable:
@@ -98,6 +115,9 @@ const bodyFont =
     ],
   });
 
+/*
+ * Arapça başlık fontu
+ */
 const arabicHeadingFont =
   Noto_Naskh_Arabic({
     variable:
@@ -118,6 +138,9 @@ const arabicHeadingFont =
     ],
   });
 
+/*
+ * Arapça gövde fontu
+ */
 const arabicBodyFont =
   Noto_Sans_Arabic({
     variable:
@@ -173,14 +196,6 @@ export function generateStaticParams() {
 /*
  * =============================================================
  * VIEWPORT
- * =============================================================
- *
- * Next.js 16:
- *
- * viewport artık Metadata içerisinde
- * tanımlanmamalıdır.
- *
- * Ayrı bir Viewport export'u kullanılır.
  * =============================================================
  */
 
@@ -274,6 +289,17 @@ export default async function LocaleLayout({
     locale ===
     "ar";
 
+  /*
+   * Tüm font CSS variable'larını body üzerine ekliyoruz.
+   *
+   * Böylece globals.css / Tailwind tarafındaki:
+   *
+   * font-heading
+   * font-body
+   * font-arabic
+   *
+   * yapıları çalışmaya devam eder.
+   */
   const bodyClassName = [
     headingFont.variable,
 
@@ -305,11 +331,13 @@ export default async function LocaleLayout({
           <ProductProvider>
             <FavoritesProvider>
               <CartProvider>
-                <OrderProvider>
-                  <PageLoader />
+                <UserProvider>
+                  <OrderProvider>
+                    <PageLoader />
 
-                  {children}
-                </OrderProvider>
+                    {children}
+                  </OrderProvider>
+                </UserProvider>
               </CartProvider>
             </FavoritesProvider>
           </ProductProvider>

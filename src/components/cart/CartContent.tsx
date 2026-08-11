@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowUpRight,
+  MessageCircle,
   Minus,
   Plus,
   ShoppingBag,
@@ -11,7 +12,6 @@ import {
 } from "lucide-react";
 
 import { useCart } from "@/contexts/CartContext";
-import { formatPrice } from "@/lib/format-price";
 import type { Locale } from "@/lib/i18n/config";
 import type { Product } from "@/types/product";
 
@@ -35,6 +35,54 @@ type CartContentProps = {
   products: Product[];
   dictionary: CartDictionary;
 };
+
+const WHATSAPP_NUMBER =
+  "905453577806";
+
+const whatsappCopy = {
+  tr: {
+    priceInfo:
+      "Fiyat Bilgisi Al",
+    orderInfo:
+      "Fiyat & Sipariş Bilgisi",
+    description:
+      "Sepetinizdeki ürünler için sipariş talebi oluşturabilir, teslimat ve iletişim bilgilerinizi bir sonraki adımda iletebilirsiniz.",
+    button:
+      "Sipariş Ver",
+    note:
+      "Sipariş formunda iletişim ve teslimat bilgilerinizi tamamladıktan sonra talebiniz firmaya iletilecektir.",
+    messageTitle:
+      "Merhaba LUXEA, aşağıdaki ürünler hakkında fiyat ve sipariş bilgisi almak istiyorum:",
+  },
+  en: {
+    priceInfo:
+      "Request Price",
+    orderInfo:
+      "Price & Order Information",
+    description:
+      "Create an order request for the products in your bag and provide your contact and delivery details in the next step.",
+    button:
+      "Place Order",
+    note:
+      "After completing your contact and delivery information, your order request will be sent to the company.",
+    messageTitle:
+      "Hello LUXEA, I would like price and order information for the following products:",
+  },
+  ar: {
+    priceInfo:
+      "طلب السعر",
+    orderInfo:
+      "معلومات السعر والطلب",
+    description:
+      "يمكنك إنشاء طلب للمنتجات الموجودة في سلتك وإدخال معلومات الاتصال والتوصيل في الخطوة التالية.",
+    button:
+      "إرسال الطلب",
+    note:
+      "بعد إكمال معلومات الاتصال والتوصيل سيتم إرسال طلبك إلى الشركة.",
+    messageTitle:
+      "مرحباً LUXEA، أود معرفة السعر ومعلومات الطلب للمنتجات التالية:",
+  },
+} as const;
 
 export default function CartContent({
   locale,
@@ -77,14 +125,8 @@ export default function CartContent({
       } => item !== null
     );
 
-  const subtotal = resolvedCartItems.reduce(
-    (total, { cartItem, product }) =>
-      total + product.price * cartItem.quantity,
-    0
-  );
-
-  const currency =
-    resolvedCartItems[0]?.product.currency ?? "USD";
+  const copy =
+    whatsappCopy[locale];
 
   if (!isLoaded) {
     return (
@@ -109,8 +151,8 @@ export default function CartContent({
 
   if (resolvedCartItems.length === 0) {
     return (
-      <div className="mt-12 flex min-h-[480px] flex-col items-center justify-center border-y border-border px-5 text-center">
-        <span className="flex h-20 w-20 items-center justify-center rounded-full border border-border bg-surface/50">
+      <div className="mt-6 flex min-h-[300px] flex-col items-center justify-center border-y border-border px-5 text-center">
+        <span className="flex h-14 w-14 items-center justify-center rounded-full border border-border bg-surface/50">
           <ShoppingBag
             size={29}
             strokeWidth={1.1}
@@ -118,17 +160,17 @@ export default function CartContent({
           />
         </span>
 
-        <h2 className="mt-8 font-heading text-4xl leading-none text-foreground sm:text-5xl">
+        <h2 className="mt-5 font-heading text-[32px] leading-none text-foreground sm:text-[38px]">
           {dictionary.emptyTitle}
         </h2>
 
-        <p className="mt-5 max-w-xl text-sm leading-7 text-foreground-soft sm:text-base sm:leading-8">
+        <p className="mt-3 max-w-xl text-xs leading-6 text-foreground-soft sm:text-sm sm:leading-7">
           {dictionary.emptyDescription}
         </p>
 
         <Link
           href={`/${locale}/products`}
-          className="group mt-9 inline-flex min-h-14 items-center justify-center gap-4 border border-foreground bg-foreground px-8 text-[10px] font-semibold uppercase tracking-[0.17em] !text-[#F3F0EA] transition-all duration-300 hover:border-accent hover:bg-accent hover:!text-white"
+          className="group mt-5 inline-flex min-h-12 items-center justify-center gap-3 border border-foreground bg-foreground px-8 text-[10px] font-semibold uppercase tracking-[0.17em] !text-[#F3F0EA] transition-all duration-300 hover:border-accent hover:bg-accent hover:!text-white"
         >
           <span>{dictionary.discoverProducts}</span>
 
@@ -143,7 +185,7 @@ export default function CartContent({
   }
 
   return (
-    <div className="mt-12">
+    <div className="mt-8">
       {/* Sepet üst bilgisi */}
       <div className="flex min-h-[72px] flex-wrap items-center justify-between gap-5 border-y border-border">
         <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
@@ -211,13 +253,23 @@ export default function CartContent({
                             />
                           </div>
 
-                          <p className="text-[10px] font-semibold tracking-[0.06em] text-foreground">
-                            {formatPrice(
-                              product.price,
-                              product.currency,
-                              locale
-                            )}
-                          </p>
+                          <a
+                            href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+                              `${copy.messageTitle}\n\n${product.name[locale]}\n${dictionary.color}: ${cartItem.color}`
+                            )}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-2 text-[9px] font-semibold uppercase tracking-[0.15em] text-accent transition-colors duration-300 hover:text-foreground"
+                          >
+                            <MessageCircle
+                              size={13}
+                              strokeWidth={1.4}
+                            />
+
+                            <span>
+                              {copy.priceInfo}
+                            </span>
+                          </a>
                         </div>
                       </div>
 
@@ -281,14 +333,24 @@ export default function CartContent({
                       </div>
                     </div>
 
-                    {/* Satır toplamı */}
-                    <p className="text-sm font-semibold tracking-[0.05em] text-foreground">
-                      {formatPrice(
-                        product.price * cartItem.quantity,
-                        product.currency,
-                        locale
-                      )}
-                    </p>
+                    {/* Fiyat bilgisi */}
+                    <a
+                      href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+                        `${copy.messageTitle}\n\n${product.name[locale]}\n${dictionary.color}: ${cartItem.color}\n${dictionary.quantity}: ${cartItem.quantity}`
+                      )}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="group/price inline-flex min-h-10 items-center justify-center gap-2 border border-accent/35 px-4 text-[8px] font-semibold uppercase tracking-[0.14em] text-accent transition-all duration-300 hover:border-accent hover:bg-accent hover:text-white"
+                    >
+                      <MessageCircle
+                        size={13}
+                        strokeWidth={1.4}
+                      />
+
+                      <span>
+                        {copy.priceInfo}
+                      </span>
+                    </a>
                   </div>
                 </div>
               </article>
@@ -304,7 +366,7 @@ export default function CartContent({
           </Link>
         </div>
 
-        {/* Sipariş özeti */}
+        {/* Fiyat ve sipariş bilgisi */}
         <aside className="lg:sticky lg:top-[116px] lg:self-start">
           <div className="border border-border bg-surface/55 p-6 sm:p-8">
             <p className="text-[9px] font-semibold uppercase tracking-[0.24em] text-accent">
@@ -312,28 +374,42 @@ export default function CartContent({
             </p>
 
             <h2 className="mt-3 font-heading text-4xl leading-none text-foreground">
-              {dictionary.subtotal}
+              {copy.orderInfo}
             </h2>
 
-            <div className="mt-8 flex items-center justify-between gap-6 border-y border-border py-6">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
-                {dictionary.subtotal}
-              </span>
-
-              <strong className="text-lg font-semibold tracking-[0.04em] text-foreground">
-                {formatPrice(subtotal, currency, locale)}
-              </strong>
-            </div>
-
-            <p className="mt-5 text-xs leading-6 text-foreground-soft">
-              {dictionary.shippingNote}
+            <p className="mt-6 text-sm leading-7 text-foreground-soft">
+              {copy.description}
             </p>
+
+            <div className="mt-7 border-y border-border py-6">
+              <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-muted">
+                {cartCount} {dictionary.productCount}
+              </p>
+
+              <p className="mt-3 text-xs leading-6 text-foreground-soft">
+                {copy.note}
+              </p>
+            </div>
 
             <Link
               href={`/${locale}/checkout`}
-              className="mt-8 inline-flex min-h-14 w-full items-center justify-center border border-[#242320] bg-[#242320] px-7 text-[10px] font-semibold uppercase tracking-[0.17em] !text-[#F3F0EA] transition-all duration-300 hover:border-accent hover:bg-accent hover:!text-white"
+              className="group mt-8 inline-flex min-h-14 w-full items-center justify-center gap-3 border border-[#242320] bg-[#242320] px-7 text-center text-[10px] font-semibold uppercase tracking-[0.17em] !text-[#F3F0EA] transition-all duration-300 hover:border-accent hover:bg-accent hover:!text-white"
             >
-              {dictionary.checkout}
+              <ShoppingBag
+                size={17}
+                strokeWidth={1.4}
+                className="transition-transform duration-300 group-hover:scale-105"
+              />
+
+              <span>
+                {copy.button}
+              </span>
+
+              <ArrowUpRight
+                size={15}
+                strokeWidth={1.4}
+                className="transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5"
+              />
             </Link>
           </div>
         </aside>

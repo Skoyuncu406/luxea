@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -17,6 +18,7 @@ import {
   Search,
   ShoppingBag,
   Truck,
+  Trash2,
   X,
 } from "lucide-react";
 
@@ -70,7 +72,6 @@ type AdminOrdersDictionary = {
   updateStatus: string;
 
   received: string;
-  paymentConfirmed: string;
   preparing: string;
   shipped: string;
   delivered: string;
@@ -86,7 +87,6 @@ type AdminOrdersContentProps = {
 
 const STATUS_OPTIONS: OrderStatus[] = [
   "received",
-  "payment-confirmed",
   "preparing",
   "shipped",
   "delivered",
@@ -105,8 +105,31 @@ export default function AdminOrdersContent({
   const {
     orders,
     isLoaded: ordersLoaded,
+    refreshOrders,
     updateOrderStatus,
+    deleteOrder,
   } = useOrders();
+
+  /*
+   * =========================================================
+   * ADMIN SAYFASI AÇILDIĞINDA SİPARİŞLERİ YENİLE
+   * =========================================================
+   *
+   * Admin sipariş ekranı her mount olduğunda siparişler
+   * PostgreSQL üzerinden yeniden alınır.
+   *
+   * Böylece:
+   *
+   * - giriş yapmadan oluşturulan guest siparişleri,
+   * - kullanıcı hesabıyla oluşturulan siparişler,
+   * - başka tarayıcı / cihazdan oluşturulan yeni siparişler
+   *
+   * admin sipariş listesinde güncel olarak görünür.
+   * =========================================================
+   */
+  useEffect(() => {
+    void refreshOrders();
+  }, [refreshOrders]);
 
   /*
    * =========================================================
@@ -147,6 +170,20 @@ export default function AdminOrdersContent({
     null
   );
 
+  const [
+    updatingOrderId,
+    setUpdatingOrderId,
+  ] = useState<string | null>(
+    null
+  );
+
+  const [
+    deletingOrderId,
+    setDeletingOrderId,
+  ] = useState<string | null>(
+    null
+  );
+
   /*
    * =========================================================
    * SİPARİŞ İSTATİSTİKLERİ
@@ -166,10 +203,7 @@ export default function AdminOrdersContent({
         orders.length,
 
       pending:
-        count("received") +
-        count(
-          "payment-confirmed"
-        ),
+        count("received"),
 
       preparing:
         count("preparing"),
@@ -315,128 +349,264 @@ export default function AdminOrdersContent({
    * stok değişmez.
    * =========================================================
    */
-  function handleOrderStatusChange(
+  async function handleOrderStatusChange(
     order: Order,
     nextStatus: OrderStatus
   ) {
     const previousStatus =
       order.status;
 
-    /*
-     * Aynı durum tekrar seçilmişse
-     * hiçbir işlem yapma.
-     */
     if (
       previousStatus ===
-      nextStatus
+        nextStatus ||
+      updatingOrderId ===
+        order.id
     ) {
       return;
     }
 
     /*
-     * Siparişteki ürünleri stok
-     * hareketi formatına dönüştürüyoruz.
-     */
-    const stockItems =
-      order.items.map(
-        (item) => ({
-          productId:
-            item.productId,
-
-          quantity:
-            item.quantity,
-        })
-      );
-
-    /*
      * =======================================================
-     * AKTİF → İPTAL
+     * SİPARİŞ TALEBİ / STOK KURALI
      * =======================================================
      *
-     * Checkout aşamasında stok zaten
-     * düşürüldüğü için burada geri eklenir.
+     * received:
+     * Sipariş talebi alınmıştır. Stok henüz rezerve edilmez.
+     *
+     * preparing / shipped / delivered:
+     * Sipariş işleme alınmıştır ve stok rezerve edilmiş kabul
+     * edilir.
+     *
+     * cancelled:
+     * Aktif sipariş iptal edilirse stok geri verilir.
+     * =======================================================
      */
-    if (
-      previousStatus !==
-        "cancelled" &&
-      nextStatus ===
-        "cancelled"
-    ) {
-      restoreProductStocks(
-        stockItems
+
+    const stockItems =
+      order.items
+        .filter(
+          (item) =>
+            Boolean(
+              item.productId
+            )
+        )
+        .map(
+          (item) => ({
+            productId:
+              item.productId,
+
+            quantity:
+              item.quantity,
+          })
+        );
+
+    const statusUsesStock = (
+      status: OrderStatus
+    ) =>
+      status ===
+        "preparing" ||
+      status ===
+        "shipped" ||
+      status ===
+        "delivered";
+
+    const previousUsesStock =
+      statusUsesStock(
+        previousStatus
       );
 
-      updateOrderStatus(
-        order.id,
+    const nextUsesStock =
+      statusUsesStock(
         nextStatus
       );
 
-      return;
-    }
+    setUpdatingOrderId(
+      order.id
+    );
 
-    /*
-     * =======================================================
-     * İPTAL → TEKRAR AKTİF
-     * =======================================================
-     *
-     * İptal sırasında stok geri verilmişti.
-     * Dolayısıyla sipariş tekrar aktif hale
-     * getirilmeden önce stok yeniden
-     * rezerve edilmelidir.
-     */
-    if (
-      previousStatus ===
-        "cancelled" &&
-      nextStatus !==
-        "cancelled"
-    ) {
-      const stockReserved =
-        decreaseProductStocks(
+    let stockWasReserved =
+      false;
+
+    let stockWasRestored =
+      false;
+
+    try {
+      /*
+       * received / cancelled -> aktif sipariş
+       */
+      if (
+        !previousUsesStock &&
+        nextUsesStock
+      ) {
+        const stockReserved =
+          decreaseProductStocks(
+            stockItems
+          );
+
+        if (
+          !stockReserved
+        ) {
+          window.alert(
+            locale === "tr"
+              ? "Bu siparişi işleme almak için yeterli stok bulunmuyor."
+              : locale === "ar"
+                ? "لا يوجد مخزون كافٍ لمعالجة هذا الطلب."
+                : "There is not enough stock to process this order."
+          );
+
+          return;
+        }
+
+        stockWasReserved =
+          true;
+      }
+
+      /*
+       * Aktif sipariş -> received / cancelled
+       */
+      if (
+        previousUsesStock &&
+        !nextUsesStock
+      ) {
+        restoreProductStocks(
           stockItems
         );
 
-      /*
-       * Yeterli stok yoksa sipariş
-       * yeniden aktif hale getirilemez.
-       */
-      if (!stockReserved) {
-        window.alert(
-          locale === "tr"
-            ? "Bu siparişi yeniden aktif hale getirmek için yeterli stok bulunmuyor."
-            : locale === "ar"
-              ? "لا يوجد مخزون كافٍ لإعادة تنشيط هذا الطلب."
-              : "There is not enough stock to reactivate this order."
-        );
-
-        return;
+        stockWasRestored =
+          true;
       }
 
-      updateOrderStatus(
+      await updateOrderStatus(
         order.id,
         nextStatus
       );
+    } catch (error) {
+      console.error(
+        "Sipariş durumu güncellenemedi:",
+        error
+      );
 
+      /*
+       * API güncellemesi başarısızsa frontend stok hareketini
+       * mümkün olduğunca geri al.
+       */
+      try {
+        if (
+          stockWasReserved
+        ) {
+          restoreProductStocks(
+            stockItems
+          );
+        }
+
+        if (
+          stockWasRestored
+        ) {
+          decreaseProductStocks(
+            stockItems
+          );
+        }
+      } catch (
+        rollbackError
+      ) {
+        console.error(
+          "Stok rollback işlemi başarısız:",
+          rollbackError
+        );
+      }
+
+      window.alert(
+        locale === "tr"
+          ? "Sipariş durumu güncellenemedi. Lütfen tekrar deneyin."
+          : locale === "ar"
+            ? "تعذر تحديث حالة الطلب. يرجى المحاولة مرة أخرى."
+            : "The order status could not be updated. Please try again."
+      );
+    } finally {
+      setUpdatingOrderId(
+        null
+      );
+    }
+  }
+
+  /*
+   * =========================================================
+   * SİPARİŞ SİLME
+   * =========================================================
+   *
+   * Güvenlik açısından silme yalnızca tamamlanmış veya iptal
+   * edilmiş siparişlerde arayüzden sunulur.
+   * =========================================================
+   */
+
+  async function handleDeleteOrder(
+    order: Order
+  ) {
+    if (
+      order.status !== "delivered" &&
+      order.status !== "cancelled"
+    ) {
       return;
     }
 
-    /*
-     * =======================================================
-     * NORMAL DURUM DEĞİŞİKLİĞİ
-     * =======================================================
-     *
-     * Örnek:
-     *
-     * received → payment-confirmed
-     * payment-confirmed → preparing
-     * preparing → shipped
-     * shipped → delivered
-     *
-     * Stok değişmez.
-     */
-    updateOrderStatus(
-      order.id,
-      nextStatus
+    if (
+      deletingOrderId === order.id
+    ) {
+      return;
+    }
+
+    const confirmationMessage =
+      locale === "tr"
+        ? `#${order.trackingCode} takip kodlu siparişi kalıcı olarak silmek istediğinize emin misiniz?`
+        : locale === "ar"
+          ? `هل أنت متأكد من حذف الطلب ذي رمز التتبع #${order.trackingCode} نهائيًا؟`
+          : `Are you sure you want to permanently delete order #${order.trackingCode}?`;
+
+    if (
+      !window.confirm(
+        confirmationMessage
+      )
+    ) {
+      return;
+    }
+
+    setDeletingOrderId(
+      order.id
     );
+
+    try {
+      await deleteOrder(
+        order.id
+      );
+
+      if (
+        expandedOrderId ===
+        order.id
+      ) {
+        setExpandedOrderId(
+          null
+        );
+      }
+    } catch (error) {
+      console.error(
+        "Sipariş silinemedi:",
+        error
+      );
+
+      window.alert(
+        error instanceof Error
+          ? error.message
+          : locale === "tr"
+            ? "Sipariş silinemedi. Lütfen tekrar deneyin."
+            : locale === "ar"
+              ? "تعذر حذف الطلب. يرجى المحاولة مرة أخرى."
+              : "The order could not be deleted. Please try again."
+      );
+    } finally {
+      setDeletingOrderId(
+        null
+      );
+    }
   }
 
   /*
@@ -728,12 +898,25 @@ export default function AdminOrdersContent({
                     order.id
                   )
                 }
+                isUpdating={
+                  updatingOrderId ===
+                  order.id
+                }
                 onStatusChange={(
                   status
                 ) =>
-                  handleOrderStatusChange(
+                  void handleOrderStatusChange(
                     order,
                     status
+                  )
+                }
+                isDeleting={
+                  deletingOrderId ===
+                  order.id
+                }
+                onDelete={() =>
+                  void handleDeleteOrder(
+                    order
                   )
                 }
               />
@@ -761,11 +944,17 @@ type AdminOrderRowProps = {
 
   isExpanded: boolean;
 
+  isUpdating: boolean;
+
   onToggle: () => void;
 
   onStatusChange: (
     status: OrderStatus
   ) => void;
+
+  isDeleting: boolean;
+
+  onDelete: () => void;
 };
 
 function AdminOrderRow({
@@ -773,8 +962,11 @@ function AdminOrderRow({
   order,
   dictionary,
   isExpanded,
+  isUpdating,
   onToggle,
   onStatusChange,
+  isDeleting,
+  onDelete,
 }: AdminOrderRowProps) {
   const customerName = [
     order.customer.firstName,
@@ -1053,6 +1245,9 @@ function AdminOrderRow({
                       value={
                         order.status
                       }
+                      disabled={
+                        isUpdating
+                      }
                       onChange={(
                         event
                       ) =>
@@ -1072,6 +1267,9 @@ function AdminOrderRow({
                         "transition-all",
                         "hover:border-border-strong",
                         "focus:border-accent",
+                        isUpdating
+                          ? "cursor-wait opacity-60"
+                          : "",
                       ].join(" ")}
                     >
                       {STATUS_OPTIONS.map(
@@ -1104,6 +1302,69 @@ function AdminOrderRow({
                     />
                   </div>
                 </section>
+
+                {(order.status === "delivered" ||
+                  order.status === "cancelled") && (
+                  <section className="mt-6 border border-danger/30 bg-danger/5 p-5 sm:p-6">
+                    <p className="text-[8px] font-semibold uppercase tracking-[0.2em] text-danger">
+                      {locale === "tr"
+                        ? "Siparişi Sil"
+                        : locale === "ar"
+                          ? "حذف الطلب"
+                          : "Delete Order"}
+                    </p>
+
+                    <p className="mt-3 max-w-2xl text-xs leading-6 text-foreground-soft">
+                      {locale === "tr"
+                        ? "Bu işlem siparişi kalıcı olarak siler ve geri alınamaz."
+                        : locale === "ar"
+                          ? "سيؤدي هذا الإجراء إلى حذف الطلب نهائيًا ولا يمكن التراجع عنه."
+                          : "This permanently deletes the order and cannot be undone."}
+                    </p>
+
+                    <button
+                      type="button"
+                      onClick={onDelete}
+                      disabled={
+                        isDeleting ||
+                        isUpdating
+                      }
+                      className={[
+                        "mt-5 inline-flex min-h-12",
+                        "items-center justify-center gap-3",
+                        "border border-danger/40",
+                        "px-5",
+                        "text-[9px] font-semibold uppercase",
+                        "tracking-[0.16em]",
+                        "text-danger",
+                        "transition-all duration-300",
+                        "hover:border-danger",
+                        "hover:bg-danger",
+                        "hover:text-white",
+                        isDeleting || isUpdating
+                          ? "cursor-wait opacity-50"
+                          : "",
+                      ].join(" ")}
+                    >
+                      <Trash2
+                        size={14}
+                        strokeWidth={1.4}
+                      />
+
+                      {isDeleting
+                        ? locale === "tr"
+                          ? "Siliniyor..."
+                          : locale === "ar"
+                            ? "جارٍ الحذف..."
+                            : "Deleting..."
+                        : locale === "tr"
+                          ? "Siparişi Kalıcı Olarak Sil"
+                          : locale === "ar"
+                            ? "حذف الطلب نهائيًا"
+                            : "Delete Order Permanently"}
+                    </button>
+                  </section>
+                )}
 
                 {/* =============================================
                     DURUM GEÇMİŞİ
@@ -1572,9 +1833,6 @@ function getStatusLabel(
   > = {
     received:
       dictionary.received,
-
-    "payment-confirmed":
-      dictionary.paymentConfirmed,
 
     preparing:
       dictionary.preparing,

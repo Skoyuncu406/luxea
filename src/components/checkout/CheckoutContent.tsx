@@ -8,14 +8,14 @@ import {
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
 import {
   ArrowLeft,
+  CheckCircle2,
   ChevronDown,
-  CreditCard,
+  Copy,
   LoaderCircle,
-  LockKeyhole,
+  PackageCheck,
   ShoppingBag,
 } from "lucide-react";
 
@@ -23,7 +23,6 @@ import { useCart } from "@/contexts/CartContext";
 import { useOrders } from "@/contexts/OrderContext";
 import { useProducts } from "@/contexts/ProductContext";
 
-import { formatPrice } from "@/lib/format-price";
 
 import type { Locale } from "@/lib/i18n/config";
 import type { Product } from "@/types/product";
@@ -84,6 +83,122 @@ type CheckoutContentProps = {
   locale: Locale;
   dictionary: CheckoutDictionary;
 };
+
+const requestCopy = {
+  tr: {
+    orderInfo:
+      "Sipariş Talebi",
+
+    orderSummaryDescription:
+      "Sipariş talebinizde yer alan ürünleri, renk ve adet bilgileriyle birlikte kontrol edin.",
+
+    secureTitle:
+      "Talebiniz güvenle iletilecek",
+
+    secureDescription:
+      "İletişim ve teslimat bilgileriniz sipariş talebinizi değerlendirmek amacıyla kullanılacaktır.",
+
+    successEyebrow:
+      "Sipariş Talebiniz Alındı",
+
+    successTitle:
+      "Teşekkür ederiz.",
+
+    successDescription:
+      "Sipariş talebiniz alınmıştır. 12 saat içerisinde dönüş yapılacaktır.",
+
+    copyTrackingCode:
+      "Takip Kodunu Kopyala",
+
+    copiedTrackingCode:
+      "Kopyalandı",
+
+    trackOrder:
+      "Siparişlerimi Gör",
+
+    continueShopping:
+      "Alışverişe Devam Et",
+
+    requestFailed:
+      "Sipariş talebiniz oluşturulamadı. Lütfen tekrar deneyin.",
+  },
+
+  en: {
+    orderInfo:
+      "Order Request",
+
+    orderSummaryDescription:
+      "Review the products, colours and quantities included in your order request.",
+
+    secureTitle:
+      "Your request will be sent securely",
+
+    secureDescription:
+      "Your contact and delivery information will only be used to evaluate and process your order request.",
+
+    successEyebrow:
+      "Order Request Received",
+
+    successTitle:
+      "Thank you.",
+
+    successDescription:
+      "Your order request has been received. We will contact you within 12 hours.",
+
+    copyTrackingCode:
+      "Copy Tracking Code",
+
+    copiedTrackingCode:
+      "Copied",
+
+    trackOrder:
+      "View My Orders",
+
+    continueShopping:
+      "Continue Shopping",
+
+    requestFailed:
+      "Your order request could not be created. Please try again.",
+  },
+
+  ar: {
+    orderInfo:
+      "طلب الطلب",
+
+    orderSummaryDescription:
+      "راجع المنتجات والألوان والكميات الموجودة في طلبك.",
+
+    secureTitle:
+      "سيتم إرسال طلبك بأمان",
+
+    secureDescription:
+      "سيتم استخدام معلومات الاتصال والتوصيل فقط لتقييم طلبك ومعالجته.",
+
+    successEyebrow:
+      "تم استلام طلبك",
+
+    successTitle:
+      "شكراً لك.",
+
+    successDescription:
+      "تم استلام طلبك. سنتواصل معك خلال 12 ساعة.",
+
+    copyTrackingCode:
+      "نسخ رمز التتبع",
+
+    copiedTrackingCode:
+      "تم النسخ",
+
+    trackOrder:
+      "عرض طلباتي",
+
+    continueShopping:
+      "متابعة التسوق",
+
+    requestFailed:
+      "تعذر إنشاء طلبك. يرجى المحاولة مرة أخرى.",
+  },
+} as const;
 
 /*
  * =============================================================
@@ -249,8 +364,6 @@ export default function CheckoutContent({
   locale,
   dictionary,
 }: CheckoutContentProps) {
-  const router = useRouter();
-
   /*
    * ============================================================
    * CART
@@ -280,10 +393,6 @@ export default function CheckoutContent({
 
     isLoaded:
       areProductsLoaded,
-
-    decreaseProductStocks,
-
-    restoreProductStocks,
   } = useProducts();
 
   /*
@@ -341,6 +450,26 @@ export default function CheckoutContent({
     setIsCompletingOrder,
   ] = useState(false);
 
+  const [
+    completedTrackingCode,
+    setCompletedTrackingCode,
+  ] = useState<string | null>(
+    null
+  );
+
+  const [
+    isTrackingCodeCopied,
+    setIsTrackingCodeCopied,
+  ] = useState(false);
+
+  const [
+    submitError,
+    setSubmitError,
+  ] = useState("");
+
+  const copy =
+    requestCopy[locale];
+
   /*
    * ============================================================
    * GLOBAL LOAD
@@ -397,39 +526,6 @@ export default function CheckoutContent({
       cartItems,
       products,
     ]);
-
-  /*
-   * ============================================================
-   * ARA TOPLAM
-   * ============================================================
-   */
-
-  const subtotal =
-    useMemo(() => {
-      return resolvedCartItems.reduce(
-        (
-          total,
-          {
-            cartItem,
-            product,
-          }
-        ) =>
-          total +
-          product.price *
-            cartItem.quantity,
-        0
-      );
-    }, [resolvedCartItems]);
-
-  /*
-   * Şimdilik sepetin ilk ürününün
-   * para birimi kullanılıyor.
-   */
-
-  const currency =
-    resolvedCartItems[0]
-      ?.product.currency ??
-    "USD";
 
   /*
    * ============================================================
@@ -533,10 +629,6 @@ export default function CheckoutContent({
   ) {
     event.preventDefault();
 
-    /*
-     * Double submit engelle.
-     */
-
     if (
       isSubmitting ||
       isCompletingOrder
@@ -544,9 +636,7 @@ export default function CheckoutContent({
       return;
     }
 
-    /*
-     * Form kontrolü.
-     */
+    setSubmitError("");
 
     const formIsValid =
       validateForm();
@@ -555,22 +645,12 @@ export default function CheckoutContent({
       return;
     }
 
-    /*
-     * Sepet kontrolü.
-     */
-
     if (
       resolvedCartItems.length ===
       0
     ) {
       return;
     }
-
-    /*
-     * ==========================================================
-     * STOK KONTROLÜ
-     * ==========================================================
-     */
 
     const hasInvalidStock =
       resolvedCartItems.some(
@@ -588,59 +668,7 @@ export default function CheckoutContent({
 
     setIsSubmitting(true);
 
-    /*
-     * Sipariş oluşturulamazsa
-     * stokları geri yükleyebilmek için.
-     */
-
-    let stocksDecreased =
-      false;
-
     try {
-      /*
-       * ========================================================
-       * STOKLARI DÜŞÜR
-       * ========================================================
-       */
-
-      const stockResult =
-        decreaseProductStocks(
-          resolvedCartItems.map(
-            ({
-              cartItem,
-              product,
-            }) => ({
-              productId:
-                product.id,
-
-              quantity:
-                cartItem.quantity,
-            })
-          )
-        );
-
-      /*
-       * Stok düşürülemediyse
-       * sipariş oluşturma.
-       */
-
-      if (!stockResult) {
-        setIsSubmitting(
-          false
-        );
-
-        return;
-      }
-
-      stocksDecreased =
-        true;
-
-      /*
-       * ========================================================
-       * ORDER ITEMS
-       * ========================================================
-       */
-
       const orderItems =
         resolvedCartItems.map(
           ({
@@ -668,6 +696,12 @@ export default function CheckoutContent({
             quantity:
               cartItem.quantity,
 
+            /*
+             * Fiyat public tarafta gösterilmiyor.
+             * Mevcut order altyapısı bu alanı hâlâ beklediği için
+             * ürün verisindeki değer backend snapshot amacıyla
+             * gönderilmeye devam eder.
+             */
             unitPrice:
               product.price,
 
@@ -676,11 +710,25 @@ export default function CheckoutContent({
           })
         );
 
-      /*
-       * ========================================================
-       * SİPARİŞ OLUŞTUR
-       * ========================================================
-       */
+      const subtotal =
+        resolvedCartItems.reduce(
+          (
+            total,
+            {
+              cartItem,
+              product,
+            }
+          ) =>
+            total +
+            product.price *
+              cartItem.quantity,
+          0
+        );
+
+      const currency =
+        resolvedCartItems[0]
+          ?.product.currency ??
+        "USD";
 
       const order =
         await createOrder({
@@ -730,94 +778,50 @@ export default function CheckoutContent({
           currency,
         });
 
-      /*
-       * ========================================================
-       * SİPARİŞ TAMAMLAMA MODUNA GEÇ
-       * ========================================================
-       *
-       * Bu state clearCart'tan ÖNCE aktif olur.
-       *
-       * Böylece cartItems [] olduğunda CheckoutContent
-       * boş sepet ekranına geçmez.
-       */
-
       setIsCompletingOrder(
         true
       );
 
-      /*
-       * ========================================================
-       * SİPARİŞ TAMAMLANDI SAYFASINA GİT
-       * ========================================================
-       *
-       * push yerine replace kullanıyoruz.
-       *
-       * Kullanıcı browser Back butonuyla
-       * tamamlanmış checkout'a dönemez.
-       */
-
-      router.replace(
-        `/${locale}/order-complete/${encodeURIComponent(
-          order.trackingCode
-        )}`
+      setCompletedTrackingCode(
+        order.trackingCode
       );
-
-      /*
-       * ========================================================
-       * SEPETİ TEMİZLE
-       * ========================================================
-       *
-       * isCompletingOrder artık true olduğu için
-       * bu işlem boş sepet ekranını tetiklemez.
-       */
 
       clearCart();
     } catch (error) {
       console.error(
-        "Sipariş oluşturulamadı:",
+        "Sipariş talebi oluşturulamadı:",
         error
       );
 
-      /*
-       * ========================================================
-       * STOKLARI GERİ YÜKLE
-       * ========================================================
-       */
-
-      if (
-        stocksDecreased
-      ) {
-        try {
-          restoreProductStocks(
-            resolvedCartItems.map(
-              ({
-                cartItem,
-                product,
-              }) => ({
-                productId:
-                  product.id,
-
-                quantity:
-                  cartItem.quantity,
-              })
-            )
-          );
-        } catch (
-          restoreError
-        ) {
-          console.error(
-            "Ürün stokları geri yüklenemedi:",
-            restoreError
-          );
-        }
-      }
-
-      setIsCompletingOrder(
-        false
+      setSubmitError(
+        copy.requestFailed
       );
 
       setIsSubmitting(
         false
+      );
+    }
+  }
+
+  async function handleCopyTrackingCode() {
+    if (!completedTrackingCode) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(
+        completedTrackingCode
+      );
+
+      setIsTrackingCodeCopied(true);
+
+      window.setTimeout(() => {
+        setIsTrackingCodeCopied(false);
+      }, 2200);
+    } catch (error) {
+      console.error(
+        "Takip kodu kopyalanamadı:",
+        error
       );
     }
   }
@@ -830,24 +834,137 @@ export default function CheckoutContent({
    * Bu kontrol boş sepet kontrolünden ÖNCE olmalıdır.
    */
 
-  if (isCompletingOrder) {
+  if (
+    isCompletingOrder &&
+    completedTrackingCode
+  ) {
     return (
-      <div className="mt-12 flex min-h-[480px] flex-col items-center justify-center border-y border-border px-5 text-center">
-        <span className="flex h-20 w-20 items-center justify-center rounded-full border border-accent/30 bg-accent/10">
-          <LoaderCircle
-            size={28}
-            strokeWidth={
-              1.3
-            }
-            className="animate-spin text-accent"
+      <div className="mt-12 flex min-h-[520px] flex-col items-center justify-center border-y border-border px-5 py-14 text-center">
+        <span className="flex h-20 w-20 items-center justify-center rounded-full border border-success/30 bg-success/10 text-success">
+          <CheckCircle2
+            size={32}
+            strokeWidth={1.2}
           />
         </span>
 
-        <p className="mt-7 text-[10px] font-semibold uppercase tracking-[0.2em] text-accent">
+        <p className="mt-7 text-[9px] font-semibold uppercase tracking-[0.22em] text-accent">
           {
-            dictionary.creatingOrder
+            copy.successEyebrow
           }
         </p>
+
+        <h2 className="mt-4 max-w-2xl font-heading text-4xl leading-none text-foreground sm:text-5xl lg:text-6xl">
+          {
+            copy.successTitle
+          }
+        </h2>
+
+        <p className="mx-auto mt-5 max-w-[620px] text-sm leading-7 text-foreground-soft sm:text-base sm:leading-8">
+          {
+            copy.successDescription
+          }
+        </p>
+
+        <div className="mt-6 w-full max-w-[520px]">
+          <button
+            type="button"
+            onClick={handleCopyTrackingCode}
+            className={[
+              "group relative flex w-full items-center justify-between gap-5 overflow-hidden",
+              "border-y border-border bg-surface/35 px-5 py-4",
+              "transition-all duration-500",
+              "hover:border-accent/50 hover:bg-surface/65",
+            ].join(" ")}
+            aria-label={copy.copyTrackingCode}
+          >
+            <span className="flex min-w-0 flex-col items-start text-start">
+              <span className="text-[7px] font-semibold uppercase tracking-[0.2em] text-accent">
+                {copy.copyTrackingCode}
+              </span>
+
+              <span
+                dir="ltr"
+                className="mt-2 break-all font-heading text-lg tracking-[0.08em] text-foreground sm:text-xl"
+              >
+                {completedTrackingCode}
+              </span>
+            </span>
+
+            <span
+              className={[
+                "flex h-11 w-11 shrink-0 items-center justify-center border",
+                "transition-all duration-500",
+                isTrackingCodeCopied
+                  ? "border-success/35 bg-success/10 text-success"
+                  : "border-border bg-background/70 text-foreground group-hover:border-accent group-hover:text-accent",
+              ].join(" ")}
+            >
+              {isTrackingCodeCopied ? (
+                <CheckCircle2
+                  size={17}
+                  strokeWidth={1.4}
+                />
+              ) : (
+                <Copy
+                  size={16}
+                  strokeWidth={1.4}
+                />
+              )}
+            </span>
+
+            <span
+              className={[
+                "pointer-events-none absolute bottom-0 left-1/2 h-px -translate-x-1/2 bg-accent",
+                "transition-all duration-700",
+                isTrackingCodeCopied
+                  ? "w-full"
+                  : "w-0 group-hover:w-[72%]",
+              ].join(" ")}
+            />
+          </button>
+
+          <p
+            className={[
+              "mt-3 text-center text-[8px] font-semibold uppercase tracking-[0.16em]",
+              "transition-all duration-300",
+              isTrackingCodeCopied
+                ? "translate-y-0 text-success opacity-100"
+                : "-translate-y-1 text-muted opacity-0",
+            ].join(" ")}
+            aria-live="polite"
+          >
+            {copy.copiedTrackingCode}
+          </p>
+        </div>
+
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+          <Link
+            href={`/${locale}/account/orders?code=${encodeURIComponent(
+              completedTrackingCode
+            )}`}
+            className="inline-flex min-h-13 items-center justify-center gap-3 border border-foreground bg-foreground px-7 text-[9px] font-semibold uppercase tracking-[0.16em] !text-[#F3F0EA] transition-all duration-300 hover:border-accent hover:bg-accent hover:!text-white"
+          >
+            <PackageCheck
+              size={15}
+              strokeWidth={1.4}
+            />
+
+            <span>
+              {
+                copy.trackOrder
+              }
+            </span>
+          </Link>
+
+          <Link
+            href={`/${locale}/products`}
+            className="inline-flex min-h-13 items-center justify-center border border-border px-7 text-[9px] font-semibold uppercase tracking-[0.16em] text-foreground transition-all duration-300 hover:border-accent hover:text-accent"
+          >
+            {
+              copy.continueShopping
+            }
+          </Link>
+        </div>
       </div>
     );
   }
@@ -1312,7 +1429,7 @@ export default function CheckoutContent({
         ==================================================== */}
 
         <div className="mt-10 flex items-start gap-4 border-y border-border py-6">
-          <LockKeyhole
+          <PackageCheck
             size={20}
             strokeWidth={
               1.25
@@ -1323,17 +1440,28 @@ export default function CheckoutContent({
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.17em] text-foreground">
               {
-                dictionary.securePayment
+                copy.secureTitle
               }
             </p>
 
-            <p className="mt-2 text-xs leading-6 text-foreground-soft">
-              {
-                dictionary.securePaymentDescription
-              }
-            </p>
+<p className="mt-2 text-xs leading-6 text-foreground-soft">
+  {
+    copy.secureDescription
+  }
+</p>
           </div>
         </div>
+
+        {submitError && (
+          <div
+            role="alert"
+            className="mt-6 border border-danger/25 bg-danger/[0.05] px-5 py-4"
+          >
+            <p className="text-xs leading-6 text-danger">
+              {submitError}
+            </p>
+          </div>
+        )}
 
         {/* ====================================================
             ALT BUTONLAR
@@ -1415,7 +1543,7 @@ export default function CheckoutContent({
                 className="animate-spin"
               />
             ) : (
-              <CreditCard
+              <ShoppingBag
                 size={17}
                 strokeWidth={
                   1.4
@@ -1524,15 +1652,8 @@ export default function CheckoutContent({
                       />
                     </div>
 
-                    <p className="mt-3 text-[10px] font-semibold tracking-[0.05em] text-foreground">
-                      {formatPrice(
-                        product.price *
-                          cartItem.quantity,
-
-                        product.currency,
-
-                        locale
-                      )}
+                    <p className="mt-3 text-[9px] font-semibold uppercase tracking-[0.14em] text-muted">
+                      {dictionary.quantity}: {cartItem.quantity}
                     </p>
                   </div>
                 </article>
@@ -1540,60 +1661,14 @@ export default function CheckoutContent({
             )}
           </div>
 
-          {/* ==================================================
-              TUTARLAR
-          ================================================== */}
+          <div className="mt-7 border-y border-border py-6">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.17em] text-accent">
+              {copy.orderInfo}
+            </p>
 
-          <div className="mt-7 space-y-4 border-y border-border py-6">
-            <div className="flex items-center justify-between gap-6">
-              <span className="text-[10px] uppercase tracking-[0.15em] text-muted">
-                {
-                  dictionary.subtotal
-                }
-              </span>
-
-              <span className="text-sm font-semibold text-foreground">
-                {formatPrice(
-                  subtotal,
-                  currency,
-                  locale
-                )}
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between gap-6">
-              <span className="text-[10px] uppercase tracking-[0.15em] text-muted">
-                {
-                  dictionary.shipping
-                }
-              </span>
-
-              <span className="text-end text-[10px] text-muted">
-                {
-                  dictionary.shippingCalculated
-                }
-              </span>
-            </div>
-          </div>
-
-          {/* ==================================================
-              TOPLAM
-          ================================================== */}
-
-          <div className="flex items-end justify-between gap-6 pt-6">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.17em] text-foreground">
-              {
-                dictionary.total
-              }
-            </span>
-
-            <strong className="font-heading text-3xl font-medium leading-none text-foreground">
-              {formatPrice(
-                subtotal,
-                currency,
-                locale
-              )}
-            </strong>
+            <p className="mt-3 text-xs leading-6 text-foreground-soft">
+              {copy.orderSummaryDescription}
+            </p>
           </div>
         </div>
       </aside>

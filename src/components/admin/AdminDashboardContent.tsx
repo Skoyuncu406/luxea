@@ -68,7 +68,6 @@ type AdminDashboardDictionary = {
   loading: string;
 
   received: string;
-  paymentConfirmed: string;
   preparing: string;
   shipped: string;
   delivered: string;
@@ -177,10 +176,7 @@ export default function AdminDashboardContent({
       ).length;
 
     const pendingOrders =
-      countByStatus("received") +
-      countByStatus(
-        "payment-confirmed"
-      );
+      countByStatus("received");
 
     /*
      * =========================================================
@@ -1016,9 +1012,6 @@ function getStatusLabel(
   > = {
     received:
       dictionary.received,
-
-    "payment-confirmed":
-      dictionary.paymentConfirmed,
 
     preparing:
       dictionary.preparing,

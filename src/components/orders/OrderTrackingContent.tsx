@@ -25,7 +25,6 @@ import {
   type OrderStatus,
 } from "@/contexts/OrderContext";
 
-import { formatPrice } from "@/lib/format-price";
 import type { Locale } from "@/lib/i18n/config";
 
 /*
@@ -60,14 +59,12 @@ type OrderTrackingDictionary = {
   color: string;
 
   received: string;
-  paymentConfirmed: string;
   preparing: string;
   shipped: string;
   delivered: string;
   cancelled: string;
 
   receivedDescription: string;
-  paymentConfirmedDescription: string;
   preparingDescription: string;
   shippedDescription: string;
   deliveredDescription: string;
@@ -106,7 +103,6 @@ type OrderTrackingResultProps = {
 const ORDER_STEPS:
   OrderStatus[] = [
     "received",
-    "payment-confirmed",
     "preparing",
     "shipped",
     "delivered",
@@ -442,29 +438,29 @@ export default function OrderTrackingContent({
    */
 
   return (
-    <div className="mt-12 w-full">
+    <div className="mt-6 w-full sm:mt-7 lg:mt-8">
       {/* =====================================================
           ARAMA ALANI
       ===================================================== */}
 
-      <section className="mx-auto w-full max-w-[900px] border-y border-border px-4 py-12 text-center sm:px-8 sm:py-16">
-        <div className="mx-auto flex w-full max-w-[680px] flex-col items-center text-center">
-          <span className="flex h-20 w-20 items-center justify-center rounded-full border border-border bg-surface/55 text-accent">
+      <section className="mx-auto w-full max-w-[860px] border-y border-border px-4 py-6 text-center sm:px-7 sm:py-7 lg:py-8">
+        <div className="mx-auto flex w-full max-w-[620px] flex-col items-center text-center">
+          <span className="flex h-12 w-12 items-center justify-center rounded-full border border-border bg-surface/55 text-accent sm:h-14 sm:w-14">
             <Package
-              size={29}
+              size={22}
               strokeWidth={
                 1.15
               }
             />
           </span>
 
-          <h2 className="mt-7 w-full text-balance text-center font-heading text-4xl leading-none text-foreground sm:text-5xl lg:text-6xl">
+          <h2 className="mt-4 w-full text-balance text-center font-heading text-[32px] leading-none text-foreground sm:text-[38px] lg:text-[42px]">
             {
               dictionary.searchTitle
             }
           </h2>
 
-          <p className="mx-auto mt-5 w-full max-w-[580px] text-center text-sm leading-7 text-foreground-soft sm:text-base sm:leading-8">
+          <p className="mx-auto mt-3 w-full max-w-[540px] text-center text-xs leading-6 text-foreground-soft sm:text-sm sm:leading-7">
             {
               dictionary.searchDescription
             }
@@ -479,10 +475,10 @@ export default function OrderTrackingContent({
           onSubmit={
             handleSubmit
           }
-          className="mx-auto mt-10 flex w-full max-w-[620px] flex-col items-center"
+          className="mx-auto mt-5 flex w-full max-w-[600px] flex-col items-center"
         >
           <label className="block w-full text-center">
-            <span className="mb-3 block w-full text-center text-[9px] font-semibold uppercase tracking-[0.2em] text-muted">
+            <span className="mb-2 block w-full text-center text-[8px] font-semibold uppercase tracking-[0.18em] text-muted">
               {
                 dictionary.trackingCode
               }
@@ -494,7 +490,7 @@ export default function OrderTrackingContent({
                 strokeWidth={
                   1.35
                 }
-                className="pointer-events-none absolute start-5 top-1/2 z-10 -translate-y-1/2 text-accent"
+                className="pointer-events-none absolute start-4 top-1/2 z-10 -translate-y-1/2 text-accent"
               />
 
               <input
@@ -529,11 +525,11 @@ export default function OrderTrackingContent({
                 }
                 dir="ltr"
                 className={[
-                  "block h-16 w-full min-w-0",
+                  "block h-12 w-full min-w-0 sm:h-13",
 
                   "border bg-[#EEEAE3]",
 
-                  "ps-14 pe-14",
+                  "ps-12 pe-12",
 
                   "text-center text-sm uppercase",
 
@@ -567,7 +563,7 @@ export default function OrderTrackingContent({
                   aria-label={
                     dictionary.clearSearch
                   }
-                  className="absolute end-0 top-0 z-10 flex h-16 w-14 items-center justify-center text-muted transition-colors duration-300 hover:text-accent"
+                  className="absolute end-0 top-0 z-10 flex h-12 w-12 items-center justify-center text-muted transition-colors duration-300 hover:text-accent sm:h-13"
                 >
                   <X
                     size={16}
@@ -594,15 +590,15 @@ export default function OrderTrackingContent({
               isSearching
             }
             className={[
-              "mt-4 inline-flex min-h-14",
+              "mt-3 inline-flex min-h-12",
 
               "w-full items-center justify-center",
 
-              "gap-3 border border-[#242320]",
+              "gap-2.5 border border-[#242320]",
 
-              "bg-[#242320] px-8",
+              "bg-[#242320] px-7",
 
-              "text-center text-[10px]",
+              "text-center text-[9px]",
 
               "font-semibold uppercase",
 
@@ -907,7 +903,7 @@ function OrderTrackingResult({
             </div>
           </div>
         ) : (
-          <div className="mx-auto grid w-full max-w-[1200px] gap-0 lg:grid-cols-5">
+          <div className="mx-auto grid w-full max-w-[1100px] gap-0 lg:grid-cols-4">
             {ORDER_STEPS.map(
               (
                 status,
@@ -1279,40 +1275,25 @@ function OrderTrackingResult({
                       }
                     </p>
 
-                    {/* Price */}
 
-                    <p className="mt-3 text-center text-[10px] font-semibold text-foreground">
-                      {formatPrice(
-                        item.unitPrice *
-                          item.quantity,
-
-                        item.currency,
-
-                        locale
-                      )}
-                    </p>
                   </div>
                 </article>
               )
             )}
           </div>
 
-          {/* Total */}
+          <div className="mt-6 border-t border-border pt-6 text-center">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-accent">
+              {dictionary.orderSummary}
+            </p>
 
-          <div className="mt-6 flex flex-col items-center justify-center gap-3 border-t border-border pt-6 sm:flex-row sm:justify-between">
-            <span className="text-center text-[10px] font-semibold uppercase tracking-[0.17em] text-foreground">
-              {
-                dictionary.total
-              }
-            </span>
-
-            <strong className="text-center font-heading text-3xl font-medium leading-none text-foreground">
-              {formatPrice(
-                order.total,
-                order.currency,
-                locale
-              )}
-            </strong>
+            <p className="mx-auto mt-3 max-w-sm text-xs leading-6 text-foreground-soft">
+              {locale === "tr"
+                ? "Fiyat ve sipariş detayları firma tarafından sizinle ayrıca paylaşılacaktır."
+                : locale === "ar"
+                  ? "ستتم مشاركة السعر وتفاصيل الطلب معك بشكل منفصل من قبل الشركة."
+                  : "Pricing and order details will be shared with you separately by the company."}
+            </p>
           </div>
         </aside>
       </div>
@@ -1331,7 +1312,7 @@ function OrderTrackingResult({
 
             "border border-foreground px-8",
 
-            "text-center text-[10px]",
+            "text-center text-[9px]",
 
             "font-semibold uppercase",
 
@@ -1373,9 +1354,6 @@ function getStatusLabel(
     received:
       dictionary.received,
 
-    "payment-confirmed":
-      dictionary.paymentConfirmed,
-
     preparing:
       dictionary.preparing,
 
@@ -1411,9 +1389,6 @@ function getStatusDescription(
   > = {
     received:
       dictionary.receivedDescription,
-
-    "payment-confirmed":
-      dictionary.paymentConfirmedDescription,
 
     preparing:
       dictionary.preparingDescription,

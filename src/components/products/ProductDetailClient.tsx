@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, PackageSearch } from "lucide-react";
+import { useState } from "react";
 
 import ProductActions from "@/components/products/ProductActions";
 import { useProducts } from "@/contexts/ProductContext";
@@ -172,17 +173,51 @@ export default function ProductDetailClient({
     findProductBySlug,
   } = useProducts();
 
+  /*
+   * Seçili galeri görseli.
+   *
+   * Hook herhangi bir koşullu return'den
+   * önce çağrılmalıdır.
+   */
+  const [
+    selectedImage,
+    setSelectedImage,
+  ] = useState<string | null>(null);
+
   if (!isLoaded) {
     return <ProductLoadingState />;
   }
 
-  const product = findProductBySlug(slug);
+  const product =
+    findProductBySlug(slug);
 
-  if (!product || !product.isActive) {
+  if (
+    !product ||
+    !product.isActive
+  ) {
     return (
-      <ProductNotFoundState locale={locale} />
+      <ProductNotFoundState
+        locale={locale}
+      />
     );
   }
+
+  const galleryImages =
+    Array.from(
+      new Set([
+        product.image,
+        ...(product.additionalImages ??
+          []),
+      ])
+    ).filter(Boolean);
+
+  const activeImage =
+    selectedImage &&
+    galleryImages.includes(
+      selectedImage
+    )
+      ? selectedImage
+      : product.image;
 
   return (
     <>
@@ -206,7 +241,7 @@ export default function ProductDetailClient({
             {/* Ana görsel */}
             <div className="group/preview relative mx-auto aspect-[4/5] w-full max-w-[720px] cursor-zoom-in overflow-hidden bg-surface sm:aspect-[5/6] lg:h-[calc(100dvh-230px)] lg:min-h-[560px] lg:max-h-[720px] lg:aspect-auto">
               <Image
-                src={product.image}
+                src={activeImage}
                 alt={product.name[locale]}
                 fill
                 priority
@@ -233,54 +268,71 @@ export default function ProductDetailClient({
               )}
 
               <FullscreenPreview
-                src={product.image}
+                src={activeImage}
                 alt={product.name[locale]}
               />
             </div>
 
             {/* Küçük galeri */}
-            <div className="mt-4 flex items-start gap-3 overflow-x-auto pb-2 sm:mt-5 sm:gap-4 lg:overflow-visible">
-              {product.hoverImage && (
-                <div className="group/preview relative aspect-[4/5] w-[28%] min-w-[92px] max-w-[150px] shrink-0 cursor-zoom-in overflow-hidden border border-border bg-surface sm:w-[24%] sm:min-w-[120px] lg:w-[23%] lg:max-w-[160px]">
-                  <Image
-                    src={product.hoverImage}
-                    alt={`${product.name[locale]} - 2`}
-                    fill
-                    sizes="(max-width: 640px) 28vw, (max-width: 1024px) 24vw, 160px"
-                    className="object-cover object-center transition-transform duration-500 lg:group-hover/preview:scale-[1.06]"
-                  />
+            {galleryImages.length > 1 && (
+              <div className="mt-4 flex items-start gap-3 overflow-x-auto pb-2 sm:mt-5 sm:gap-4">
+                {galleryImages.map(
+                  (imageUrl, index) => {
+                    const isActive =
+                      imageUrl === activeImage;
 
-                  <div className="pointer-events-none absolute inset-0 border-0 border-accent transition-all duration-300 lg:group-hover/preview:border" />
+                    return (
+                      <button
+                        key={`${imageUrl}-${index}`}
+                        type="button"
+                        onClick={() =>
+                          setSelectedImage(
+                            imageUrl
+                          )
+                        }
+                        aria-label={`${product.name[locale]} - ${index + 1}`}
+                        aria-pressed={isActive}
+                        className={[
+                          "group relative aspect-[4/5]",
+                          "w-[24%] min-w-[82px] max-w-[120px]",
+                          "shrink-0 overflow-hidden bg-surface",
+                          "border transition-all duration-300",
+                          isActive
+                            ? "border-accent"
+                            : "border-border hover:border-accent/60",
+                        ].join(" ")}
+                      >
+                        <Image
+                          src={imageUrl}
+                          alt={`${product.name[locale]} - ${index + 1}`}
+                          fill
+                          sizes="120px"
+                          className="object-cover object-center transition-transform duration-500 group-hover:scale-[1.05]"
+                        />
 
-                  <FullscreenPreview
-                    src={product.hoverImage}
-                    alt={`${product.name[locale]} - 2`}
-                  />
-                </div>
-              )}
+                        <span
+                          aria-hidden="true"
+                          className={[
+                            "pointer-events-none absolute inset-0",
+                            "transition-colors duration-300",
+                            isActive
+                              ? "bg-transparent"
+                              : "bg-[#242320]/0 group-hover:bg-[#242320]/5",
+                          ].join(" ")}
+                        />
 
-              <div className="group/preview relative aspect-[4/5] w-[28%] min-w-[92px] max-w-[150px] shrink-0 cursor-zoom-in overflow-hidden border border-border bg-surface sm:w-[24%] sm:min-w-[120px] lg:w-[23%] lg:max-w-[160px]">
-                <Image
-                  src={product.image}
-                  alt={`${product.name[locale]} - 3`}
-                  fill
-                  sizes="(max-width: 640px) 28vw, (max-width: 1024px) 24vw, 160px"
-                  className="scale-[1.15] object-cover object-center transition-transform duration-500 lg:group-hover/preview:scale-[1.22]"
-                />
-
-                <div
-                  aria-hidden="true"
-                  className="pointer-events-none absolute inset-0 bg-[#E5E0D7]/12"
-                />
-
-                <div className="pointer-events-none absolute inset-0 border-0 border-accent transition-all duration-300 lg:group-hover/preview:border" />
-
-                <FullscreenPreview
-                  src={product.image}
-                  alt={`${product.name[locale]} - 3`}
-                />
+                        {isActive && (
+                          <span
+                            aria-hidden="true"
+                            className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] bg-accent"
+                          />
+                        )}
+                      </button>
+                    );
+                  }
+                )}
               </div>
-            </div>
+            )}
           </div>
         </div>
 

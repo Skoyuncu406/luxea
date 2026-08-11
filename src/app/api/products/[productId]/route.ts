@@ -30,6 +30,8 @@ type UpdateProductRequestBody = {
 
   hoverImage?: unknown;
 
+  additionalImages?: unknown;
+
   price?: unknown;
 
   currency?: unknown;
@@ -161,6 +163,31 @@ function normalizeColors(
   );
 }
 
+function normalizeImageUrls(
+  value: unknown
+) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return Array.from(
+    new Set(
+      value
+        .filter(
+          (
+            imageUrl
+          ): imageUrl is string =>
+            typeof imageUrl ===
+            "string"
+        )
+        .map((imageUrl) =>
+          imageUrl.trim()
+        )
+        .filter(Boolean)
+    )
+  );
+}
+
 /*
  * ============================================================
  * PRODUCT QUERY
@@ -224,8 +251,21 @@ function serializeProduct(
   const hoverImage =
     sortedImages.find(
       (image) =>
-        !image.isPrimary
+        !image.isPrimary &&
+        image.order === 1
     );
+
+  const additionalImages =
+    sortedImages
+      .filter(
+        (image) =>
+          !image.isPrimary &&
+          image.order >= 2
+      )
+      .map(
+        (image) =>
+          image.url
+      );
 
   return {
     id: product.id,
@@ -258,6 +298,8 @@ function serializeProduct(
     hoverImage:
       hoverImage?.url ||
       undefined,
+
+    additionalImages,
 
     price:
       Number(product.price),
@@ -419,8 +461,25 @@ export async function PATCH(
     const currentHoverImage =
       currentProduct.images.find(
         (image) =>
-          !image.isPrimary
+          !image.isPrimary &&
+          image.order === 1
       );
+
+    const currentAdditionalImages =
+      currentProduct.images
+        .filter(
+          (image) =>
+            !image.isPrimary &&
+            image.order >= 2
+        )
+        .sort(
+          (a, b) =>
+            a.order - b.order
+        )
+        .map(
+          (image) =>
+            image.url
+        );
 
     /*
      * ========================================================
@@ -693,6 +752,55 @@ export async function PATCH(
         )
           ? body.hoverImage.trim()
           : "";
+    }
+
+    /*
+     * ========================================================
+     * ADDITIONAL IMAGES
+     *
+     * Alan request içinde yoksa mevcut değerler korunur.
+     * [] gönderilirse tüm ilave görseller kaldırılır.
+     * ========================================================
+     */
+
+    let additionalImages =
+      currentAdditionalImages;
+
+    const additionalImagesWereProvided =
+      Object.prototype.hasOwnProperty.call(
+        body,
+        "additionalImages"
+      );
+
+    if (
+      additionalImagesWereProvided
+    ) {
+      if (
+        !Array.isArray(
+          body.additionalImages
+        )
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+
+            message:
+              "İlave ürün görselleri geçersiz.",
+          },
+          {
+            status: 400,
+          }
+        );
+      }
+
+      additionalImages =
+        normalizeImageUrls(
+          body.additionalImages
+        ).filter(
+          (imageUrl) =>
+            imageUrl !== image &&
+            imageUrl !== hoverImage
+        );
     }
 
     /*
@@ -1012,13 +1120,9 @@ export async function PATCH(
          * ----------------------------------------------------
          * IMAGES
          *
-         * Şimdilik frontend modeli:
-         *
-         * image      → primary
-         * hoverImage → secondary
-         *
-         * İleride üçüncü görsel desteğinde bu yapı
-         * genişletilebilir.
+         * order 0 = ana görsel
+         * order 1 = hover görseli
+         * order 2+ = ilave galeri görselleri
          * ----------------------------------------------------
          */
 
@@ -1054,6 +1158,32 @@ export async function PATCH(
               isPrimary:
                 false,
             },
+          });
+        }
+
+        if (
+          additionalImages.length >
+          0
+        ) {
+          await tx.productImage.createMany({
+            data:
+              additionalImages.map(
+                (
+                  imageUrl,
+                  index
+                ) => ({
+                  productId,
+
+                  url:
+                    imageUrl,
+
+                  order:
+                    index + 2,
+
+                  isPrimary:
+                    false,
+                })
+              ),
           });
         }
 

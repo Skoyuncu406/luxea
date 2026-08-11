@@ -36,7 +36,6 @@ type UpdateOrderRequestBody = {
 
 type FrontendOrderStatus =
   | "received"
-  | "payment-confirmed"
   | "preparing"
   | "shipped"
   | "delivered"
@@ -79,8 +78,14 @@ function serializeStatus(
     case OrderStatus.RECEIVED:
       return "received";
 
+    /*
+     * Legacy durum:
+     * Eski siparişlerde PAYMENT_CONFIRMED bulunabilir.
+     * Yeni public/admin akışında ayrı bir aşama değildir.
+     * Bu nedenle "received" olarak normalize ediyoruz.
+     */
     case OrderStatus.PAYMENT_CONFIRMED:
-      return "payment-confirmed";
+      return "received";
 
     case OrderStatus.PREPARING:
       return "preparing";
@@ -108,9 +113,6 @@ function parseOrderStatus(
   switch (value) {
     case "received":
       return OrderStatus.RECEIVED;
-
-    case "payment-confirmed":
-      return OrderStatus.PAYMENT_CONFIRMED;
 
     case "preparing":
       return OrderStatus.PREPARING;
@@ -691,6 +693,215 @@ export async function PATCH(
 
         message:
           "Sipariş durumu güncellenirken bir hata oluştu.",
+      },
+      {
+        status: 500,
+      }
+    );
+  }
+}
+
+/*
+ * =============================================================
+ * DELETE
+ *
+ * Admin tarafından tamamlanmış veya iptal edilmiş
+ * siparişin kalıcı olarak silinmesi.
+ *
+ * Güvenlik amacıyla aktif siparişler silinemez.
+ * Yalnızca DELIVERED veya CANCELLED durumundaki
+ * siparişler silinebilir.
+ * =============================================================
+ */
+
+export async function DELETE(
+  _request: Request,
+  {
+    params,
+  }: OrderRouteProps
+) {
+  try {
+    /*
+     * =========================================================
+     * ADMIN AUTH
+     * =========================================================
+     */
+
+    const session =
+      await requireAdminSession();
+
+    if (!session) {
+      return NextResponse.json(
+        {
+          success: false,
+
+          message:
+            "Bu işlem için admin girişi gereklidir.",
+        },
+        {
+          status: 401,
+        }
+      );
+    }
+
+    /*
+     * =========================================================
+     * PARAMS
+     * =========================================================
+     */
+
+    const {
+      orderId,
+    } = await params;
+
+    const normalizedOrderId =
+      orderId.trim();
+
+    if (
+      !normalizedOrderId
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+
+          message:
+            "Sipariş kimliği geçersiz.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    /*
+     * =========================================================
+     * CURRENT ORDER
+     * =========================================================
+     */
+
+    const currentOrder =
+      await prisma.order.findUnique({
+        where: {
+          id:
+            normalizedOrderId,
+        },
+
+        select: {
+          id: true,
+          status: true,
+          trackingCode: true,
+        },
+      });
+
+    if (!currentOrder) {
+      return NextResponse.json(
+        {
+          success: false,
+
+          message:
+            "Sipariş bulunamadı.",
+        },
+        {
+          status: 404,
+        }
+      );
+    }
+
+    /*
+     * =========================================================
+     * DELETE PERMISSION
+     * =========================================================
+     *
+     * Aktif siparişlerin yanlışlıkla silinmesini önlüyoruz.
+     */
+
+    const canDelete =
+      currentOrder.status ===
+        OrderStatus.DELIVERED ||
+      currentOrder.status ===
+        OrderStatus.CANCELLED;
+
+    if (!canDelete) {
+      return NextResponse.json(
+        {
+          success: false,
+
+          message:
+            "Yalnızca teslim edilmiş veya iptal edilmiş siparişler silinebilir.",
+        },
+        {
+          status: 409,
+        }
+      );
+    }
+
+    /*
+     * =========================================================
+     * DELETE ORDER
+     * =========================================================
+     *
+     * OrderItem ve OrderStatusHistory ilişkileri Prisma
+     * şemasında cascade ise Order ile birlikte silinir.
+     *
+     * Cascade tanımlı değilse transaction içindeki deleteMany
+     * çağrıları ilişkili kayıtları önce güvenli şekilde temizler.
+     * =========================================================
+     */
+
+    await prisma.$transaction(
+      async (tx) => {
+        await tx.orderStatusHistory.deleteMany({
+          where: {
+            orderId:
+              normalizedOrderId,
+          },
+        });
+
+        await tx.orderItem.deleteMany({
+          where: {
+            orderId:
+              normalizedOrderId,
+          },
+        });
+
+        await tx.order.delete({
+          where: {
+            id:
+              normalizedOrderId,
+          },
+        });
+      }
+    );
+
+    return NextResponse.json(
+      {
+        success: true,
+
+        orderId:
+          normalizedOrderId,
+
+        trackingCode:
+          currentOrder.trackingCode,
+
+        message:
+          "Sipariş başarıyla silindi.",
+      },
+      {
+        status: 200,
+      }
+    );
+  } catch (error) {
+    console.error(
+      "Sipariş silinemedi:",
+      error
+    );
+
+    return NextResponse.json(
+      {
+        success: false,
+
+        message:
+          "Sipariş silinirken bir hata oluştu.",
       },
       {
         status: 500,

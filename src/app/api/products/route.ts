@@ -27,6 +27,12 @@ type CreateProductRequestBody = {
 
   hoverImage?: unknown;
 
+  /*
+   * Ürün detay galerisinde gösterilecek
+   * sınırsız sayıdaki ilave görseller.
+   */
+  additionalImages?: unknown;
+
   price?: unknown;
 
   currency?: unknown;
@@ -162,6 +168,37 @@ function normalizeColors(
 
 /*
  * ============================================================
+ * IMAGE URL NORMALIZATION
+ * ============================================================
+ */
+
+function normalizeImageUrls(
+  value: unknown
+) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return Array.from(
+    new Set(
+      value
+        .filter(
+          (
+            imageUrl
+          ): imageUrl is string =>
+            typeof imageUrl ===
+            "string"
+        )
+        .map((imageUrl) =>
+          imageUrl.trim()
+        )
+        .filter(Boolean)
+    )
+  );
+}
+
+/*
+ * ============================================================
  * SERIALIZER
  * ============================================================
  */
@@ -214,11 +251,34 @@ function serializeProduct(
     ) ??
     sortedImages[0];
 
+  /*
+   * Görsel sıra sözleşmesi:
+   *
+   * order 0 = ana görsel
+   * order 1 = hover görseli (varsa)
+   * order 2+ = ilave galeri görselleri
+   *
+   * Böylece hover görseli olmasa bile ilk ilave
+   * görsel yanlışlıkla hover görseli sayılmaz.
+   */
   const hoverImage =
     sortedImages.find(
       (image) =>
-        !image.isPrimary
+        !image.isPrimary &&
+        image.order === 1
     );
+
+  const additionalImages =
+    sortedImages
+      .filter(
+        (image) =>
+          !image.isPrimary &&
+          image.order >= 2
+      )
+      .map(
+        (image) =>
+          image.url
+      );
 
   return {
     id: product.id,
@@ -251,6 +311,8 @@ function serializeProduct(
     hoverImage:
       hoverImage?.url ||
       undefined,
+
+    additionalImages,
 
     price:
       Number(product.price),
@@ -430,6 +492,15 @@ export async function POST(
       )
         ? body.hoverImage.trim()
         : "";
+
+    const additionalImages =
+      normalizeImageUrls(
+        body.additionalImages
+      ).filter(
+        (imageUrl) =>
+          imageUrl !== image &&
+          imageUrl !== hoverImage
+      );
 
     const price =
       isNonNegativeNumber(
@@ -692,6 +763,43 @@ export async function POST(
                 isPrimary:
                   false,
               },
+            });
+          }
+
+          /*
+           * --------------------------------------------------
+           * ADDITIONAL IMAGES
+           * --------------------------------------------------
+           *
+           * order 1 hover görseli için ayrılmıştır.
+           * Hover görseli olmasa da ilave görseller
+           * order 2'den başlar.
+           */
+
+          if (
+            additionalImages.length >
+            0
+          ) {
+            await tx.productImage.createMany({
+              data:
+                additionalImages.map(
+                  (
+                    imageUrl,
+                    index
+                  ) => ({
+                    productId:
+                      product.id,
+
+                    url:
+                      imageUrl,
+
+                    order:
+                      index + 2,
+
+                    isPrimary:
+                      false,
+                  })
+                ),
             });
           }
 

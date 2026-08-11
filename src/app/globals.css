@@ -449,3 +449,40 @@ video {
     transform: none;
   }
 }
+
+/* =========================================================
+   FORM INPUT / BROWSER AUTOFILL FIX
+   ========================================================= */
+
+input,
+textarea,
+select {
+  color: var(--foreground);
+}
+
+/* Chrome / Edge / Safari autofill */
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-text-fill-color: var(--foreground) !important;
+
+  -webkit-box-shadow:
+    0 0 0 1000px var(--background) inset !important;
+
+  box-shadow:
+    0 0 0 1000px var(--background) inset !important;
+
+  caret-color: var(--foreground);
+
+  transition:
+    background-color 9999s ease-out 0s;
+}
+
+/* Firefox */
+
+input:autofill {
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
+}

@@ -34,6 +34,15 @@ export type CreateProductInput = {
   image: string;
   hoverImage?: string;
 
+  /*
+   * Ürün detay galerisinde gösterilecek
+   * sınırsız sayıdaki ilave görseller.
+   *
+   * Ana görsel ve hover görseli
+   * bu dizinin içinde tutulmaz.
+   */
+  additionalImages: string[];
+
   price: number;
   currency: ProductCurrency;
 

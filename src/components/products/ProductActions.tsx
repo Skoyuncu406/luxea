@@ -6,10 +6,11 @@ import {
   Minus,
   Plus,
   ShoppingBag,
+  MessageCircle,
+  ArrowUpRight,
 } from "lucide-react";
 
 import { useFavorites } from "@/contexts/FavoritesContext";
-import { formatPrice } from "@/lib/format-price";
 import type { Locale } from "@/lib/i18n/config";
 import type { Product } from "@/types/product";
 import { useCart } from "@/contexts/CartContext";
@@ -62,6 +63,33 @@ export default function ProductActions({
   const { addToCart } = useCart();
 const [isAddedToCart, setIsAddedToCart] = useState(false);
 
+  const whatsappLabel =
+    locale === "tr"
+      ? "Fiyat Bilgisi Al"
+      : locale === "ar"
+        ? "احصل على السعر"
+        : "Get Price";
+
+  const whatsappHint =
+    locale === "tr"
+      ? "Güncel fiyat ve ürün detayları için WhatsApp üzerinden bize ulaşın."
+      : locale === "ar"
+        ? "تواصل معنا عبر واتساب للحصول على السعر الحالي وتفاصيل المنتج."
+        : "Contact us on WhatsApp for current pricing and product details.";
+
+  const whatsappMessage =
+    locale === "tr"
+      ? `Merhaba, ${product.name[locale]} ürünü hakkında fiyat bilgisi almak istiyorum.${selectedColor ? ` Seçtiğim renk: ${selectedColor}.` : ""}`
+      : locale === "ar"
+        ? `مرحبًا، أود الحصول على معلومات السعر لمنتج ${product.name[locale]}.${selectedColor ? ` اللون الذي اخترته: ${selectedColor}.` : ""}`
+        : `Hello, I would like to get pricing information for ${product.name[locale]}.${selectedColor ? ` Selected color: ${selectedColor}.` : ""}`;
+
+  const whatsappUrl =
+    `https://wa.me/905453577806?text=${encodeURIComponent(
+      whatsappMessage
+    )}`;
+
+
 function handleAddToCart() {
   if (
     isOutOfStock ||
@@ -105,17 +133,66 @@ function handleAddToCart() {
         {product.name[locale]}
       </h1>
 
-      <p className="mt-6 text-lg font-semibold tracking-[0.04em] text-foreground">
-        {formatPrice(
-          product.price,
-          product.currency,
-          locale
-        )}
-      </p>
-
       <p className="mt-6 text-sm leading-7 text-foreground-soft sm:text-base sm:leading-8">
         {product.shortDescription[locale]}
       </p>
+
+      {/* Fiyat bilgisi / WhatsApp */}
+      <div className="relative mt-8 overflow-hidden border border-accent/35 bg-accent/[0.055] p-5 sm:p-6">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -end-10 -top-12 h-32 w-32 rounded-full bg-accent/10 blur-3xl"
+        />
+
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="max-w-[430px]">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.22em] text-accent">
+              LUXEA PRIVATE SERVICE
+            </p>
+
+            <p className="mt-2 text-xs leading-6 text-foreground-soft">
+              {whatsappHint}
+            </p>
+          </div>
+
+          <a
+            href={whatsappUrl}
+            target="_blank"
+            rel="noreferrer"
+            className={[
+              "group relative inline-flex min-h-14 shrink-0 overflow-hidden",
+              "items-center justify-center gap-3",
+              "border border-accent bg-accent px-6",
+              "text-[9px] font-semibold uppercase tracking-[0.16em]",
+              "!text-white",
+              "transition-all duration-500",
+              "hover:border-accent-dark hover:bg-accent-dark",
+              "hover:shadow-[0_14px_35px_rgba(112,86,56,0.20)]",
+            ].join(" ")}
+          >
+            <span
+              aria-hidden="true"
+              className="absolute inset-y-0 -left-16 w-10 -skew-x-12 bg-white/20 blur-sm transition-all duration-700 group-hover:left-[120%]"
+            />
+
+            <MessageCircle
+              size={16}
+              strokeWidth={1.45}
+              className="relative transition-transform duration-300 group-hover:scale-110"
+            />
+
+            <span className="relative">
+              {whatsappLabel}
+            </span>
+
+            <ArrowUpRight
+              size={14}
+              strokeWidth={1.4}
+              className="relative transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5"
+            />
+          </a>
+        </div>
+      </div>
 
       {/* Renk seçimi */}
       <div className="mt-9 border-y border-border py-6">

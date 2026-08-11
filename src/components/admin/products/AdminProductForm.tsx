@@ -6,6 +6,7 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -302,6 +303,106 @@ export default function AdminProductForm({
   );
 
   /*
+   * İLAVE GÖRSELLER
+   *
+   * Ana görsel ve hover görseli bu dizide tutulmaz.
+   * Kullanıcı istediği kadar ilave görsel ekleyebilir.
+   */
+  const [
+    additionalImages,
+    setAdditionalImages,
+  ] = useState<string[]>(
+    product?.additionalImages ?? []
+  );
+
+  /*
+   * Yeni bir ilave görsel yüklenirken uploader'ın
+   * geçici değerini burada tutuyoruz.
+   */
+  const [
+    additionalImageDraft,
+    setAdditionalImageDraft,
+  ] = useState("");
+
+  const additionalImageCopy =
+    locale === "tr"
+      ? {
+          title: "İlave Görseller",
+          description:
+            "Ürün detay galerisinde ana görselin altında gösterilecek ilave görselleri ekleyin. Görsel sayısı için bir sınır yoktur.",
+          add: "İlave Görsel Ekle",
+          addDescription:
+            "Yeni bir görsel yüklediğinizde otomatik olarak galeriye eklenir.",
+          remove: "Görseli kaldır",
+          count: "ilave görsel",
+        }
+      : locale === "ar"
+        ? {
+            title: "صور إضافية",
+            description:
+              "أضف الصور التي ستظهر أسفل الصورة الرئيسية في معرض تفاصيل المنتج. لا يوجد حد لعدد الصور.",
+            add: "إضافة صورة",
+            addDescription:
+              "عند رفع صورة جديدة ستتم إضافتها تلقائياً إلى المعرض.",
+            remove: "إزالة الصورة",
+            count: "صورة إضافية",
+          }
+        : {
+            title: "Additional Images",
+            description:
+              "Add images that will appear below the main image in the product detail gallery. There is no image limit.",
+            add: "Add Additional Image",
+            addDescription:
+              "A newly uploaded image is automatically added to the gallery.",
+            remove: "Remove image",
+            count: "additional images",
+          };
+
+  function addAdditionalImage(url: string) {
+    const normalizedUrl = url.trim();
+
+    setAdditionalImageDraft(url);
+
+    if (!normalizedUrl) {
+      return;
+    }
+
+    setAdditionalImages((current) => {
+      if (
+        current.includes(normalizedUrl) ||
+        normalizedUrl === image.trim() ||
+        normalizedUrl === hoverImage.trim()
+      ) {
+        return current;
+      }
+
+      return [
+        ...current,
+        normalizedUrl,
+      ];
+    });
+
+    /*
+     * Upload tamamlandıktan sonra aynı uploader
+     * yeni görsel için tekrar boş hale gelir.
+     */
+    window.setTimeout(() => {
+      setAdditionalImageDraft("");
+    }, 0);
+  }
+
+  function removeAdditionalImage(
+    imageUrl: string
+  ) {
+    setAdditionalImages((current) =>
+      current.filter(
+        (currentImage) =>
+          currentImage !== imageUrl
+      )
+    );
+  }
+
+  /*
    * GÖRÜNÜRLÜK
    */
   const [
@@ -532,6 +633,18 @@ async function handleSubmit(
       hoverImage:
         hoverImage.trim() ||
         undefined,
+
+      additionalImages:
+        additionalImages
+          .map((imageUrl) =>
+            imageUrl.trim()
+          )
+          .filter(
+            (imageUrl) =>
+              Boolean(imageUrl) &&
+              imageUrl !== image.trim() &&
+              imageUrl !== hoverImage.trim()
+          ),
 
       price: Number(price),
 
@@ -1117,6 +1230,119 @@ async function handleSubmit(
                   setHoverImage
                 }
               />
+
+              {/* İlave Görseller */}
+              <div className="border-t border-border pt-8">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                  <div className="max-w-2xl">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-foreground">
+                      {
+                        additionalImageCopy.title
+                      }
+                    </p>
+
+                    <p className="mt-2 text-xs leading-6 text-foreground-soft">
+                      {
+                        additionalImageCopy.description
+                      }
+                    </p>
+                  </div>
+
+                  {additionalImages.length >
+                    0 && (
+                    <p className="shrink-0 text-[9px] font-semibold uppercase tracking-[0.16em] text-accent">
+                      {
+                        additionalImages.length
+                      }{" "}
+                      {
+                        additionalImageCopy.count
+                      }
+                    </p>
+                  )}
+                </div>
+
+                {/* Küçük ilave görsel önizlemeleri */}
+                {additionalImages.length >
+                  0 && (
+                  <div className="mt-5 flex flex-wrap gap-3">
+                    {additionalImages.map(
+                      (
+                        imageUrl,
+                        index
+                      ) => (
+                        <div
+                          key={`${imageUrl}-${index}`}
+                          className="group relative h-24 w-20 shrink-0 overflow-hidden border border-border bg-surface sm:h-28 sm:w-24"
+                        >
+                          <Image
+                            src={imageUrl}
+                            alt={`${additionalImageCopy.title} ${index + 1}`}
+                            fill
+                            sizes="96px"
+                            className="object-cover object-center"
+                          />
+
+                          <div
+                            aria-hidden="true"
+                            className="pointer-events-none absolute inset-0 bg-black/0 transition-colors duration-300 group-hover:bg-black/15"
+                          />
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              removeAdditionalImage(
+                                imageUrl
+                              )
+                            }
+                            aria-label={
+                              additionalImageCopy.remove
+                            }
+                            title={
+                              additionalImageCopy.remove
+                            }
+                            className="absolute end-1.5 top-1.5 z-10 flex h-7 w-7 items-center justify-center border border-white/45 bg-[#242320]/75 text-white opacity-100 backdrop-blur-sm transition-all duration-300 hover:bg-danger sm:opacity-0 sm:group-hover:opacity-100"
+                          >
+                            <Trash2
+                              size={12}
+                              strokeWidth={
+                                1.5
+                              }
+                            />
+                          </button>
+
+                          <span className="pointer-events-none absolute bottom-1.5 start-1.5 border border-white/35 bg-black/45 px-1.5 py-1 text-[7px] font-semibold tracking-[0.12em] text-white backdrop-blur-sm">
+                            {String(
+                              index +
+                                1
+                            ).padStart(
+                              2,
+                              "0"
+                            )}
+                          </span>
+                        </div>
+                      )
+                    )}
+                  </div>
+                )}
+
+                {/* Yeni ilave görsel yükleme */}
+                <div className="mt-6">
+                  <AdminProductImageUploader
+                    label={
+                      additionalImageCopy.add
+                    }
+                    description={
+                      additionalImageCopy.addDescription
+                    }
+                    value={
+                      additionalImageDraft
+                    }
+                    onChange={
+                      addAdditionalImage
+                    }
+                  />
+                </div>
+              </div>
             </div>
           </FormSection>
         </div>

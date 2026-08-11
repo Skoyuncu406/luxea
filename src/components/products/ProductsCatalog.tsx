@@ -4,25 +4,24 @@ import { useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
+  ArrowUpRight,
   Check,
   ChevronDown,
   Heart,
+  MessageCircle,
   Search,
   SlidersHorizontal,
   X,
 } from "lucide-react";
 
 import { useFavorites } from "@/contexts/FavoritesContext";
-import { formatPrice } from "@/lib/format-price";
 import type { Locale } from "@/lib/i18n/config";
 import type { Category } from "@/types/category";
 import type { Product } from "@/types/product";
 
 type SortOption =
   | "recommended"
-  | "newest"
-  | "price-low"
-  | "price-high";
+  | "newest";
 
 type ProductsCatalogDictionary = {
   searchPlaceholder: string;
@@ -37,8 +36,6 @@ type ProductsCatalogDictionary = {
   sortBy: string;
   sortRecommended: string;
   sortNewest: string;
-  sortPriceLow: string;
-  sortPriceHigh: string;
 
   addToFavorites: string;
   removeFromFavorites: string;
@@ -50,6 +47,35 @@ type ProductsCatalogProps = {
   categories: Category[];
   dictionary: ProductsCatalogDictionary;
 };
+
+const WHATSAPP_NUMBER =
+  "905453577806";
+
+const whatsappCopy = {
+  tr: {
+    priceInfo:
+      "Fiyat Bilgisi Al",
+
+    message:
+      "Merhaba LUXEA, {product} ürünü hakkında fiyat ve sipariş bilgisi almak istiyorum.",
+  },
+
+  en: {
+    priceInfo:
+      "Request Price",
+
+    message:
+      "Hello LUXEA, I would like to get price and order information about {product}.",
+  },
+
+  ar: {
+    priceInfo:
+      "طلب السعر",
+
+    message:
+      "مرحباً LUXEA، أود الحصول على معلومات السعر والطلب لمنتج {product}.",
+  },
+} as const;
 
 export default function ProductsCatalog({
   locale,
@@ -69,6 +95,23 @@ export default function ProductsCatalog({
   const [isSortOpen, setIsSortOpen] = useState(false);
 
   const { isFavorite, toggleFavorite } = useFavorites();
+
+  const copy =
+    whatsappCopy[locale];
+
+  function getWhatsAppUrl(
+    productName: string
+  ) {
+    const message =
+      copy.message.replace(
+        "{product}",
+        productName
+      );
+
+    return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+      message
+    )}`;
+  }
 
   const visibleCategories = useMemo(() => {
     return categories
@@ -112,12 +155,6 @@ export default function ProductsCatalog({
           return a.order - b.order;
         }
 
-        case "price-low":
-          return a.price - b.price;
-
-        case "price-high":
-          return b.price - a.price;
-
         case "recommended":
         default: {
           if (a.isFeatured !== b.isFeatured) {
@@ -154,14 +191,6 @@ export default function ProductsCatalog({
     {
       value: "newest",
       label: dictionary.sortNewest,
-    },
-    {
-      value: "price-low",
-      label: dictionary.sortPriceLow,
-    },
-    {
-      value: "price-high",
-      label: dictionary.sortPriceHigh,
     },
   ];
 
@@ -570,43 +599,65 @@ export default function ProductsCatalog({
                   </span>
                 </div>
 
-                <Link
-                  href={`/${locale}/products/${product.slug}`}
-                  className="block"
-                >
-                  <div className="border-b border-border pb-6 pt-5">
-                    <div className="flex items-start justify-between gap-5">
-                      <h2 className="min-w-0 font-heading text-[27px] leading-[1.02] text-foreground transition-colors duration-300 group-hover:text-accent lg:text-[29px]">
-                        {product.name[locale]}
-                      </h2>
+                <div className="border-b border-border pb-6 pt-5">
+                  <Link
+                    href={`/${locale}/products/${product.slug}`}
+                    className="block w-fit max-w-full"
+                  >
+                    <h2 className="min-w-0 font-heading text-[27px] leading-[1.02] text-foreground transition-colors duration-300 hover:text-accent lg:text-[29px]">
+                      {product.name[locale]}
+                    </h2>
+                  </Link>
 
-                      <p className="shrink-0 pt-1 text-[11px] font-semibold tracking-[0.07em] text-foreground">
-                        {formatPrice(
-                          product.price,
-                          product.currency,
-                          locale
-                        )}
-                      </p>
-                    </div>
+                  <p className="mt-3 line-clamp-2 text-xs leading-6 text-foreground-soft">
+                    {product.shortDescription[locale]}
+                  </p>
 
-                    <p className="mt-3 line-clamp-2 text-xs leading-6 text-foreground-soft">
-                      {product.shortDescription[locale]}
-                    </p>
-
-                    <div className="mt-5 flex items-center gap-2.5">
-                      {product.colors.map((color) => (
-                        <span
-                          key={color}
-                          aria-hidden="true"
-                          className="h-3.5 w-3.5 rounded-full border border-black/15"
-                          style={{
-                            backgroundColor: color,
-                          }}
-                        />
-                      ))}
-                    </div>
+                  <div className="mt-5 flex min-h-5 items-center gap-2.5">
+                    {product.colors.map((color) => (
+                      <span
+                        key={color}
+                        aria-hidden="true"
+                        className="h-3.5 w-3.5 rounded-full border border-black/15"
+                        style={{
+                          backgroundColor: color,
+                        }}
+                      />
+                    ))}
                   </div>
-                </Link>
+
+                  <a
+                    href={getWhatsAppUrl(
+                      product.name[locale]
+                    )}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group/whatsapp relative mt-5 inline-flex min-h-10 items-center gap-2.5 overflow-hidden text-[9px] font-semibold uppercase tracking-[0.16em] text-accent transition-colors duration-300 hover:text-foreground sm:text-[10px]"
+                  >
+                    <span className="flex h-8 w-8 items-center justify-center border border-accent/30 bg-accent/[0.04] transition-all duration-500 ease-out group-hover/whatsapp:border-accent group-hover/whatsapp:bg-accent group-hover/whatsapp:text-white group-hover/whatsapp:shadow-[0_8px_24px_rgba(146,115,74,0.18)]">
+                      <MessageCircle
+                        size={14}
+                        strokeWidth={1.4}
+                        className="transition-transform duration-500 ease-out group-hover/whatsapp:scale-110"
+                      />
+                    </span>
+
+                    <span className="relative py-1">
+                      {copy.priceInfo}
+
+                      <span
+                        aria-hidden="true"
+                        className="absolute -bottom-0.5 start-0 h-px w-0 bg-accent transition-all duration-500 ease-out group-hover/whatsapp:w-full"
+                      />
+                    </span>
+
+                    <ArrowUpRight
+                      size={14}
+                      strokeWidth={1.35}
+                      className="transition-all duration-500 ease-out group-hover/whatsapp:-translate-y-0.5 group-hover/whatsapp:translate-x-1 rtl:group-hover/whatsapp:-translate-x-1"
+                    />
+                  </a>
+                </div>
               </article>
             );
           })}

@@ -24,27 +24,27 @@ export default async function FavoritesPage({
     await getDictionary(locale);
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
+    <main className="min-h-[100dvh] bg-background text-foreground lg:h-[100dvh] lg:overflow-y-auto">
       <Navbar
         locale={locale}
         dictionary={dictionary}
       />
 
       <section className="pt-[120px] sm:pt-[128px] lg:pt-[88px]">
-        <div className="container-premium py-14 sm:py-16 lg:py-20">
-          <div className="mx-auto flex max-w-[900px] flex-col items-center text-center">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-accent sm:text-[11px]">
+        <div className="container-premium pb-8 pt-7 sm:pb-10 sm:pt-8 lg:pb-10 lg:pt-8">
+          <div className="mx-auto flex max-w-[820px] flex-col items-center text-center">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.28em] text-accent sm:text-[10px]">
               LUXEA
             </p>
 
-            <h1 className="mt-4 font-heading text-[44px] leading-[0.95] text-foreground sm:text-6xl lg:text-7xl xl:text-[82px]">
+            <h1 className="mt-2 font-heading text-[38px] leading-[0.96] text-foreground sm:text-[46px] lg:text-[54px] xl:text-[60px]">
               {
                 dictionary.favoritesPage
                   .title
               }
             </h1>
 
-            <p className="mt-6 max-w-[680px] text-sm leading-7 text-foreground-soft sm:text-base sm:leading-8">
+            <p className="mt-3 max-w-[620px] text-xs leading-6 text-foreground-soft sm:text-sm sm:leading-7">
               {
                 dictionary.favoritesPage
                   .description

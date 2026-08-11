@@ -22,35 +22,36 @@ export default function CategoryShowcase({
     <section className="relative overflow-hidden bg-surface">
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -end-40 top-0 h-[420px] w-[420px] rounded-full bg-accent/8 blur-[130px]"
+        className="pointer-events-none absolute -end-28 top-1/2 h-[280px] w-[280px] -translate-y-1/2 rounded-full bg-accent/8 blur-[100px]"
       />
 
       <div className="container-premium relative z-10">
-        <div className="flex flex-col gap-8 border-b border-border py-20 sm:py-24 lg:flex-row lg:items-end lg:justify-between lg:py-28">
-          <div className="max-w-3xl">
-            <p className="mb-4 text-[10px] font-semibold uppercase tracking-[0.3em] text-accent sm:text-[11px]">
+        <div className="flex flex-col gap-5 border-b border-border py-8 sm:py-9 lg:flex-row lg:items-end lg:justify-between lg:gap-10 lg:py-10">
+          <div className="max-w-[760px]">
+            <p className="mb-2 text-[9px] font-semibold uppercase tracking-[0.28em] text-accent sm:text-[10px]">
               LUXEA
             </p>
 
-            <h2 className="font-heading text-4xl leading-[0.98] text-foreground sm:text-5xl lg:text-6xl xl:text-7xl">
+            <h2 className="font-heading text-[34px] leading-[0.98] text-foreground sm:text-4xl lg:text-[46px] xl:text-[52px]">
               {dictionary.title}
             </h2>
 
-            <p className="mt-5 max-w-2xl text-sm leading-7 text-foreground-soft sm:text-base sm:leading-8">
+            <p className="mt-3 max-w-2xl text-xs leading-6 text-foreground-soft sm:text-sm sm:leading-7">
               {dictionary.description}
             </p>
           </div>
 
           <Link
             href={`/${locale}/categories`}
-            className="group inline-flex w-fit items-center gap-4 text-[10px] font-semibold uppercase tracking-[0.18em] text-foreground transition-colors duration-300 hover:text-accent sm:text-[11px]"
+            className="group inline-flex w-fit shrink-0 items-center gap-3 text-[9px] font-semibold uppercase tracking-[0.17em] text-foreground transition-colors duration-300 hover:text-accent sm:text-[10px]"
           >
             <span>{dictionary.viewAll}</span>
 
-            <span className="flex h-9 w-9 items-center justify-center border border-border transition-all duration-300 group-hover:border-accent group-hover:bg-accent group-hover:!text-white">
+            <span className="flex h-8 w-8 items-center justify-center border border-border transition-all duration-300 group-hover:border-accent group-hover:bg-accent group-hover:!text-white">
               <ArrowUpRight
-                size={15}
+                size={14}
                 strokeWidth={1.4}
+                className="transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5"
               />
             </span>
           </Link>

@@ -1,15 +1,29 @@
 "use client";
 
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
 import Image from "next/image";
 import Link from "next/link";
+
 import {
+  ArrowLeft,
+  ArrowRight,
   ArrowUpRight,
+  MessageCircle,
   PackageSearch,
 } from "lucide-react";
 
-import { useProducts } from "@/contexts/ProductContext";
-import type { Locale } from "@/lib/i18n/config";
-import { formatPrice } from "@/lib/format-price";
+import {
+  useProducts,
+} from "@/contexts/ProductContext";
+
+import type {
+  Locale,
+} from "@/lib/i18n/config";
 
 type FeaturedProductsDictionary = {
   eyebrow: string;
@@ -22,8 +36,72 @@ type FeaturedProductsDictionary = {
 
 type FeaturedProductsProps = {
   locale: Locale;
-  dictionary: FeaturedProductsDictionary;
+  dictionary:
+    FeaturedProductsDictionary;
 };
+
+const WHATSAPP_NUMBER =
+  "905453577806";
+
+const whatsappCopy = {
+  tr: {
+    priceInfo:
+      "Fiyat Bilgisi Al",
+    message:
+      "Merhaba LUXEA, {product} ürünü hakkında fiyat ve sipariş bilgisi almak istiyorum.",
+    previous:
+      "Önceki ürünler",
+    next:
+      "Sonraki ürünler",
+  },
+
+  en: {
+    priceInfo:
+      "Request Price",
+    message:
+      "Hello LUXEA, I would like to get price and order information about {product}.",
+    previous:
+      "Previous products",
+    next:
+      "Next products",
+  },
+
+  ar: {
+    priceInfo:
+      "طلب السعر",
+    message:
+      "مرحباً LUXEA، أود الحصول على معلومات السعر والطلب لمنتج {product}.",
+    previous:
+      "المنتجات السابقة",
+    next:
+      "المنتجات التالية",
+  },
+} as const;
+
+function getPerView() {
+  if (
+    typeof window ===
+    "undefined"
+  ) {
+    return 3;
+  }
+
+  if (
+    window.innerWidth <
+    640
+  ) {
+    return 1;
+  }
+
+  if (
+    window.innerWidth <
+    1024
+  ) {
+    return 2;
+  }
+
+  return 3;
+}
 
 export default function FeaturedProducts({
   locale,
@@ -34,31 +112,181 @@ export default function FeaturedProducts({
     isLoaded,
   } = useProducts();
 
-  const featuredProducts = [...products]
-    .filter(
-      (product) =>
-        product.isActive &&
-        product.isFeatured
-    )
-    .sort(
-      (a, b) => a.order - b.order
-    )
-    .slice(0, 4);
+  const copy =
+    whatsappCopy[locale];
 
-  /*
-   * =========================================================
-   * LOADING
-   * =========================================================
-   */
+  const [
+    perView,
+    setPerView,
+  ] = useState(3);
+
+  const [
+    activeSlide,
+    setActiveSlide,
+  ] = useState(0);
+
+  const [
+    isPaused,
+    setIsPaused,
+  ] = useState(false);
+
+  const featuredProducts =
+    useMemo(
+      () =>
+        [...products]
+          .filter(
+            (product) =>
+              product.isActive &&
+              product.isFeatured
+          )
+          .sort(
+            (a, b) =>
+              a.order -
+              b.order
+          ),
+      [
+        products,
+      ]
+    );
+
+  useEffect(() => {
+    function syncPerView() {
+      setPerView(
+        getPerView()
+      );
+    }
+
+    syncPerView();
+
+    window.addEventListener(
+      "resize",
+      syncPerView
+    );
+
+    return () => {
+      window.removeEventListener(
+        "resize",
+        syncPerView
+      );
+    };
+  }, []);
+
+  const slides =
+    useMemo(() => {
+      const nextSlides =
+        [];
+
+      for (
+        let index = 0;
+        index <
+        featuredProducts.length;
+        index += perView
+      ) {
+        nextSlides.push(
+          featuredProducts.slice(
+            index,
+            index + perView
+          )
+        );
+      }
+
+      return nextSlides;
+    }, [
+      featuredProducts,
+      perView,
+    ]);
+
+  useEffect(() => {
+    setActiveSlide(0);
+  }, [
+    perView,
+    featuredProducts.length,
+  ]);
+
+  useEffect(() => {
+    if (
+      isPaused ||
+      slides.length <= 1
+    ) {
+      return;
+    }
+
+    const timer =
+      window.setInterval(
+        () => {
+          setActiveSlide(
+            (current) =>
+              (current + 1) %
+              slides.length
+          );
+        },
+        4200
+      );
+
+    return () => {
+      window.clearInterval(
+        timer
+      );
+    };
+  }, [
+    isPaused,
+    slides.length,
+  ]);
+
+  function goPrevious() {
+    if (
+      slides.length <= 1
+    ) {
+      return;
+    }
+
+    setActiveSlide(
+      (current) =>
+        current === 0
+          ? slides.length - 1
+          : current - 1
+    );
+  }
+
+  function goNext() {
+    if (
+      slides.length <= 1
+    ) {
+      return;
+    }
+
+    setActiveSlide(
+      (current) =>
+        (current + 1) %
+        slides.length
+    );
+  }
+
+  function getWhatsAppUrl(
+    productName: string
+  ) {
+    const message =
+      copy.message.replace(
+        "{product}",
+        productName
+      );
+
+    return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+      message
+    )}`;
+  }
+
   if (!isLoaded) {
     return (
-      <section className="relative overflow-hidden">
+      <section className="relative overflow-hidden bg-background">
         <div className="container-premium relative z-10">
-          <div className="flex min-h-[420px] items-center justify-center border-y border-border">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-              {locale === "tr"
+          <div className="flex min-h-[300px] items-center justify-center border-b border-border">
+            <p className="text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+              {locale ===
+              "tr"
                 ? "Ürünler yükleniyor"
-                : locale === "ar"
+                : locale ===
+                    "ar"
                   ? "جارٍ تحميل المنتجات"
                   : "Loading products"}
             </p>
@@ -69,188 +297,358 @@ export default function FeaturedProducts({
   }
 
   return (
-    <section className="relative overflow-hidden">
-      <div className="container-premium relative z-10">
-        {/* =====================================================
-            BAŞLIK
-        ===================================================== */}
-        <div className="flex flex-col gap-8 border-b border-border pb-10 sm:pb-12 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-3xl">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-accent sm:text-[11px]">
+    <section className="relative overflow-hidden bg-background">
+      <div className="container-premium relative z-10 py-6 sm:py-7 lg:py-8">
+        <div className="flex flex-col gap-5 border-b border-border pb-6 lg:flex-row lg:items-end lg:justify-between lg:gap-10">
+          <div className="max-w-[760px]">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.28em] text-accent sm:text-[10px]">
               {dictionary.eyebrow}
             </p>
 
-            <h2 className="mt-4 font-heading text-4xl leading-[0.98] text-foreground sm:text-5xl lg:text-6xl xl:text-7xl">
+            <h2 className="mt-2 font-heading text-[31px] leading-[0.98] text-foreground sm:text-[34px] lg:text-[40px] xl:text-[44px]">
               {dictionary.title}
             </h2>
 
-            <p className="mt-5 max-w-2xl text-sm leading-7 text-foreground-soft sm:text-base sm:leading-8">
+            <p className="mt-2 max-w-2xl text-[11px] leading-5 text-foreground-soft sm:text-xs sm:leading-6">
               {dictionary.description}
             </p>
           </div>
 
-          <Link
-            href={`/${locale}/products`}
-            className="group inline-flex w-fit items-center gap-4 text-[10px] font-semibold uppercase tracking-[0.18em] text-foreground transition-colors duration-300 hover:text-accent sm:text-[11px]"
-          >
-            <span>
-              {dictionary.viewAll}
-            </span>
+          <div className="flex items-center gap-3">
+            {slides.length >
+              1 && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={
+                    goPrevious
+                  }
+                  aria-label={
+                    copy.previous
+                  }
+                  className="flex h-9 w-9 items-center justify-center border border-border text-foreground transition-all duration-300 hover:border-accent hover:bg-accent hover:text-white"
+                >
+                  <ArrowLeft
+                    size={14}
+                    strokeWidth={
+                      1.4
+                    }
+                    className="rtl:rotate-180"
+                  />
+                </button>
 
-            <span className="flex h-9 w-9 items-center justify-center border border-border transition-all duration-300 group-hover:border-accent group-hover:bg-accent group-hover:text-white">
-              <ArrowUpRight
-                size={15}
-                strokeWidth={1.4}
-              />
-            </span>
-          </Link>
+                <button
+                  type="button"
+                  onClick={
+                    goNext
+                  }
+                  aria-label={
+                    copy.next
+                  }
+                  className="flex h-9 w-9 items-center justify-center border border-border text-foreground transition-all duration-300 hover:border-accent hover:bg-accent hover:text-white"
+                >
+                  <ArrowRight
+                    size={14}
+                    strokeWidth={
+                      1.4
+                    }
+                    className="rtl:rotate-180"
+                  />
+                </button>
+              </div>
+            )}
+
+            <Link
+              href={`/${locale}/products`}
+              className="group inline-flex w-fit items-center gap-3 text-[9px] font-semibold uppercase tracking-[0.17em] text-foreground transition-colors duration-300 hover:text-accent sm:text-[10px]"
+            >
+              <span>
+                {
+                  dictionary.viewAll
+                }
+              </span>
+
+              <span className="flex h-8 w-8 items-center justify-center border border-border transition-all duration-300 group-hover:border-accent group-hover:bg-accent group-hover:text-white">
+                <ArrowUpRight
+                  size={14}
+                  strokeWidth={
+                    1.4
+                  }
+                  className="transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5"
+                />
+              </span>
+            </Link>
+          </div>
         </div>
 
-        {/* =====================================================
-            ÜRÜN YOK
-        ===================================================== */}
-        {featuredProducts.length === 0 ? (
-          <div className="flex min-h-[360px] flex-col items-center justify-center border-b border-border px-5 py-14 text-center">
-            <span className="flex h-16 w-16 items-center justify-center border border-accent/30 bg-accent/10 text-accent">
+        {featuredProducts.length ===
+        0 ? (
+          <div className="flex min-h-[260px] flex-col items-center justify-center border-b border-border px-5 py-10 text-center">
+            <span className="flex h-14 w-14 items-center justify-center border border-accent/30 bg-accent/10 text-accent">
               <PackageSearch
-                size={26}
-                strokeWidth={1.2}
+                size={23}
+                strokeWidth={
+                  1.2
+                }
               />
             </span>
 
-            <h3 className="mt-6 font-heading text-3xl leading-none text-foreground sm:text-4xl">
-              {locale === "tr"
+            <h3 className="mt-5 font-heading text-3xl leading-none text-foreground">
+              {locale ===
+              "tr"
                 ? "Henüz öne çıkan ürün bulunmuyor."
-                : locale === "ar"
+                : locale ===
+                    "ar"
                   ? "لا توجد منتجات مميزة حتى الآن."
                   : "No featured products yet."}
             </h3>
-
-            <p className="mt-4 max-w-xl text-sm leading-7 text-foreground-soft">
-              {locale === "tr"
-                ? "Admin panelinden öne çıkan olarak işaretlenen ürünler burada görünecek."
-                : locale === "ar"
-                  ? "ستظهر هنا المنتجات التي يحددها المسؤول كمنتجات مميزة."
-                  : "Products marked as featured by the admin will appear here."}
-            </p>
           </div>
         ) : (
-          /*
-           * ===================================================
-           * ÜRÜNLER
-           * ===================================================
-           */
-          <div className="mt-10 grid gap-x-6 gap-y-14 sm:mt-12 sm:grid-cols-2 lg:grid-cols-4 lg:gap-x-7">
-            {featuredProducts.map(
-              (product) => (
-                <article
-                  key={product.id}
-                  className="group min-w-0"
-                >
-                  <Link
-                    href={`/${locale}/products/${product.slug}`}
-                    className="block"
+          <div
+            className="relative mt-6 overflow-hidden"
+            onMouseEnter={() =>
+              setIsPaused(
+                true
+              )
+            }
+            onMouseLeave={() =>
+              setIsPaused(
+                false
+              )
+            }
+          >
+            <div
+              className="flex transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]"
+              style={{
+                transform: `translateX(-${activeSlide * 100}%)`,
+              }}
+            >
+              {slides.map(
+                (
+                  slide,
+                  slideIndex
+                ) => (
+                  <div
+                    key={
+                      slideIndex
+                    }
+                    className="w-full shrink-0"
                   >
-                    <div className="relative aspect-[4/5] overflow-hidden bg-surface">
-                      <Image
-                        src={product.image}
-                        alt={
-                          product.name[
-                            locale
-                          ]
-                        }
-                        fill
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                        className={[
-                          "object-cover transition-all duration-700 ease-out",
-
-                          product.hoverImage
-                            ? "group-hover:scale-[1.025] group-hover:opacity-0"
-                            : "group-hover:scale-[1.035]",
-                        ].join(" ")}
-                      />
-
-                      {product.hoverImage && (
-                        <Image
-                          src={
-                            product.hoverImage
-                          }
-                          alt=""
-                          fill
-                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                          className="object-cover opacity-0 transition-all duration-700 ease-out group-hover:scale-[1.025] group-hover:opacity-100"
-                        />
+                    <div
+                      className={[
+                        "grid gap-5",
+                        perView ===
+                        1
+                          ? "grid-cols-1"
+                          : perView ===
+                              2
+                            ? "grid-cols-2"
+                            : "grid-cols-3",
+                      ].join(
+                        " "
                       )}
-
-                      <div
-                        aria-hidden="true"
-                        className="absolute inset-0 bg-gradient-to-t from-[#242320]/20 via-transparent to-transparent"
-                      />
-
-                      {product.isNew && (
-                        <span className="absolute start-4 top-4 border border-white/45 bg-black/10 px-3 py-2 text-[8px] font-semibold uppercase tracking-[0.2em] text-white backdrop-blur-md">
-                          {
-                            dictionary.newLabel
-                          }
-                        </span>
-                      )}
-
-                      <span className="absolute inset-x-4 bottom-4 translate-y-3 border border-white/40 bg-[#E5E0D7]/88 px-4 py-3 text-center text-[9px] font-semibold uppercase tracking-[0.16em] text-foreground opacity-0 backdrop-blur-xl transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100">
-                        {
-                          dictionary.explore
-                        }
-                      </span>
-                    </div>
-
-                    <div className="border-b border-border pb-5 pt-5">
-                      <div className="flex items-start justify-between gap-4">
-                        <h3 className="font-heading text-2xl leading-none text-foreground transition-colors duration-300 group-hover:text-accent sm:text-[28px]">
-                          {
+                    >
+                      {slide.map(
+                        (
+                          product
+                        ) => {
+                          const productName =
                             product.name[
                               locale
-                            ]
-                          }
-                        </h3>
+                            ];
 
-                        <p className="shrink-0 text-[11px] font-semibold tracking-[0.08em] text-foreground">
-                          {formatPrice(
-                            product.price,
-                            product.currency,
-                            locale
-                          )}
-                        </p>
-                      </div>
+                          const whatsappUrl =
+                            getWhatsAppUrl(
+                              productName
+                            );
 
-                      <p className="mt-3 line-clamp-2 text-xs leading-6 text-foreground-soft">
-                        {
-                          product
-                            .shortDescription[
-                            locale
-                          ]
-                        }
-                      </p>
-
-                      <div className="mt-4 flex items-center gap-2">
-                        {product.colors.map(
-                          (color) => (
-                            <span
-                              key={color}
-                              aria-label={
-                                color
+                          return (
+                            <article
+                              key={
+                                product.id
                               }
-                              className="h-3 w-3 rounded-full border border-black/15"
-                              style={{
-                                backgroundColor:
-                                  color,
-                              }}
-                            />
-                          )
-                        )}
-                      </div>
+                              className="group min-w-0"
+                            >
+                              <Link
+                                href={`/${locale}/products/${product.slug}`}
+                                className="block"
+                              >
+                                <div className="relative aspect-[4/3] overflow-hidden bg-surface sm:aspect-[4/3] lg:aspect-[16/10]">
+                                  <Image
+                                    src={
+                                      product.image
+                                    }
+                                    alt={
+                                      productName
+                                    }
+                                    fill
+                                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                                    className={[
+                                      "object-cover object-center transition-all duration-700 ease-out",
+                                      product.hoverImage
+                                        ? "group-hover:scale-[1.025] group-hover:opacity-0"
+                                        : "group-hover:scale-[1.035]",
+                                    ].join(
+                                      " "
+                                    )}
+                                  />
+
+                                  {product.hoverImage && (
+                                    <Image
+                                      src={
+                                        product.hoverImage
+                                      }
+                                      alt=""
+                                      fill
+                                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                                      className="object-cover object-center opacity-0 transition-all duration-700 ease-out group-hover:scale-[1.025] group-hover:opacity-100"
+                                    />
+                                  )}
+
+                                  <div className="absolute inset-0 bg-gradient-to-t from-[#242320]/25 via-transparent to-transparent" />
+
+                                  {product.isNew && (
+                                    <span className="absolute start-3 top-3 border border-white/45 bg-black/10 px-2.5 py-1.5 text-[7px] font-semibold uppercase tracking-[0.18em] text-white backdrop-blur-md">
+                                      {
+                                        dictionary.newLabel
+                                      }
+                                    </span>
+                                  )}
+
+                                  <span className="absolute inset-x-3 bottom-3 translate-y-2 border border-white/40 bg-[#E5E0D7]/90 px-3 py-2 text-center text-[8px] font-semibold uppercase tracking-[0.15em] text-foreground opacity-0 backdrop-blur-xl transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100">
+                                    {
+                                      dictionary.explore
+                                    }
+                                  </span>
+                                </div>
+                              </Link>
+
+                              <div className="border-b border-border pb-5 pt-4">
+                                <Link
+                                  href={`/${locale}/products/${product.slug}`}
+                                  className="block w-fit max-w-full"
+                                >
+                                  <h3 className="font-heading text-[20px] leading-none text-foreground transition-colors duration-300 hover:text-accent sm:text-[22px]">
+                                    {
+                                      productName
+                                    }
+                                  </h3>
+                                </Link>
+
+                                <p className="mt-1.5 line-clamp-1 text-[10px] leading-5 text-foreground-soft">
+                                  {
+                                    product
+                                      .shortDescription[
+                                      locale
+                                    ]
+                                  }
+                                </p>
+
+                                <div className="mt-2 flex min-h-3 items-center gap-1.5">
+                                  {product.colors
+                                    .slice(
+                                      0,
+                                      5
+                                    )
+                                    .map(
+                                      (
+                                        color
+                                      ) => (
+                                        <span
+                                          key={
+                                            color
+                                          }
+                                          aria-label={
+                                            color
+                                          }
+                                          className="h-2.5 w-2.5 rounded-full border border-black/15"
+                                          style={{
+                                            backgroundColor:
+                                              color,
+                                          }}
+                                        />
+                                      )
+                                    )}
+                                </div>
+
+                                <a
+                                  href={
+                                    whatsappUrl
+                                  }
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="group/whatsapp mt-2 inline-flex min-h-7 items-center gap-2 text-[8px] font-semibold uppercase tracking-[0.15em] text-accent transition-colors duration-300 hover:text-foreground sm:text-[9px]"
+                                >
+                                  <span className="flex h-6 w-6 items-center justify-center border border-accent/30 bg-accent/[0.04] transition-all duration-500 group-hover/whatsapp:border-accent group-hover/whatsapp:bg-accent group-hover/whatsapp:text-white">
+                                    <MessageCircle
+                                      size={
+                                        12
+                                      }
+                                      strokeWidth={
+                                        1.4
+                                      }
+                                    />
+                                  </span>
+
+                                  <span>
+                                    {
+                                      copy.priceInfo
+                                    }
+                                  </span>
+
+                                  <ArrowUpRight
+                                    size={
+                                      12
+                                    }
+                                    strokeWidth={
+                                      1.35
+                                    }
+                                    className="transition-transform duration-300 group-hover/whatsapp:-translate-y-0.5 group-hover/whatsapp:translate-x-0.5 rtl:group-hover/whatsapp:-translate-x-0.5"
+                                  />
+                                </a>
+                              </div>
+                            </article>
+                          );
+                        }
+                      )}
                     </div>
-                  </Link>
-                </article>
-              )
+                  </div>
+                )
+              )}
+            </div>
+
+            {slides.length >
+              1 && (
+              <div className="mt-5 flex items-center justify-center gap-2 pb-2">
+                {slides.map(
+                  (
+                    _,
+                    index
+                  ) => (
+                    <button
+                      key={
+                        index
+                      }
+                      type="button"
+                      onClick={() =>
+                        setActiveSlide(
+                          index
+                        )
+                      }
+                      aria-label={`${index + 1}`}
+                      className={[
+                        "h-1 transition-all duration-300",
+                        index ===
+                        activeSlide
+                          ? "w-7 bg-accent"
+                          : "w-3 bg-border-strong hover:bg-accent/60",
+                      ].join(
+                        " "
+                      )}
+                    />
+                  )
+                )}
+              </div>
             )}
           </div>
         )}
