@@ -51,7 +51,7 @@ function FullscreenPreview({
       className={[
         "pointer-events-none fixed inset-0 z-[700]",
         "hidden items-center justify-center p-8 lg:flex",
-        "bg-[#242320]/88 opacity-0 backdrop-blur-md",
+        "bg-[#242320]/84 opacity-0 backdrop-blur-lg",
         "transition-opacity duration-500",
         "group-hover/preview:opacity-100",
       ].join(" ")}
@@ -62,12 +62,12 @@ function FullscreenPreview({
           alt={alt}
           fill
           sizes="88vw"
-          className="object-contain object-center drop-shadow-[0_30px_80px_rgba(0,0,0,0.45)]"
+          className="object-contain object-center drop-shadow-[0_34px_90px_rgba(0,0,0,0.40)]"
         />
       </div>
 
       <div className="absolute inset-x-0 bottom-7 flex justify-center">
-        <p className="text-[8px] font-semibold uppercase tracking-[0.3em] text-white/55">
+        <p className="text-[8px] font-semibold uppercase tracking-[0.34em] text-white/60">
           LUXEA
         </p>
       </div>
@@ -77,9 +77,9 @@ function FullscreenPreview({
 
 function ProductLoadingState() {
   return (
-    <div className="flex min-h-[520px] items-center justify-center border-y border-border px-5 text-center">
+    <div className="flex min-h-[520px] items-center justify-center border-y border-white/20 px-5 text-center">
       <div>
-        <span className="mx-auto block h-8 w-8 animate-spin rounded-full border-2 border-border border-t-accent" />
+        <span className="mx-auto block h-8 w-8 animate-spin rounded-full border border-white/30 border-t-accent" />
 
         <p className="mt-5 text-[9px] font-semibold uppercase tracking-[0.2em] text-muted">
           Ürün yükleniyor
@@ -116,9 +116,9 @@ function ProductNotFoundState({
         : "Back to Products";
 
   return (
-    <div className="flex min-h-[520px] items-center justify-center border-y border-border px-5 py-16 text-center">
+    <div className="flex min-h-[520px] items-center justify-center border-y border-white/20 px-5 py-16 text-center">
       <div className="mx-auto flex max-w-[620px] flex-col items-center">
-        <span className="flex h-20 w-20 items-center justify-center border border-accent/30 bg-accent/10 text-accent">
+        <span className="flex h-20 w-20 items-center justify-center border border-accent/30 bg-[#E5E0D7]/12 text-accent backdrop-blur-[1px]">
           <PackageSearch
             size={31}
             strokeWidth={1.15}
@@ -223,7 +223,7 @@ export default function ProductDetailClient({
     <>
       <Link
         href={`/${locale}/products`}
-        className="group inline-flex items-center gap-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-foreground transition-colors duration-300 hover:text-accent"
+        className="group inline-flex items-center gap-3.5 text-[9px] font-semibold uppercase tracking-[0.19em] text-foreground transition-colors duration-300 hover:text-accent sm:text-[10px]"
       >
         <ArrowLeft
           size={15}
@@ -234,25 +234,25 @@ export default function ProductDetailClient({
         <span>{dictionary.backToProducts}</span>
       </Link>
 
-      <div className="mt-8 grid gap-12 lg:grid-cols-12 lg:gap-12 xl:gap-16">
+      <div className="mt-9 grid gap-12 lg:grid-cols-12 lg:items-start lg:gap-14 xl:gap-20">
         {/* Ürün görselleri */}
         <div className="min-w-0 lg:col-span-7">
           <div className="w-full">
             {/* Ana görsel */}
-            <div className="group/preview relative mx-auto aspect-[4/5] w-full max-w-[720px] cursor-zoom-in overflow-hidden bg-surface sm:aspect-[5/6] lg:h-[calc(100dvh-230px)] lg:min-h-[560px] lg:max-h-[720px] lg:aspect-auto">
+            <div className="group/preview relative mx-auto aspect-[4/5] w-full max-w-[720px] cursor-zoom-in overflow-hidden border border-white/20 bg-surface/45 shadow-[0_22px_60px_rgba(36,35,32,0.08)] sm:aspect-[5/6] lg:h-[calc(100dvh-230px)] lg:min-h-[560px] lg:max-h-[720px] lg:aspect-auto">
               <Image
                 src={activeImage}
                 alt={product.name[locale]}
                 fill
                 priority
                 sizes="(max-width: 1024px) 100vw, 58vw"
-                className="object-cover object-center transition-transform duration-700 ease-out lg:group-hover/preview:scale-[1.025]"
+                className="object-cover object-center transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] lg:group-hover/preview:scale-[1.018]"
               />
 
-              <div className="pointer-events-none absolute inset-0 bg-[#242320]/0 transition-colors duration-500 lg:group-hover/preview:bg-[#242320]/10" />
+              <div className="pointer-events-none absolute inset-0 bg-[#242320]/0 transition-colors duration-500 lg:group-hover/preview:bg-[#242320]/7" />
 
               <div className="pointer-events-none absolute inset-x-5 bottom-5 hidden translate-y-3 items-center justify-center opacity-0 transition-all duration-500 lg:flex lg:group-hover/preview:translate-y-0 lg:group-hover/preview:opacity-100">
-                <span className="border border-white/40 bg-[#E5E0D7]/90 px-5 py-3 text-[8px] font-semibold uppercase tracking-[0.22em] text-foreground backdrop-blur-xl">
+                <span className="border border-white/45 bg-[#E5E0D7]/86 px-5 py-3 text-[8px] font-semibold uppercase tracking-[0.24em] text-foreground shadow-[0_10px_30px_rgba(36,35,32,0.10)] backdrop-blur-xl">
                   {locale === "tr"
                     ? "Tam Ekran Görüntüle"
                     : locale === "ar"
@@ -262,7 +262,7 @@ export default function ProductDetailClient({
               </div>
 
               {product.isNew && (
-                <span className="absolute start-4 top-4 z-10 border border-white/45 bg-black/15 px-3 py-2 text-[8px] font-semibold uppercase tracking-[0.2em] text-white backdrop-blur-md sm:start-5 sm:top-5">
+                <span className="absolute start-4 top-4 z-10 border border-white/45 bg-[#242320]/22 px-3.5 py-2 text-[8px] font-semibold uppercase tracking-[0.22em] text-white backdrop-blur-md sm:start-5 sm:top-5">
                   {newLabel}
                 </span>
               )}
@@ -275,7 +275,7 @@ export default function ProductDetailClient({
 
             {/* Küçük galeri */}
             {galleryImages.length > 1 && (
-              <div className="mt-4 flex items-start gap-3 overflow-x-auto pb-2 sm:mt-5 sm:gap-4">
+              <div className="mt-4 flex items-start gap-3.5 overflow-x-auto pb-2 sm:mt-5 sm:gap-4">
                 {galleryImages.map(
                   (imageUrl, index) => {
                     const isActive =
@@ -294,12 +294,12 @@ export default function ProductDetailClient({
                         aria-pressed={isActive}
                         className={[
                           "group relative aspect-[4/5]",
-                          "w-[24%] min-w-[82px] max-w-[120px]",
-                          "shrink-0 overflow-hidden bg-surface",
-                          "border transition-all duration-300",
+                          "w-[23%] min-w-[82px] max-w-[116px]",
+                          "shrink-0 overflow-hidden bg-surface/45",
+                          "border transition-all duration-300 ease-out",
                           isActive
-                            ? "border-accent"
-                            : "border-border hover:border-accent/60",
+                            ? "border-accent shadow-[0_8px_24px_rgba(146,115,74,0.14)]"
+                            : "border-white/25 hover:-translate-y-0.5 hover:border-accent/60",
                         ].join(" ")}
                       >
                         <Image
@@ -307,7 +307,7 @@ export default function ProductDetailClient({
                           alt={`${product.name[locale]} - ${index + 1}`}
                           fill
                           sizes="120px"
-                          className="object-cover object-center transition-transform duration-500 group-hover:scale-[1.05]"
+                          className="object-cover object-center transition-transform duration-500 ease-out group-hover:scale-[1.035]"
                         />
 
                         <span
@@ -324,7 +324,7 @@ export default function ProductDetailClient({
                         {isActive && (
                           <span
                             aria-hidden="true"
-                            className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] bg-accent"
+                            className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-accent"
                           />
                         )}
                       </button>
@@ -338,7 +338,7 @@ export default function ProductDetailClient({
 
         {/* Ürün işlemleri */}
         <div className="min-w-0 lg:col-span-5">
-          <div className="lg:sticky lg:top-[112px]">
+          <div className="lg:sticky lg:top-[116px]">
             <ProductActions
               locale={locale}
               product={product}

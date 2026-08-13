@@ -7,12 +7,13 @@ import {
 } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   ArrowUpRight,
   ChevronDown,
   Search,
   UserRound,
+  LogOut,
 } from "lucide-react";
 
 import CartNavLink from "./CartNavLink";
@@ -20,6 +21,7 @@ import FavoritesNavLink from "./FavoritesNavLink";
 import LanguageSwitcher from "./LanguageSwitcher";
 
 import { useCategories } from "@/contexts/CategoryContext";
+import { useUser } from "@/contexts/UserContext";
 import type { Locale } from "@/lib/i18n/config";
 
 type NavbarDictionary = {
@@ -43,16 +45,17 @@ type NavbarProps = {
 };
 
 const desktopIconClass =
-  "relative inline-flex h-10 w-10 shrink-0 items-center justify-center text-foreground transition-colors duration-300 hover:text-accent";
+  "group/icon relative inline-flex h-10 w-10 shrink-0 items-center justify-center border border-transparent text-foreground transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-border hover:bg-surface/55 hover:text-accent";
 
 const mobileIconClass =
-  "relative inline-flex h-8 w-8 shrink-0 items-center justify-center text-foreground transition-colors duration-300 hover:text-accent";
+  "group/icon relative inline-flex h-8 w-8 shrink-0 items-center justify-center border border-transparent text-foreground transition-all duration-300 ease-out hover:border-border hover:bg-surface/45 hover:text-accent";
 
 export default function Navbar({
   locale,
   dictionary,
 }: NavbarProps) {
   const pathname = usePathname();
+  const router = useRouter();
 
   /*
    * DİNAMİK KATEGORİLER
@@ -64,6 +67,18 @@ export default function Navbar({
     categories,
     isLoaded: categoriesLoaded,
   } = useCategories();
+
+  const {
+    user,
+    isLoaded: userLoaded,
+    isAuthenticated,
+    logout,
+  } = useUser();
+
+  const [
+    isMobileAccountOpen,
+    setIsMobileAccountOpen,
+  ] = useState(false);
 
   const [
     isScrolled,
@@ -148,40 +163,83 @@ export default function Navbar({
     };
   }, []);
 
-  /*
-   * Sayfa değişince mobil kategori
-   * menüsünü otomatik kapat.
-   */
-  useEffect(() => {
-    setIsMobileCategoriesOpen(false);
-  }, [pathname]);
-
   function closeMobileCategories() {
     setIsMobileCategoriesOpen(false);
   }
+
+  function closeMobileAccount() {
+    setIsMobileAccountOpen(false);
+  }
+
+  async function handleLogout() {
+    try {
+      await logout();
+
+      setIsMobileAccountOpen(false);
+      setIsMobileCategoriesOpen(false);
+
+      router.replace(`/${locale}`);
+      router.refresh();
+    } catch (error) {
+      console.error("Çıkış yapılamadı:", error);
+    }
+  }
+
+  const accountLabel =
+    locale === "tr"
+      ? "Hesabım"
+      : locale === "ar"
+        ? "حسابي"
+        : "My Account";
+
+  const logoutLabel =
+    locale === "tr"
+      ? "Çıkış Yap"
+      : locale === "ar"
+        ? "تسجيل الخروج"
+        : "Sign Out";
+
+  const displayName =
+    user?.firstName?.trim() ||
+    user?.lastName?.trim() ||
+    dictionary.common.account;
 
   return (
     <header
       className={[
         "fixed inset-x-0 top-0 z-[500]",
         "w-full overflow-visible",
-        "transition-[background-color,box-shadow,backdrop-filter]",
+        "transition-[background-color,box-shadow,backdrop-filter,border-color]",
         "duration-500",
         "ease-[cubic-bezier(0.22,1,0.36,1)]",
 
         shouldShowBackground
           ? [
-              "bg-[#E5E0D7]/95",
-              "shadow-[0_8px_30px_rgba(36,35,32,0.06)]",
-              "backdrop-blur-xl",
+              "border-b border-white/35",
+              "bg-[#E5E0D7]/88",
+              "shadow-[0_10px_34px_rgba(36,35,32,0.045)]",
+              "backdrop-blur-2xl",
             ].join(" ")
           : [
+              "border-b border-transparent",
               "bg-transparent",
               "shadow-none",
               "backdrop-blur-none",
             ].join(" "),
       ].join(" ")}
     >
+      <span
+        aria-hidden="true"
+        className={[
+          "pointer-events-none absolute inset-x-0 top-0 h-px",
+          "bg-gradient-to-r from-transparent via-accent/30 to-transparent",
+          "transition-opacity duration-500",
+          shouldShowBackground
+            ? "opacity-100"
+            : "opacity-0",
+        ].join(" ")}
+      />
+
       <div className="container-premium overflow-visible">
         {/* =========================================================
             MOBİL + TABLET
@@ -190,12 +248,12 @@ export default function Navbar({
           {/* Üst satır */}
           <div
             className={[
-              "grid h-[72px]",
+              "grid h-[70px]",
               "grid-cols-[auto_minmax(0,1fr)_auto]",
               "items-center",
               "transition-[border-color]",
               "duration-500",
-              "sm:h-[80px]",
+              "sm:h-[78px]",
 
               shouldShowBackground
                 ? "border-b border-border"
@@ -217,13 +275,13 @@ export default function Navbar({
                     "relative block shrink-0",
                     "overflow-hidden",
 
-                    "h-[48px] w-[68px]",
+                    "h-[46px] w-[66px]",
 
-                    "min-[390px]:h-[50px]",
-                    "min-[390px]:w-[72px]",
+                    "min-[390px]:h-[48px]",
+                    "min-[390px]:w-[70px]",
 
-                    "sm:h-[56px]",
-                    "sm:w-[82px]",
+                    "sm:h-[54px]",
+                    "sm:w-[80px]",
                   ].join(" ")}
                 >
                   <Image
@@ -238,7 +296,7 @@ export default function Navbar({
                       "transition-transform",
                       "duration-500",
                       "ease-out",
-                      "group-hover:scale-[1.03]",
+                      "group-hover:scale-[1.015]",
                     ].join(" ")}
                   />
                 </span>
@@ -292,26 +350,109 @@ export default function Navbar({
               />
 
               {/* Hesap */}
-              <Link
-                href={`/${locale}/account`}
-                aria-label={
-                  dictionary.common.account
-                }
-                title={
-                  dictionary.common.account
-                }
-                className={
-                  mobileIconClass
-                }
-                onClick={
-                  closeMobileCategories
-                }
-              >
-                <UserRound
-                  size={17}
-                  strokeWidth={1.45}
-                />
-              </Link>
+              {userLoaded && isAuthenticated && user ? (
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMobileAccountOpen(
+                        (current) => !current
+                      );
+                      setIsMobileCategoriesOpen(false);
+                    }}
+                    aria-expanded={isMobileAccountOpen}
+                    aria-haspopup="menu"
+                    className={[
+                      "inline-flex h-8 max-w-[92px] items-center gap-1.5 px-2",
+                      "text-[9px] font-semibold uppercase tracking-[0.12em]",
+                      "text-foreground transition-colors duration-300",
+                      "hover:text-accent",
+                    ].join(" ")}
+                  >
+                    <span className="truncate">
+                      {displayName}
+                    </span>
+
+                    <ChevronDown
+                      size={11}
+                      strokeWidth={1.4}
+                      className={[
+                        "shrink-0 transition-transform duration-300",
+                        isMobileAccountOpen ? "rotate-180" : "",
+                      ].join(" ")}
+                    />
+                  </button>
+
+                  <div
+                    role="menu"
+                    className={[
+                      "absolute end-0 top-[calc(100%+10px)] z-[650]",
+                      "w-max min-w-[180px] border border-white/40",
+                      "bg-[#EEEAE3]/98 p-2 shadow-[0_22px_60px_rgba(36,35,32,0.16)]",
+                      "backdrop-blur-2xl transition-all duration-300",
+                      isMobileAccountOpen
+                        ? "visible translate-y-0 opacity-100"
+                        : "invisible pointer-events-none -translate-y-2 opacity-0",
+                    ].join(" ")}
+                  >
+                    <Link
+                      href={`/${locale}/account`}
+                      onClick={() => {
+                        closeMobileCategories();
+                        closeMobileAccount();
+                      }}
+                      className={[
+                        "flex min-h-10 w-full items-center whitespace-nowrap px-3.5 py-2.5",
+                        "text-[9px] font-semibold uppercase tracking-[0.15em]",
+                        "text-foreground transition-colors duration-300",
+                        "hover:bg-white/25 hover:text-accent",
+                      ].join(" ")}
+                    >
+                      {accountLabel}
+                    </Link>
+
+                    <div className="my-1 h-px w-full bg-border" />
+
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className={[
+                        "flex min-h-10 w-full items-center gap-2 whitespace-nowrap px-3.5 py-2.5 text-start",
+                        "text-[9px] font-semibold uppercase tracking-[0.15em]",
+                        "text-foreground transition-colors duration-300",
+                        "hover:bg-white/25 hover:text-danger",
+                      ].join(" ")}
+                    >
+                      <LogOut
+                        size={13}
+                        strokeWidth={1.4}
+                      />
+                      <span>{logoutLabel}</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <Link
+                  href={`/${locale}/account`}
+                  aria-label={
+                    dictionary.common.account
+                  }
+                  title={
+                    dictionary.common.account
+                  }
+                  className={
+                    mobileIconClass
+                  }
+                  onClick={
+                    closeMobileCategories
+                  }
+                >
+                  <UserRound
+                    size={17}
+                    strokeWidth={1.45}
+                  />
+                </Link>
+              )}
 
               {/* Sepet */}
               <CartNavLink
@@ -354,7 +495,7 @@ export default function Navbar({
           <nav
             aria-label="Mobile navigation"
             className={[
-              "grid h-[48px]",
+              "grid h-[46px]",
               "grid-cols-2",
 
               "transition-[border-color,background-color]",
@@ -505,9 +646,9 @@ export default function Navbar({
               "z-[600] overflow-hidden",
 
               "border-b border-border",
-              "bg-[#EEEAE3]",
+              "bg-[#EEEAE3]/96 backdrop-blur-2xl",
 
-              "shadow-[0_24px_55px_rgba(36,35,32,0.16)]",
+              "shadow-[0_28px_70px_rgba(36,35,32,0.12)]",
 
               "transition-all duration-500",
               "ease-[cubic-bezier(0.22,1,0.36,1)]",
@@ -528,7 +669,7 @@ export default function Navbar({
                   ].join(" "),
             ].join(" ")}
           >
-            <div className="max-h-[70dvh] overflow-y-auto px-4 py-5 sm:px-6">
+            <div className="max-h-[70dvh] overflow-y-auto px-4 py-6 sm:px-6">
               {/* Tüm kategoriler */}
               <Link
                 href={`/${locale}/categories`}
@@ -702,7 +843,7 @@ export default function Navbar({
         ========================================================= */}
         <div
           className={[
-            "hidden h-[88px]",
+            "hidden h-[84px]",
             "grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]",
             "items-center",
             "overflow-visible",
@@ -723,20 +864,66 @@ export default function Navbar({
               aria-label="LUXEA"
               className="group relative flex shrink-0 items-center"
             >
-              <span className="relative block h-[66px] w-[96px] shrink-0 overflow-hidden xl:h-[70px] xl:w-[102px]">
+              {/*
+               * Premium logo aura
+               *
+               * Desktop'ta logo hover olduğunda arkasında
+               * yumuşak beyaz bir ışık oluşur.
+               * Neon görünüm vermemek için opaklığı kontrollü.
+               */}
+              <span
+                aria-hidden="true"
+                className={[
+                  "pointer-events-none",
+                  "absolute left-1/2 top-1/2 z-0",
+                  "h-[70%] w-[88%]",
+                  "-translate-x-1/2 -translate-y-1/2",
+                  "rounded-full",
+                  "bg-white/0",
+                  "blur-xl",
+                  "transition-all duration-500",
+                  "ease-[cubic-bezier(0.22,1,0.36,1)]",
+                  "group-hover:scale-[1.18]",
+                  "group-hover:bg-white/55",
+                ].join(" ")}
+              />
+
+              {/*
+               * Çok ince ikinci ışık katmanı.
+               * Logonun kenarlarını hover sırasında
+               * daha belirgin hale getirir.
+               */}
+              <span
+                aria-hidden="true"
+                className={[
+                  "pointer-events-none",
+                  "absolute left-1/2 top-1/2 z-0",
+                  "h-[48%] w-[72%]",
+                  "-translate-x-1/2 -translate-y-1/2",
+                  "rounded-full",
+                  "bg-white/0",
+                  "blur-md",
+                  "transition-all duration-500",
+                  "group-hover:bg-white/35",
+                ].join(" ")}
+              />
+
+              <span className="relative z-10 block h-[62px] w-[92px] shrink-0 xl:h-[66px] xl:w-[98px]">
                 <Image
                   src="/luxea-2.jpg"
                   alt="LUXEA"
                   fill
                   priority
-                  sizes="(min-width: 1280px) 102px, 96px"
+                  sizes="(min-width: 1280px) 98px, 92px"
                   className={[
                     "object-contain",
                     "object-center",
-                    "transition-transform",
+                    "transition-all",
                     "duration-500",
-                    "ease-out",
-                    "group-hover:scale-[1.03]",
+                    "ease-[cubic-bezier(0.22,1,0.36,1)]",
+                    "group-hover:scale-[1.035]",
+                    "group-hover:brightness-[1.08]",
+                    "group-hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.95)]",
                   ].join(" ")}
                 />
               </span>
@@ -748,7 +935,7 @@ export default function Navbar({
           ===================================================== */}
           <nav
             aria-label="Main navigation"
-            className="flex items-center justify-center gap-10 overflow-visible"
+            className="flex items-center justify-center gap-12 overflow-visible"
           >
             {/* Kategori dropdown */}
             <div className="group relative">
@@ -761,10 +948,10 @@ export default function Navbar({
                   "whitespace-nowrap",
                   "py-3",
 
-                  "text-[11px]",
-                  "font-medium",
+                  "text-[10px]",
+                  "font-semibold",
                   "uppercase",
-                  "tracking-[0.18em]",
+                  "tracking-[0.22em]",
 
                   "text-foreground",
 
@@ -820,9 +1007,9 @@ export default function Navbar({
                   "top-[72px]",
                   "h-8",
 
-                  "w-[22.222vw]",
-                  "min-w-[380px]",
-                  "max-w-[520px]",
+                  "w-[30vw]",
+                  "min-w-[440px]",
+                  "max-w-[620px]",
 
                   "-translate-x-1/2",
                 ].join(" ")}
@@ -837,12 +1024,12 @@ export default function Navbar({
                   "pointer-events-none",
 
                   "fixed left-1/2",
-                  "top-[88px]",
+                  "top-[84px]",
                   "z-[600]",
 
-                  "w-[22.222vw]",
-                  "min-w-[380px]",
-                  "max-w-[520px]",
+                  "w-[30vw]",
+                  "min-w-[440px]",
+                  "max-w-[620px]",
 
                   "-translate-x-1/2",
                   "translate-y-3",
@@ -864,15 +1051,15 @@ export default function Navbar({
                   "group-focus-within:opacity-100",
                 ].join(" ")}
               >
-                <div className="border border-border bg-[#EEEAE3] p-5 shadow-[0_24px_65px_rgba(36,35,32,0.15)]">
+                <div className="border border-white/45 bg-[#EEEAE3]/96 p-6 shadow-[0_30px_80px_rgba(36,35,32,0.13)] backdrop-blur-2xl">
                   {/* Başlık */}
-                  <div className="flex items-center justify-between gap-5 border-b border-border pb-5">
+                  <div className="flex items-center justify-between gap-6 border-b border-border pb-6">
                     <div className="min-w-0">
                       <p className="text-[8px] font-semibold uppercase tracking-[0.26em] text-accent">
                         LUXEA
                       </p>
 
-                      <h2 className="mt-2 font-heading text-[30px] leading-none text-foreground">
+                      <h2 className="mt-2 font-heading text-[32px] leading-[0.95] text-foreground">
                         {
                           dictionary
                             .navigation
@@ -919,7 +1106,7 @@ export default function Navbar({
                   {categoriesLoaded ? (
                     visibleCategories.length >
                     0 ? (
-                      <div className="mt-5 grid grid-cols-2 border-s border-t border-border">
+                      <div className="mt-6 grid grid-cols-2 border-s border-t border-border">
                         {visibleCategories.map(
                           (
                             category,
@@ -933,14 +1120,14 @@ export default function Navbar({
                               className={[
                                 "group/item",
                                 "relative",
-                                "min-h-[96px]",
+                                "min-h-[104px]",
                                 "min-w-0",
 
                                 "border-e",
                                 "border-b",
                                 "border-border",
 
-                                "px-4 py-4",
+                                "px-5 py-5",
 
                                 "transition-colors",
                                 "duration-300",
@@ -967,7 +1154,7 @@ export default function Navbar({
                                   "break-words",
 
                                   "font-heading",
-                                  "text-[20px]",
+                                  "text-[22px]",
                                   "leading-[1.05]",
 
                                   "text-foreground",
@@ -991,8 +1178,8 @@ export default function Navbar({
                               <span
                                 className={[
                                   "absolute",
-                                  "bottom-4",
-                                  "start-4",
+                                  "bottom-5",
+                                  "start-5",
 
                                   "h-px",
                                   "w-6",
@@ -1050,10 +1237,10 @@ export default function Navbar({
                 "whitespace-nowrap",
                 "py-3",
 
-                "text-[11px]",
-                "font-medium",
+                "text-[10px]",
+                "font-semibold",
                 "uppercase",
-                "tracking-[0.18em]",
+                "tracking-[0.22em]",
 
                 "text-foreground",
 
@@ -1089,7 +1276,7 @@ export default function Navbar({
           {/* =====================================================
               MASAÜSTÜ SAĞ ALAN
           ===================================================== */}
-          <div className="flex min-w-0 items-center justify-end">
+          <div className="flex min-w-0 items-center justify-end gap-0.5">
             {/* Arama */}
             <Link
               href={`/${locale}/products`}
@@ -1120,23 +1307,117 @@ export default function Navbar({
             />
 
             {/* Hesap */}
-            <Link
-              href={`/${locale}/account`}
-              aria-label={
-                dictionary.common.account
-              }
-              title={
-                dictionary.common.account
-              }
-              className={
-                desktopIconClass
-              }
-            >
-              <UserRound
-                size={18}
-                strokeWidth={1.5}
-              />
-            </Link>
+            {userLoaded && isAuthenticated && user ? (
+              <div className="group/account relative">
+                <Link
+                  href={`/${locale}/account`}
+                  className={[
+                    "relative inline-flex h-10 max-w-[180px] items-center gap-2 overflow-hidden px-3",
+                    "text-[9px] font-semibold uppercase tracking-[0.16em]",
+                    "text-foreground transition-colors duration-300",
+                    "hover:text-accent",
+                  ].join(" ")}
+                >
+                  <span className="truncate">
+                    {displayName}
+                  </span>
+
+                  <ChevronDown
+                    size={12}
+                    strokeWidth={1.4}
+                    className={[
+                      "shrink-0 transition-transform duration-300",
+                      "group-hover/account:rotate-180",
+                      "group-focus-within/account:rotate-180",
+                    ].join(" ")}
+                  />
+
+                  <span
+                    className={[
+                      "absolute inset-x-3 bottom-0 h-px origin-center scale-x-0 bg-accent",
+                      "transition-transform duration-300",
+                      "group-hover/account:scale-x-100",
+                      "group-focus-within/account:scale-x-100",
+                    ].join(" ")}
+                  />
+                </Link>
+
+                <div
+                  aria-hidden="true"
+                  className="absolute end-0 top-full h-4 min-w-full w-[190px]"
+                />
+
+                <div
+                  className={[
+                    "invisible pointer-events-none absolute end-0 top-[calc(100%+8px)] z-[650]",
+                    "w-max min-w-[160px] translate-y-2 opacity-0",
+                    "border border-white/45 bg-[#EEEAE3]/98 p-2",
+                    "shadow-[0_24px_65px_rgba(36,35,32,0.16)] backdrop-blur-2xl",
+                    "transition-all duration-300",
+                    "ease-[cubic-bezier(0.22,1,0.36,1)]",
+                    "group-hover/account:visible",
+                    "group-hover/account:pointer-events-auto",
+                    "group-hover/account:translate-y-0",
+                    "group-hover/account:opacity-100",
+                    "group-focus-within/account:visible",
+                    "group-focus-within/account:pointer-events-auto",
+                    "group-focus-within/account:translate-y-0",
+                    "group-focus-within/account:opacity-100",
+                  ].join(" ")}
+                >
+                  <Link
+                    href={`/${locale}/account`}
+                    className={[
+                      "flex min-h-11 w-full items-center whitespace-nowrap px-4 py-3",
+                      "text-[9px] font-semibold uppercase tracking-[0.15em]",
+                      "text-foreground transition-colors duration-300",
+                      "hover:bg-white/25 hover:text-accent",
+                    ].join(" ")}
+                  >
+                    <span>
+                      {accountLabel}
+                    </span>
+                  </Link>
+
+                  <div className="my-1 h-px bg-border" />
+
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className={[
+                      "flex min-h-11 w-full items-center gap-2.5 whitespace-nowrap px-4 py-3 text-start",
+                      "text-[9px] font-semibold uppercase tracking-[0.15em]",
+                      "text-foreground transition-colors duration-300",
+                      "hover:bg-white/25 hover:text-danger",
+                    ].join(" ")}
+                  >
+                    <LogOut
+                      size={14}
+                      strokeWidth={1.4}
+                    />
+                    <span>{logoutLabel}</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <Link
+                href={`/${locale}/account`}
+                aria-label={
+                  dictionary.common.account
+                }
+                title={
+                  dictionary.common.account
+                }
+                className={
+                  desktopIconClass
+                }
+              >
+                <UserRound
+                  size={18}
+                  strokeWidth={1.5}
+                />
+              </Link>
+            )}
 
             {/* Sepet */}
             <CartNavLink
@@ -1150,7 +1431,7 @@ export default function Navbar({
             {/* Dil */}
             <div
               className={[
-                "ms-1 ps-2",
+                "ms-2 ps-3",
                 "transition-[border-color]",
                 "duration-500",
 

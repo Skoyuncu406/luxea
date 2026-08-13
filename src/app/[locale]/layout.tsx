@@ -3,6 +3,8 @@ import type {
   Viewport,
 } from "next";
 
+import Image from "next/image";
+
 import type {
   ReactNode,
 } from "react";
@@ -17,7 +19,9 @@ import {
   notFound,
 } from "next/navigation";
 
+import ContactFooter from "@/components/layout/ContactFooter";
 import PageLoader from "@/components/layout/PageLoader";
+import WhatsAppButton from "@/components/layout/WhatsAppButton";
 
 import {
   CartProvider,
@@ -53,30 +57,15 @@ import {
   getDictionary,
 } from "@/lib/i18n/get-dictionary";
 
-import WhatsAppButton from "@/components/layout/WhatsAppButton";
-
-import ContactFooter from "@/components/layout/ContactFooter";
-
+import AIConcierge from "@/components/layout/AIConcierge";
 import "../globals.css";
 
 /*
  * =============================================================
  * FONTS
  * =============================================================
- *
- * Cormorant Garamond geçici olarak kaldırıldı.
- *
- * Google Fonts / Turbopack tarafında oluşan 404 problemi
- * nedeniyle Latin başlıklarda da Manrope kullanıyoruz.
- *
- * --font-heading değişkenini koruduğumuz için mevcut
- * font-heading Tailwind sınıflarını değiştirmemiz gerekmiyor.
- * =============================================================
  */
 
-/*
- * Latin başlık fontu
- */
 const headingFont =
   Manrope({
     variable:
@@ -96,9 +85,6 @@ const headingFont =
     ],
   });
 
-/*
- * Latin gövde fontu
- */
 const bodyFont =
   Manrope({
     variable:
@@ -119,9 +105,6 @@ const bodyFont =
     ],
   });
 
-/*
- * Arapça başlık fontu
- */
 const arabicHeadingFont =
   Noto_Naskh_Arabic({
     variable:
@@ -142,9 +125,6 @@ const arabicHeadingFont =
     ],
   });
 
-/*
- * Arapça gövde fontu
- */
 const arabicBodyFont =
   Noto_Sans_Arabic({
     variable:
@@ -293,17 +273,6 @@ export default async function LocaleLayout({
     locale ===
     "ar";
 
-  /*
-   * Tüm font CSS variable'larını body üzerine ekliyoruz.
-   *
-   * Böylece globals.css / Tailwind tarafındaki:
-   *
-   * font-heading
-   * font-body
-   * font-arabic
-   *
-   * yapıları çalışmaya devam eder.
-   */
   const bodyClassName = [
     headingFont.variable,
 
@@ -317,7 +286,7 @@ export default async function LocaleLayout({
       ? "font-arabic"
       : "font-latin",
 
-    "min-h-screen bg-background text-foreground",
+    "min-h-screen bg-[#E5E0D7] text-foreground",
   ].join(" ");
 
   return (
@@ -331,25 +300,99 @@ export default async function LocaleLayout({
           bodyClassName
         }
       >
-        <CategoryProvider>
-          <ProductProvider>
-            <FavoritesProvider>
-              <CartProvider>
-                <UserProvider>
-                  <OrderProvider>
-                    <PageLoader />
+        {/*
+         * =====================================================
+         * SABİT SITE BACKGROUND
+         * =====================================================
+         *
+         * Hero.png viewport'a sabitlenir.
+         * Kullanıcı scroll yaptığında bu katman hareket etmez.
+         * =====================================================
+         */}
 
-                    {children}
-                      <ContactFooter
-    locale={locale}
-  />
-                     <WhatsAppButton />
-                  </OrderProvider>
-                </UserProvider>
-              </CartProvider>
-            </FavoritesProvider>
-          </ProductProvider>
-        </CategoryProvider>
+        <div
+          aria-hidden="true"
+          className="
+            pointer-events-none
+            fixed
+            inset-0
+            z-0
+            overflow-hidden
+          "
+        >
+          <Image
+            src="/Hero.png"
+            alt=""
+            fill
+            priority
+            sizes="100vw"
+            className="
+              object-cover
+              object-center
+            "
+          />
+
+          {/*
+           * Görseli biraz yumuşatıyoruz.
+           * İçeriklerin okunabilirliğini korurken
+           * arka planın varlığı hissediliyor.
+           */}
+          <div
+            className="
+              absolute
+              inset-0
+              bg-[#E5E0D7]/58
+              backdrop-blur-[1px]
+            "
+          />
+
+          {/*
+           * Çok hafif premium vignette
+           */}
+          <div
+            className="
+              absolute
+              inset-0
+              bg-[radial-gradient(circle_at_center,transparent_20%,rgba(36,35,32,0.10)_100%)]
+            "
+          />
+        </div>
+
+        {/*
+         * =====================================================
+         * SITE CONTENT
+         * =====================================================
+         */}
+
+        <div
+          className="
+            relative
+            z-10
+            min-h-screen
+          "
+        >
+<CategoryProvider>
+  <ProductProvider>
+    <UserProvider>
+      <FavoritesProvider>
+        <CartProvider>
+          <OrderProvider>
+            <PageLoader />
+
+            {children}
+
+            <ContactFooter
+              locale={locale}
+            />
+<AIConcierge />
+            <WhatsAppButton />
+          </OrderProvider>
+        </CartProvider>
+      </FavoritesProvider>
+    </UserProvider>
+  </ProductProvider>
+</CategoryProvider>
+        </div>
       </body>
     </html>
   );

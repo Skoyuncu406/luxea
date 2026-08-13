@@ -4,28 +4,43 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 
 export default function PageLoader() {
-  const [isVisible, setIsVisible] = useState(true);
-  const [isLeaving, setIsLeaving] = useState(false);
+  const [isVisible, setIsVisible] =
+    useState(true);
+
+  const [isLeaving, setIsLeaving] =
+    useState(false);
 
   useEffect(() => {
-    const previousOverflow = document.body.style.overflow;
+    const previousOverflow =
+      document.body.style.overflow;
 
-    document.body.style.overflow = "hidden";
+    document.body.style.overflow =
+      "hidden";
 
-    const leaveTimer = window.setTimeout(() => {
-      setIsLeaving(true);
-    }, 2100);
+    const leaveTimer =
+      window.setTimeout(() => {
+        setIsLeaving(true);
+      }, 2100);
 
-    const removeTimer = window.setTimeout(() => {
-      setIsVisible(false);
-      document.body.style.overflow = previousOverflow;
-    }, 2850);
+    const removeTimer =
+      window.setTimeout(() => {
+        setIsVisible(false);
+
+        document.body.style.overflow =
+          previousOverflow;
+      }, 2850);
 
     return () => {
-      window.clearTimeout(leaveTimer);
-      window.clearTimeout(removeTimer);
+      window.clearTimeout(
+        leaveTimer
+      );
 
-      document.body.style.overflow = previousOverflow;
+      window.clearTimeout(
+        removeTimer
+      );
+
+      document.body.style.overflow =
+        previousOverflow;
     };
   }, []);
 
@@ -44,6 +59,7 @@ export default function PageLoader() {
         "overflow-hidden bg-background",
         "transition-all duration-[750ms]",
         "ease-[cubic-bezier(0.76,0,0.24,1)]",
+
         isLeaving
           ? "pointer-events-none scale-[1.015] opacity-0"
           : "scale-100 opacity-100",
@@ -88,15 +104,15 @@ export default function PageLoader() {
       {/* Ana içerik */}
       <div className="relative z-10 flex w-full flex-col items-center px-6 text-center">
         {/* Tek logo */}
-<div className="page-loader-logo relative h-[330px] w-[330px] overflow-hidden min-[390px]:h-[360px] min-[390px]:w-[360px] sm:h-[420px] sm:w-[420px] lg:h-[470px] lg:w-[470px] xl:h-[520px] xl:w-[520px]">
-<Image
-  src="/luxea-1.jpg"
-  alt="LUXEA"
-  fill
-  priority
-  sizes="(max-width: 389px) 330px, (max-width: 639px) 360px, (max-width: 1023px) 420px, (max-width: 1279px) 470px, 520px"
-  className="object-contain object-center"
-/>
+        <div className="page-loader-logo relative h-[330px] w-[330px] overflow-hidden min-[390px]:h-[360px] min-[390px]:w-[360px] sm:h-[420px] sm:w-[420px] lg:h-[470px] lg:w-[470px] xl:h-[520px] xl:w-[520px]">
+          <Image
+            src="/luxea-1.jpg"
+            alt="LUXEA"
+            fill
+            priority
+            sizes="(max-width: 389px) 330px, (max-width: 639px) 360px, (max-width: 1023px) 420px, (max-width: 1279px) 470px, 520px"
+            className="object-contain object-center"
+          />
         </div>
 
         {/* Dekoratif ayırıcı */}
@@ -126,7 +142,9 @@ export default function PageLoader() {
         </p>
       </div>
 
-      <span className="sr-only">Yükleniyor...</span>
+      <span className="sr-only">
+        Yükleniyor...
+      </span>
     </div>
   );
 }

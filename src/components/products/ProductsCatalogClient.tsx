@@ -1,9 +1,18 @@
 "use client";
 
 import ProductsCatalog from "@/components/products/ProductsCatalog";
-import { useCategories } from "@/contexts/CategoryContext";
-import { useProducts } from "@/contexts/ProductContext";
-import type { Locale } from "@/lib/i18n/config";
+
+import {
+  useCategories,
+} from "@/contexts/CategoryContext";
+
+import {
+  useProducts,
+} from "@/contexts/ProductContext";
+
+import type {
+  Locale,
+} from "@/lib/i18n/config";
 
 type ProductsCatalogDictionary = {
   searchPlaceholder: string;
@@ -27,7 +36,8 @@ type ProductsCatalogDictionary = {
 
 type ProductsCatalogClientProps = {
   locale: Locale;
-  dictionary: ProductsCatalogDictionary;
+  dictionary:
+    ProductsCatalogDictionary;
 };
 
 export default function ProductsCatalogClient({
@@ -36,45 +46,108 @@ export default function ProductsCatalogClient({
 }: ProductsCatalogClientProps) {
   const {
     products,
-    isLoaded: productsLoaded,
+    isLoaded:
+      productsLoaded,
   } = useProducts();
 
   const {
     categories,
-    isLoaded: categoriesLoaded,
+    isLoaded:
+      categoriesLoaded,
   } = useCategories();
 
   const isLoaded =
-    productsLoaded && categoriesLoaded;
+    productsLoaded &&
+    categoriesLoaded;
 
   if (!isLoaded) {
     return (
-      <div className="flex min-h-[420px] items-center justify-center border-y border-border px-5 text-center">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-          {locale === "tr"
-            ? "Ürünler yükleniyor"
-            : locale === "ar"
-              ? "جارٍ تحميل المنتجات"
-              : "Loading products"}
-        </p>
+      <div
+        className="
+          flex
+          min-h-[420px]
+          items-center
+          justify-center
+
+          border-y
+          border-white/20
+
+          px-5
+
+          text-center
+        "
+      >
+        <div className="flex flex-col items-center">
+          <span
+            className="
+              h-7
+              w-7
+
+              animate-spin
+
+              rounded-full
+
+              border
+              border-white/30
+              border-t-accent
+            "
+          />
+
+          <p
+            className="
+              mt-5
+
+              text-[9px]
+              font-semibold
+              uppercase
+              tracking-[0.24em]
+
+              text-muted
+
+              sm:text-[10px]
+            "
+          >
+            {locale === "tr"
+              ? "Ürünler yükleniyor"
+              : locale === "ar"
+                ? "جارٍ تحميل المنتجات"
+                : "Loading products"}
+          </p>
+        </div>
       </div>
     );
   }
 
-  const activeProducts = products.filter(
-    (product) => product.isActive
-  );
+  const activeProducts =
+    products.filter(
+      (product) =>
+        product.isActive
+    );
 
-  const activeCategories = [...categories]
-    .filter((category) => category.isActive)
-    .sort((a, b) => a.order - b.order);
+  const activeCategories =
+    [...categories]
+      .filter(
+        (category) =>
+          category.isActive
+      )
+      .sort(
+        (a, b) =>
+          a.order -
+          b.order
+      );
 
   return (
     <ProductsCatalog
       locale={locale}
-      products={activeProducts}
-      categories={activeCategories}
-      dictionary={dictionary}
+      products={
+        activeProducts
+      }
+      categories={
+        activeCategories
+      }
+      dictionary={
+        dictionary
+      }
     />
   );
 }

@@ -220,7 +220,7 @@ export default function ProductsCatalog({
   return (
     <div className="relative z-0 isolate w-full">
       {/* Arama, kategori ve sıralama */}
-      <div className="relative z-[40] border-y border-border py-5 sm:py-6">
+      <div className="relative z-[40] border-y border-white/20 py-5 sm:py-6">
         <div className="relative grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px_260px]">
           {/* Arama */}
           <div className="group relative z-0 min-w-0">
@@ -238,13 +238,13 @@ export default function ProductsCatalog({
               aria-label={dictionary.searchPlaceholder}
               autoComplete="off"
               className={[
-                "h-14 w-full border border-border bg-surface/60",
+                "h-14 w-full border border-white/25 bg-[#E5E0D7]/10 backdrop-blur-[1px]",
                 "ps-14 pe-14 text-sm text-foreground",
                 "outline-none transition-all duration-300",
                 "placeholder:text-muted/80",
-                "hover:border-border-strong",
-                "focus:border-accent focus:bg-surface",
-                "focus:shadow-[0_12px_40px_rgba(36,35,32,0.07)]",
+                "hover:border-accent/50",
+                "focus:border-accent focus:bg-[#E5E0D7]/18",
+                "focus:shadow-[0_14px_36px_rgba(36,35,32,0.06)]",
                 "sm:h-16 sm:text-[15px]",
               ].join(" ")}
             />
@@ -282,8 +282,8 @@ export default function ProductsCatalog({
                 "relative z-10 flex h-14 w-full items-center justify-between gap-4",
                 "border px-5 text-start transition-all duration-300 sm:h-16",
                 isFilterOpen
-                  ? "border-accent bg-surface text-accent"
-                  : "border-border bg-surface/60 text-foreground hover:border-border-strong hover:bg-surface",
+                  ? "border-accent bg-[#E5E0D7]/18 text-accent"
+                  : "border-white/25 bg-[#E5E0D7]/10 text-foreground backdrop-blur-[1px] hover:border-accent/50 hover:bg-[#E5E0D7]/18",
               ].join(" ")}
             >
               <span className="flex min-w-0 items-center gap-4">
@@ -294,11 +294,11 @@ export default function ProductsCatalog({
                 />
 
                 <span className="min-w-0">
-                  <span className="block text-[8px] font-semibold uppercase tracking-[0.2em] text-muted">
+                  <span className="block text-[8px] font-semibold uppercase tracking-[0.24em] text-muted">
                     {dictionary.filterCategories}
                   </span>
 
-                  <span className="mt-1 block truncate font-heading text-[20px] leading-none">
+                  <span className="mt-1 block truncate font-heading text-[20px] font-semibold leading-none tracking-[-0.02em]">
                     {selectedCategory
                       ? selectedCategory.name[locale]
                       : dictionary.allCategories}
@@ -322,8 +322,8 @@ export default function ProductsCatalog({
               className={[
                 "absolute inset-x-0 top-[calc(100%+10px)] z-[90]",
                 "max-h-[420px] overflow-y-auto",
-                "border border-border bg-[#EEEAE3] p-2",
-                "shadow-[0_24px_65px_rgba(36,35,32,0.22)]",
+                "border border-white/30 bg-[#E5E0D7]/95 p-2 backdrop-blur-xl",
+                "shadow-[0_24px_60px_rgba(36,35,32,0.16)]",
                 "transition-all duration-300",
                 isFilterOpen
                   ? "visible translate-y-0 opacity-100"
@@ -338,13 +338,13 @@ export default function ProductsCatalog({
                 className={[
                   "flex w-full items-center justify-between gap-4 px-4 py-3.5",
                   "text-start transition-colors duration-300",
-                  "hover:bg-background/60 hover:text-accent",
+                  "hover:bg-white/20 hover:text-accent",
                   selectedCategoryId === "all"
                     ? "text-accent"
                     : "text-foreground",
                 ].join(" ")}
               >
-                <span className="font-heading text-xl leading-none">
+                <span className="font-heading text-xl font-semibold leading-none tracking-[-0.02em]">
                   {dictionary.allCategories}
                 </span>
 
@@ -353,7 +353,7 @@ export default function ProductsCatalog({
                 )}
               </button>
 
-              <div className="my-1 h-px bg-border" />
+              <div className="my-1 h-px bg-white/25" />
 
               {visibleCategories.map((category) => {
                 const categoryIsSelected =
@@ -371,13 +371,13 @@ export default function ProductsCatalog({
                     className={[
                       "flex w-full items-center justify-between gap-4 px-4 py-3.5",
                       "text-start transition-colors duration-300",
-                      "hover:bg-background/60 hover:text-accent",
+                      "hover:bg-white/20 hover:text-accent",
                       categoryIsSelected
                         ? "text-accent"
                         : "text-foreground",
                     ].join(" ")}
                   >
-                    <span className="font-heading text-xl leading-none">
+                    <span className="font-heading text-xl font-semibold leading-none tracking-[-0.02em]">
                       {category.name[locale]}
                     </span>
 
@@ -409,16 +409,16 @@ export default function ProductsCatalog({
                 "relative z-10 flex h-14 w-full items-center justify-between gap-4",
                 "border px-5 text-start transition-all duration-300 sm:h-16",
                 isSortOpen
-                  ? "border-accent bg-surface text-accent"
-                  : "border-border bg-surface/60 text-foreground hover:border-border-strong hover:bg-surface",
+                  ? "border-accent bg-[#E5E0D7]/18 text-accent"
+                  : "border-white/25 bg-[#E5E0D7]/10 text-foreground backdrop-blur-[1px] hover:border-accent/50 hover:bg-[#E5E0D7]/18",
               ].join(" ")}
             >
               <span className="min-w-0">
-                <span className="block text-[8px] font-semibold uppercase tracking-[0.2em] text-muted">
+                <span className="block text-[8px] font-semibold uppercase tracking-[0.24em] text-muted">
                   {dictionary.sortBy}
                 </span>
 
-                <span className="mt-1 block truncate font-heading text-[20px] leading-none text-foreground">
+                <span className="mt-1 block truncate font-heading text-[20px] font-semibold leading-none tracking-[-0.02em] text-foreground">
                   {selectedSort.label}
                 </span>
               </span>
@@ -438,9 +438,9 @@ export default function ProductsCatalog({
               role="listbox"
               className={[
                 "absolute inset-x-0 top-[calc(100%+10px)] z-[90]",
-                "overflow-hidden border border-border",
-                "bg-[#EEEAE3] p-2",
-                "shadow-[0_24px_65px_rgba(36,35,32,0.22)]",
+                "overflow-hidden border border-white/30",
+                "bg-[#E5E0D7]/95 p-2 backdrop-blur-xl",
+                "shadow-[0_24px_60px_rgba(36,35,32,0.16)]",
                 "transition-all duration-300",
                 isSortOpen
                   ? "visible translate-y-0 opacity-100"
@@ -464,7 +464,7 @@ export default function ProductsCatalog({
                       "flex w-full items-center justify-between gap-4 px-4 py-3.5",
                       "text-start text-[10px] font-semibold uppercase tracking-[0.12em]",
                       "transition-colors duration-300",
-                      "hover:bg-background/60 hover:text-accent",
+                      "hover:bg-white/20 hover:text-accent",
                       optionIsSelected
                         ? "text-accent"
                         : "text-foreground",
@@ -484,8 +484,8 @@ export default function ProductsCatalog({
       </div>
 
       {/* Sonuç sayısı */}
-      <div className="relative z-0 flex min-h-[76px] flex-wrap items-center justify-between gap-4 border-b border-border">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
+      <div className="relative z-0 flex min-h-[76px] flex-wrap items-center justify-between gap-4 border-b border-white/20">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.21em] text-muted">
           {filteredProducts.length}{" "}
           {dictionary.productsFound}
         </p>
@@ -496,7 +496,7 @@ export default function ProductsCatalog({
           <button
             type="button"
             onClick={clearFilters}
-            className="inline-flex items-center gap-2 text-[9px] font-semibold uppercase tracking-[0.16em] text-foreground transition-colors duration-300 hover:text-accent"
+            className="inline-flex items-center gap-2 text-[9px] font-semibold uppercase tracking-[0.18em] text-foreground transition-colors duration-300 hover:text-accent"
           >
             <X size={13} strokeWidth={1.4} />
 
@@ -507,7 +507,7 @@ export default function ProductsCatalog({
 
       {/* Ürün listesi */}
       {filteredProducts.length > 0 ? (
-        <div className="relative z-0 grid grid-cols-1 gap-x-6 gap-y-16 pt-10 sm:grid-cols-2 sm:pt-12 lg:grid-cols-3 lg:gap-x-8 lg:gap-y-20 xl:grid-cols-4 xl:gap-x-9">
+        <div className="relative z-0 grid grid-cols-1 gap-x-6 gap-y-14 pt-10 sm:grid-cols-2 sm:pt-12 lg:grid-cols-3 lg:gap-x-7 lg:gap-y-16 xl:grid-cols-4 xl:gap-x-8">
           {filteredProducts.map((product) => {
             const productIsFavorite = isFavorite(product.id);
 
@@ -516,7 +516,7 @@ export default function ProductsCatalog({
                 key={product.id}
                 className="group relative z-0 min-w-0"
               >
-                <div className="relative z-0 aspect-[4/5] overflow-hidden bg-surface">
+                <div className="relative z-0 aspect-[4/5] overflow-hidden border border-white/20 bg-surface/45 shadow-[0_18px_45px_rgba(36,35,32,0.055)]">
                   <Link
                     href={`/${locale}/products/${product.slug}`}
                     className="absolute inset-0 z-10"
@@ -531,8 +531,8 @@ export default function ProductsCatalog({
                     className={[
                       "object-cover transition-all duration-700 ease-out",
                       product.hoverImage
-                        ? "group-hover:scale-[1.025] group-hover:opacity-0"
-                        : "group-hover:scale-[1.035]",
+                        ? "group-hover:scale-[1.018] group-hover:opacity-0"
+                        : "group-hover:scale-[1.025]",
                     ].join(" ")}
                   />
 
@@ -542,17 +542,17 @@ export default function ProductsCatalog({
                       alt=""
                       fill
                       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
-                      className="object-cover opacity-0 transition-all duration-700 ease-out group-hover:scale-[1.025] group-hover:opacity-100"
+                      className="object-cover opacity-0 transition-all duration-700 ease-out group-hover:scale-[1.018] group-hover:opacity-100"
                     />
                   )}
 
                   <div
                     aria-hidden="true"
-                    className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#242320]/20 via-transparent to-transparent"
+                    className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#242320]/16 via-transparent to-transparent"
                   />
 
                   {product.isNew && (
-                    <span className="pointer-events-none absolute start-4 top-4 z-20 border border-white/45 bg-black/10 px-3 py-2 text-[8px] font-semibold uppercase tracking-[0.2em] text-white backdrop-blur-md">
+                    <span className="pointer-events-none absolute start-4 top-4 z-20 border border-white/45 bg-[#242320]/20 px-3 py-2 text-[8px] font-semibold uppercase tracking-[0.21em] text-white backdrop-blur-md">
                       {dictionary.newLabel}
                     </span>
                   )}
@@ -575,9 +575,9 @@ export default function ProductsCatalog({
                     }
                     className={[
                       "absolute end-4 top-4 z-30 flex h-10 w-10 items-center justify-center",
-                      "border border-white/45 bg-[#E5E0D7]/88 backdrop-blur-xl",
+                      "border border-white/45 bg-[#E5E0D7]/84 backdrop-blur-xl",
                       "transition-all duration-300",
-                      "hover:border-accent hover:bg-accent hover:text-white",
+                      "hover:-translate-y-0.5 hover:border-accent hover:bg-accent hover:text-white",
                       productIsFavorite
                         ? "border-accent bg-accent text-white"
                         : "text-foreground",
@@ -594,31 +594,31 @@ export default function ProductsCatalog({
                     />
                   </button>
 
-                  <span className="pointer-events-none absolute inset-x-4 bottom-4 z-20 translate-y-3 border border-white/45 bg-[#E5E0D7]/92 px-4 py-3 text-center text-[9px] font-semibold uppercase tracking-[0.16em] text-foreground opacity-0 backdrop-blur-xl transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100">
+                  <span className="pointer-events-none absolute inset-x-4 bottom-4 z-20 translate-y-3 border border-white/45 bg-[#E5E0D7]/88 px-4 py-3 text-center text-[9px] font-semibold uppercase tracking-[0.18em] text-foreground opacity-0 backdrop-blur-xl transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100">
                     {dictionary.viewProduct}
                   </span>
                 </div>
 
-                <div className="border-b border-border pb-6 pt-5">
+                <div className="border-b border-white/20 pb-6 pt-5">
                   <Link
                     href={`/${locale}/products/${product.slug}`}
                     className="block w-fit max-w-full"
                   >
-                    <h2 className="min-w-0 font-heading text-[27px] leading-[1.02] text-foreground transition-colors duration-300 hover:text-accent lg:text-[29px]">
+                    <h2 className="min-w-0 font-heading text-[25px] font-semibold leading-[0.98] tracking-[-0.025em] text-foreground transition-colors duration-300 hover:text-accent lg:text-[27px]">
                       {product.name[locale]}
                     </h2>
                   </Link>
 
-                  <p className="mt-3 line-clamp-2 text-xs leading-6 text-foreground-soft">
+                  <p className="mt-3.5 line-clamp-2 text-[11px] leading-6 sm:text-xs text-foreground-soft">
                     {product.shortDescription[locale]}
                   </p>
 
-                  <div className="mt-5 flex min-h-5 items-center gap-2.5">
+                  <div className="mt-4.5 flex min-h-5 items-center gap-2.5">
                     {product.colors.map((color) => (
                       <span
                         key={color}
                         aria-hidden="true"
-                        className="h-3.5 w-3.5 rounded-full border border-black/15"
+                        className="h-3 w-3 rounded-full border border-black/15 shadow-[0_0_0_1px_rgba(255,255,255,0.22)]"
                         style={{
                           backgroundColor: color,
                         }}
@@ -632,13 +632,13 @@ export default function ProductsCatalog({
                     )}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="group/whatsapp relative mt-5 inline-flex min-h-10 items-center gap-2.5 overflow-hidden text-[9px] font-semibold uppercase tracking-[0.16em] text-accent transition-colors duration-300 hover:text-foreground sm:text-[10px]"
+                    className="group/whatsapp relative mt-4 inline-flex min-h-9 items-center gap-2.5 overflow-hidden text-[9px] font-semibold uppercase tracking-[0.18em] text-accent transition-colors duration-300 hover:text-foreground sm:text-[10px]"
                   >
-                    <span className="flex h-8 w-8 items-center justify-center border border-accent/30 bg-accent/[0.04] transition-all duration-500 ease-out group-hover/whatsapp:border-accent group-hover/whatsapp:bg-accent group-hover/whatsapp:text-white group-hover/whatsapp:shadow-[0_8px_24px_rgba(146,115,74,0.18)]">
+                    <span className="flex h-7 w-7 items-center justify-center border border-accent/30 bg-[#E5E0D7]/10 backdrop-blur-[1px] transition-all duration-300 ease-out group-hover/whatsapp:border-accent group-hover/whatsapp:bg-accent group-hover/whatsapp:text-white group-hover/whatsapp:shadow-[0_8px_24px_rgba(146,115,74,0.18)]">
                       <MessageCircle
                         size={14}
                         strokeWidth={1.4}
-                        className="transition-transform duration-500 ease-out group-hover/whatsapp:scale-110"
+                        className="transition-transform duration-300 ease-out group-hover/whatsapp:scale-105"
                       />
                     </span>
 
@@ -647,14 +647,14 @@ export default function ProductsCatalog({
 
                       <span
                         aria-hidden="true"
-                        className="absolute -bottom-0.5 start-0 h-px w-0 bg-accent transition-all duration-500 ease-out group-hover/whatsapp:w-full"
+                        className="absolute -bottom-0.5 start-0 h-px w-0 bg-accent transition-all duration-300 ease-out group-hover/whatsapp:w-full"
                       />
                     </span>
 
                     <ArrowUpRight
                       size={14}
                       strokeWidth={1.35}
-                      className="transition-all duration-500 ease-out group-hover/whatsapp:-translate-y-0.5 group-hover/whatsapp:translate-x-1 rtl:group-hover/whatsapp:-translate-x-1"
+                      className="transition-all duration-300 ease-out group-hover/whatsapp:-translate-y-0.5 group-hover/whatsapp:translate-x-1 rtl:group-hover/whatsapp:-translate-x-1"
                     />
                   </a>
                 </div>
@@ -663,8 +663,8 @@ export default function ProductsCatalog({
           })}
         </div>
       ) : (
-        <div className="relative z-0 flex min-h-[380px] flex-col items-center justify-center border-b border-border px-5 text-center">
-          <p className="max-w-xl font-heading text-4xl leading-tight text-foreground sm:text-5xl">
+        <div className="relative z-0 flex min-h-[380px] flex-col items-center justify-center border-b border-white/20 px-5 text-center">
+          <p className="max-w-xl font-heading text-4xl font-semibold leading-[1.02] tracking-[-0.03em] text-foreground sm:text-5xl">
             {dictionary.noProducts}
           </p>
 

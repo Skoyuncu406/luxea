@@ -2,8 +2,14 @@ import { notFound } from "next/navigation";
 
 import CategoryDetailClient from "@/components/categories/CategoryDetailClient";
 import Navbar from "@/components/layout/Navbar";
-import { isValidLocale } from "@/lib/i18n/config";
-import { getDictionary } from "@/lib/i18n/get-dictionary";
+
+import {
+  isValidLocale,
+} from "@/lib/i18n/config";
+
+import {
+  getDictionary,
+} from "@/lib/i18n/get-dictionary";
 
 type CategoryPageProps = {
   params: Promise<{
@@ -15,25 +21,82 @@ type CategoryPageProps = {
 export default async function CategoryPage({
   params,
 }: CategoryPageProps) {
-  const { locale, slug } =
-    await params;
+  const {
+    locale,
+    slug,
+  } = await params;
 
-  if (!isValidLocale(locale)) {
+  if (
+    !isValidLocale(
+      locale
+    )
+  ) {
     notFound();
   }
 
   const dictionary =
-    await getDictionary(locale);
+    await getDictionary(
+      locale
+    );
 
   return (
-    <main className="min-h-screen w-full overflow-x-clip bg-background text-foreground">
+    <main
+      className="
+        relative
+        min-h-screen
+        w-full
+        overflow-x-clip
+        bg-transparent
+        text-foreground
+      "
+    >
+      {/* ORTAK ARKA PLAN KAPLAMASI */}
+
+      <div
+        aria-hidden="true"
+        className="
+          pointer-events-none
+          absolute
+          inset-0
+          z-0
+
+          bg-[#E5E0D7]/18
+
+          backdrop-blur-[0.5px]
+        "
+      />
+
       <Navbar
         locale={locale}
         dictionary={dictionary}
       />
 
-      <section className="min-h-[100dvh] pt-[120px] sm:pt-[128px] lg:pt-[88px]">
-        <div className="container-premium w-full py-14 sm:py-16 lg:py-20">
+      <section
+        className="
+          relative
+          z-10
+
+          min-h-[100dvh]
+
+          pt-[120px]
+
+          sm:pt-[128px]
+
+          lg:pt-[88px]
+        "
+      >
+        <div
+          className="
+            container-premium
+            w-full
+
+            py-14
+
+            sm:py-16
+
+            lg:py-20
+          "
+        >
           <CategoryDetailClient
             locale={locale}
             slug={slug}
@@ -42,6 +105,7 @@ export default async function CategoryPage({
                 dictionary
                   .categoryShowcase
                   .viewAll,
+
               explore:
                 dictionary
                   .categoryShowcase
@@ -52,6 +116,7 @@ export default async function CategoryPage({
                 dictionary
                   .productsPage
                   .newLabel,
+
               viewProduct:
                 dictionary
                   .productsPage

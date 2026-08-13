@@ -125,32 +125,32 @@ function handleAddToCart() {
 
   return (
     <div>
-      <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-accent sm:text-[11px]">
+      <p className="text-[9px] font-semibold uppercase tracking-[0.34em] text-accent sm:text-[10px]">
         LUXEA
       </p>
 
-      <h1 className="mt-4 font-heading text-5xl leading-[0.95] text-foreground sm:text-6xl lg:text-[64px] xl:text-7xl">
+      <h1 className="mt-4 font-heading text-5xl font-semibold leading-[0.94] tracking-[-0.04em] text-foreground sm:text-6xl lg:text-[62px] xl:text-[68px]">
         {product.name[locale]}
       </h1>
 
-      <p className="mt-6 text-sm leading-7 text-foreground-soft sm:text-base sm:leading-8">
+      <p className="mt-6 max-w-[560px] text-sm leading-7 text-foreground-soft sm:text-[15px] sm:leading-8">
         {product.shortDescription[locale]}
       </p>
 
       {/* Fiyat bilgisi / WhatsApp */}
-      <div className="relative mt-8 overflow-hidden border border-accent/35 bg-accent/[0.055] p-5 sm:p-6">
+      <div className="relative mt-9 overflow-hidden border border-accent/30 bg-[#E5E0D7]/12 p-5 backdrop-blur-[1px] sm:p-6">
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -end-10 -top-12 h-32 w-32 rounded-full bg-accent/10 blur-3xl"
+          className="pointer-events-none absolute -end-12 -top-14 h-36 w-36 rounded-full bg-accent/[0.08] blur-3xl"
         />
 
         <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="max-w-[430px]">
-            <p className="text-[9px] font-semibold uppercase tracking-[0.22em] text-accent">
+            <p className="text-[8px] font-semibold uppercase tracking-[0.26em] text-accent sm:text-[9px]">
               LUXEA PRIVATE SERVICE
             </p>
 
-            <p className="mt-2 text-xs leading-6 text-foreground-soft">
+            <p className="mt-2.5 text-[11px] leading-6 text-foreground-soft sm:text-xs">
               {whatsappHint}
             </p>
           </div>
@@ -162,12 +162,12 @@ function handleAddToCart() {
             className={[
               "group relative inline-flex min-h-14 shrink-0 overflow-hidden",
               "items-center justify-center gap-3",
-              "border border-accent bg-accent px-6",
+              "border border-accent bg-accent px-6 shadow-[0_12px_30px_rgba(112,86,56,0.12)]",
               "text-[9px] font-semibold uppercase tracking-[0.16em]",
               "!text-white",
-              "transition-all duration-500",
+              "transition-all duration-300 ease-out",
               "hover:border-accent-dark hover:bg-accent-dark",
-              "hover:shadow-[0_14px_35px_rgba(112,86,56,0.20)]",
+              "hover:-translate-y-0.5 hover:shadow-[0_16px_34px_rgba(112,86,56,0.18)]",
             ].join(" ")}
           >
             <span
@@ -195,18 +195,18 @@ function handleAddToCart() {
       </div>
 
       {/* Renk seçimi */}
-      <div className="mt-9 border-y border-border py-6">
+      <div className="mt-9 border-y border-white/20 py-6">
         <div className="flex items-center justify-between gap-6">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-foreground">
+          <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-foreground sm:text-[10px]">
             {dictionary.color}
           </p>
 
-          <p className="text-end text-[10px] uppercase tracking-[0.16em] text-muted">
+          <p className="text-end text-[9px] uppercase tracking-[0.17em] text-muted sm:text-[10px]">
             {dictionary.selectColor}
           </p>
         </div>
 
-        <div className="mt-5 flex flex-wrap items-center gap-3">
+        <div className="mt-5 flex flex-wrap items-center gap-3.5">
           {product.colors.map((color, index) => {
             const colorIsSelected =
               selectedColor === color;
@@ -219,15 +219,15 @@ function handleAddToCart() {
                 aria-label={`${dictionary.color} ${index + 1}`}
                 aria-pressed={colorIsSelected}
                 className={[
-                  "relative flex h-10 w-10 items-center justify-center rounded-full border",
-                  "transition-all duration-300",
+                  "relative flex h-11 w-11 items-center justify-center rounded-full border",
+                  "transition-all duration-300 ease-out",
                   colorIsSelected
-                    ? "border-foreground shadow-[0_0_0_2px_rgba(229,224,215,1),0_0_0_3px_rgba(36,35,32,0.45)]"
-                    : "border-border hover:border-foreground",
+                    ? "border-accent shadow-[0_0_0_3px_rgba(229,224,215,0.95),0_0_0_4px_rgba(146,115,74,0.65)]"
+                    : "border-white/30 hover:border-accent/70",
                 ].join(" ")}
               >
                 <span
-                  className="h-6 w-6 rounded-full border border-black/10"
+                  className="h-6 w-6 rounded-full border border-black/10 shadow-[0_2px_8px_rgba(36,35,32,0.08)]"
                   style={{
                     backgroundColor: color,
                   }}
@@ -239,15 +239,15 @@ function handleAddToCart() {
       </div>
 
       {/* Adet */}
-      <div className="border-b border-border py-6">
+      <div className="border-b border-white/20 py-6">
         <div className="flex items-center justify-between gap-6">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-foreground">
+          <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-foreground sm:text-[10px]">
             {dictionary.quantity}
           </p>
 
           <p
             className={[
-              "text-[10px] uppercase tracking-[0.16em]",
+              "text-[9px] uppercase tracking-[0.17em] sm:text-[10px]",
               isOutOfStock
                 ? "text-danger"
                 : "text-muted",
@@ -259,18 +259,18 @@ function handleAddToCart() {
           </p>
         </div>
 
-        <div className="mt-5 inline-flex h-12 items-center border border-border">
+        <div className="mt-5 inline-flex h-12 items-center border border-white/25 bg-[#E5E0D7]/10 backdrop-blur-[1px]">
           <button
             type="button"
             onClick={decreaseQuantity}
             disabled={quantity <= 1 || isOutOfStock}
             aria-label={dictionary.decrease}
-            className="flex h-full w-12 items-center justify-center text-foreground transition-colors duration-300 hover:text-accent disabled:cursor-not-allowed disabled:opacity-35"
+            className="flex h-full w-12 items-center justify-center text-foreground transition-all duration-300 hover:bg-accent/[0.06] hover:text-accent disabled:cursor-not-allowed disabled:opacity-35"
           >
             <Minus size={14} strokeWidth={1.5} />
           </button>
 
-          <span className="flex h-full min-w-12 items-center justify-center border-x border-border text-sm">
+          <span className="flex h-full min-w-12 items-center justify-center border-x border-white/25 text-sm font-medium">
             {quantity}
           </span>
 
@@ -282,7 +282,7 @@ function handleAddToCart() {
               quantity >= product.stock
             }
             aria-label={dictionary.increase}
-            className="flex h-full w-12 items-center justify-center text-foreground transition-colors duration-300 hover:text-accent disabled:cursor-not-allowed disabled:opacity-35"
+            className="flex h-full w-12 items-center justify-center text-foreground transition-all duration-300 hover:bg-accent/[0.06] hover:text-accent disabled:cursor-not-allowed disabled:opacity-35"
           >
             <Plus size={14} strokeWidth={1.5} />
           </button>
@@ -290,19 +290,19 @@ function handleAddToCart() {
       </div>
 
       {/* Sepet ve favori */}
-      <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+      <div className="mt-8 flex flex-col gap-3.5 sm:flex-row">
        <button
   type="button"
   onClick={handleAddToCart}
   disabled={isOutOfStock || !selectedColor}
   className={[
-    "inline-flex min-h-14 flex-1 items-center justify-center gap-3",
+    "inline-flex min-h-14 flex-1 items-center justify-center gap-3 overflow-hidden",
     "border px-7 text-[10px] font-semibold uppercase tracking-[0.16em]",
-    "transition-all duration-300",
+    "transition-all duration-300 ease-out",
     isAddedToCart
-      ? "border-accent bg-accent !text-white"
+      ? "border-accent bg-accent !text-white shadow-[0_12px_30px_rgba(146,115,74,0.16)]"
       : !isOutOfStock && selectedColor
-        ? "border-[#242320] bg-[#242320] !text-[#F3F0EA] hover:border-[#92734A] hover:bg-[#92734A] hover:!text-white"
+        ? "border-[#242320] bg-[#242320] !text-[#F3F0EA] shadow-[0_12px_28px_rgba(36,35,32,0.12)] hover:-translate-y-0.5 hover:border-[#92734A] hover:bg-[#92734A] hover:!text-white hover:shadow-[0_16px_34px_rgba(146,115,74,0.16)]"
         : "cursor-not-allowed border-border bg-surface-strong text-muted",
   ].join(" ")}
 >
@@ -326,11 +326,11 @@ function handleAddToCart() {
           aria-pressed={productIsFavorite}
           title={dictionary.addToFavorites}
           className={[
-            "inline-flex min-h-14 min-w-14 items-center justify-center border",
-            "transition-all duration-300",
+            "inline-flex min-h-14 min-w-14 items-center justify-center border bg-[#E5E0D7]/8 backdrop-blur-[1px]",
+            "transition-all duration-300 ease-out",
             productIsFavorite
-              ? "border-accent bg-accent text-white hover:border-accent-dark hover:bg-accent-dark"
-              : "border-foreground text-foreground hover:bg-foreground hover:!text-[#F3F0EA]",
+              ? "border-accent bg-accent text-white shadow-[0_10px_24px_rgba(146,115,74,0.14)] hover:border-accent-dark hover:bg-accent-dark"
+              : "border-foreground/80 text-foreground hover:-translate-y-0.5 hover:bg-foreground hover:!text-[#F3F0EA]",
           ].join(" ")}
         >
           <Heart
@@ -346,9 +346,9 @@ function handleAddToCart() {
       </div>
 
       {/* Bilgi alanları */}
-      <div className="mt-9 divide-y divide-border border-y border-border">
-        <details className="group py-5">
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-6 text-[10px] font-semibold uppercase tracking-[0.17em]">
+      <div className="mt-10 divide-y divide-white/20 border-y border-white/20">
+        <details className="group py-[22px]">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-6 text-[9px] font-semibold uppercase tracking-[0.19em] text-foreground transition-colors duration-300 hover:text-accent sm:text-[10px]">
             <span>{dictionary.details}</span>
 
             <Plus
@@ -358,13 +358,13 @@ function handleAddToCart() {
             />
           </summary>
 
-          <p className="pt-4 text-sm leading-7 text-foreground-soft">
+          <p className="max-w-[560px] pt-4 text-[13px] leading-7 text-foreground-soft sm:text-sm">
             {dictionary.detailsText}
           </p>
         </details>
 
-        <details className="group py-5">
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-6 text-[10px] font-semibold uppercase tracking-[0.17em]">
+        <details className="group py-[22px]">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-6 text-[9px] font-semibold uppercase tracking-[0.19em] text-foreground transition-colors duration-300 hover:text-accent sm:text-[10px]">
             <span>{dictionary.shipping}</span>
 
             <Plus
@@ -374,13 +374,13 @@ function handleAddToCart() {
             />
           </summary>
 
-          <p className="pt-4 text-sm leading-7 text-foreground-soft">
+          <p className="max-w-[560px] pt-4 text-[13px] leading-7 text-foreground-soft sm:text-sm">
             {dictionary.shippingText}
           </p>
         </details>
 
-        <details className="group py-5">
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-6 text-[10px] font-semibold uppercase tracking-[0.17em]">
+        <details className="group py-[22px]">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-6 text-[9px] font-semibold uppercase tracking-[0.19em] text-foreground transition-colors duration-300 hover:text-accent sm:text-[10px]">
             <span>{dictionary.returns}</span>
 
             <Plus
@@ -390,7 +390,7 @@ function handleAddToCart() {
             />
           </summary>
 
-          <p className="pt-4 text-sm leading-7 text-foreground-soft">
+          <p className="max-w-[560px] pt-4 text-[13px] leading-7 text-foreground-soft sm:text-sm">
             {dictionary.returnsText}
           </p>
         </details>

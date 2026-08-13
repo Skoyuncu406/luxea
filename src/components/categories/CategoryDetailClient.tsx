@@ -113,8 +113,8 @@ export default function CategoryDetailClient({
 
   if (!isLoaded) {
     return (
-      <div className="flex min-h-[520px] items-center justify-center border-y border-border px-5 text-center">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
+      <div className="flex min-h-[520px] items-center justify-center border-y border-white/20 px-5 text-center">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-muted">
           {locale === "tr"
             ? "Kategori yükleniyor"
             : locale === "ar"
@@ -161,8 +161,8 @@ export default function CategoryDetailClient({
           CATEGORY HEADER
       ===================================================== */}
 
-      <div className="mx-auto flex w-full max-w-4xl flex-col items-center text-center">
-        <p className="w-full text-center text-[10px] font-semibold uppercase tracking-[0.28em] text-accent sm:text-[11px]">
+      <div className="mx-auto flex w-full max-w-[900px] flex-col items-center text-center">
+        <p className="w-full text-center text-[9px] font-semibold uppercase tracking-[0.34em] text-accent sm:text-[10px]">
           {
             category
               .eyebrow[
@@ -171,7 +171,7 @@ export default function CategoryDetailClient({
           }
         </p>
 
-        <h1 className="mt-4 w-full text-center font-heading text-5xl leading-none sm:text-6xl lg:text-8xl">
+        <h1 className="mt-4 w-full text-center font-heading text-5xl font-semibold leading-[0.94] tracking-[-0.04em] sm:text-6xl lg:text-[76px] xl:text-[84px]">
           {
             category
               .name[
@@ -180,7 +180,7 @@ export default function CategoryDetailClient({
           }
         </h1>
 
-        <p className="mx-auto mt-6 max-w-2xl text-center text-sm leading-7 text-foreground-soft sm:text-base sm:leading-8">
+        <p className="mx-auto mt-6 max-w-[680px] text-center text-sm leading-7 text-foreground-soft sm:text-[15px] sm:leading-8">
           {locale === "tr"
             ? `${category.name[locale]} kategorisindeki seçkin LUXEA ürünlerini keşfedin.`
             : locale === "ar"
@@ -190,7 +190,7 @@ export default function CategoryDetailClient({
 
         <Link
           href={`/${locale}/categories`}
-          className="group mt-8 inline-flex items-center gap-3 text-[9px] font-semibold uppercase tracking-[0.15em] text-foreground transition-colors duration-300 hover:text-accent"
+          className="group mt-8 inline-flex items-center gap-3.5 text-[9px] font-semibold uppercase tracking-[0.19em] text-foreground transition-colors duration-300 hover:text-accent"
         >
           <ArrowLeft
             size={14}
@@ -214,7 +214,7 @@ export default function CategoryDetailClient({
 
       {categoryProducts.length >
       0 ? (
-        <div className="mt-14 grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="mt-14 grid gap-x-6 gap-y-14 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 xl:gap-x-7">
           {categoryProducts.map(
             (product) => {
               const productName =
@@ -245,7 +245,7 @@ export default function CategoryDetailClient({
                       productName
                     }
                   >
-                    <div className="relative aspect-[4/5] overflow-hidden bg-surface">
+                    <div className="relative aspect-[4/5] overflow-hidden border border-white/20 bg-surface/45 shadow-[0_18px_45px_rgba(36,35,32,0.055)]">
                       <Image
                         src={
                           product.image
@@ -259,8 +259,8 @@ export default function CategoryDetailClient({
                           "object-cover object-center",
                           "transition-all duration-700 ease-out",
                           product.hoverImage
-                            ? "group-hover:scale-[1.025] group-hover:opacity-0"
-                            : "group-hover:scale-[1.035]",
+                            ? "group-hover:scale-[1.018] group-hover:opacity-0"
+                            : "group-hover:scale-[1.025]",
                         ].join(
                           " "
                         )}
@@ -284,7 +284,7 @@ export default function CategoryDetailClient({
                             duration-700
                             ease-out
 
-                            group-hover:scale-[1.025]
+                            group-hover:scale-[1.018]
                             group-hover:opacity-100
                           "
                         />
@@ -300,7 +300,7 @@ export default function CategoryDetailClient({
                           inset-0
 
                           bg-gradient-to-t
-                          from-[#242320]/20
+                          from-[#242320]/16
                           via-transparent
                           to-transparent
                         "
@@ -309,7 +309,7 @@ export default function CategoryDetailClient({
                       {/* Yeni ürün etiketi */}
 
                       {product.isNew && (
-                        <span className="absolute start-4 top-4 z-10 border border-white/45 bg-black/15 px-3 py-2 text-[8px] font-semibold uppercase tracking-[0.18em] text-white backdrop-blur-md">
+                        <span className="absolute start-4 top-4 z-10 border border-white/45 bg-[#242320]/20 px-3 py-2 text-[8px] font-semibold uppercase tracking-[0.21em] text-white backdrop-blur-md">
                           {
                             productsDictionary
                               .newLabel
@@ -331,7 +331,7 @@ export default function CategoryDetailClient({
                           border
                           border-white/45
 
-                          bg-[#E5E0D7]/92
+                          bg-[#E5E0D7]/88
 
                           px-4
                           py-3
@@ -340,7 +340,7 @@ export default function CategoryDetailClient({
                           text-[8px]
                           font-semibold
                           uppercase
-                          tracking-[0.16em]
+                          tracking-[0.18em]
                           text-foreground
 
                           opacity-0
@@ -366,7 +366,7 @@ export default function CategoryDetailClient({
                       PRODUCT INFO
                   ================================================= */}
 
-                  <div className="border-b border-border pb-5 pt-5 text-center">
+                  <div className="border-b border-white/20 pb-6 pt-5 text-center">
                     <Link
                       href={`/${locale}/products/${product.slug}`}
                       className="block"
@@ -374,8 +374,10 @@ export default function CategoryDetailClient({
                       <h2
                         className="
                           font-heading
-                          text-2xl
-                          leading-none
+                          text-[25px]
+                          font-semibold
+                          leading-[0.98]
+                          tracking-[-0.025em]
                           text-foreground
 
                           transition-colors
@@ -395,12 +397,13 @@ export default function CategoryDetailClient({
                     <p
                       className="
                         mx-auto
-                        mt-3
+                        mt-3.5
                         line-clamp-2
                         max-w-[290px]
 
-                        text-xs
+                        text-[11px]
                         leading-6
+                        sm:text-xs
                         text-foreground-soft
                       "
                     >
@@ -416,7 +419,7 @@ export default function CategoryDetailClient({
 
                     {product.colors.length >
                       0 && (
-                      <div className="mt-4 flex min-h-4 items-center justify-center gap-2">
+                      <div className="mt-4.5 flex min-h-4 items-center justify-center gap-2.5">
                         {product.colors
                           .slice(
                             0,
@@ -437,6 +440,7 @@ export default function CategoryDetailClient({
                                   rounded-full
                                   border
                                   border-black/15
+                                  shadow-[0_0_0_1px_rgba(255,255,255,0.22)]
                                 "
                                 style={{
                                   backgroundColor:
@@ -476,51 +480,31 @@ export default function CategoryDetailClient({
                         overflow-hidden
 
                         border
-                        border-accent/35
+                        border-accent/30
 
-                        bg-accent/[0.04]
+                        bg-[#E5E0D7]/10
 
                         px-5
 
                         text-[8px]
                         font-semibold
                         uppercase
-                        tracking-[0.16em]
+                        tracking-[0.18em]
 
                         text-accent
 
                         transition-all
-                        duration-500
+                        duration-300
 
                         hover:-translate-y-0.5
                         hover:border-accent
                         hover:bg-accent
                         hover:!text-white
-                        hover:shadow-[0_12px_30px_rgba(146,115,74,0.15)]
+                        hover:shadow-[0_14px_30px_rgba(146,115,74,0.14)]
 
                         sm:text-[9px]
                       "
                     >
-                      {/* subtle animation */}
-
-                      <span
-                        aria-hidden="true"
-                        className="
-                          pointer-events-none
-                          absolute
-                          inset-y-0
-                          -start-20
-                          w-16
-                          skew-x-[-18deg]
-                          bg-white/15
-
-                          transition-all
-                          duration-700
-
-                          group-hover/price:start-[120%]
-                        "
-                      />
-
                       <MessageCircle
                         size={14}
                         strokeWidth={1.45}
@@ -529,10 +513,9 @@ export default function CategoryDetailClient({
                           z-10
 
                           transition-transform
-                          duration-500
+                          duration-300
 
-                          group-hover/price:-rotate-6
-                          group-hover/price:scale-110
+                          group-hover/price:scale-105
                         "
                       />
 
@@ -566,14 +549,14 @@ export default function CategoryDetailClient({
           )}
         </div>
       ) : (
-        <div className="mt-14 flex min-h-[360px] flex-col items-center justify-center border-y border-border px-5 py-12 text-center">
+        <div className="mt-14 flex min-h-[360px] flex-col items-center justify-center border-y border-white/20 px-5 py-12 text-center">
           <PackageSearch
             size={34}
             strokeWidth={1.1}
             className="text-accent"
           />
 
-          <h2 className="mt-7 font-heading text-4xl leading-none text-foreground sm:text-5xl">
+          <h2 className="mt-7 font-heading text-4xl font-semibold leading-[0.96] tracking-[-0.03em] text-foreground sm:text-5xl">
             {locale === "tr"
               ? "Bu kategoride henüz ürün yok."
               : locale === "ar"
@@ -639,7 +622,7 @@ function CategoryNotFoundState({
   locale: Locale;
 }) {
   return (
-    <div className="flex min-h-[520px] items-center justify-center border-y border-border px-5 py-14 text-center">
+    <div className="flex min-h-[520px] items-center justify-center border-y border-white/20 px-5 py-14 text-center">
       <div className="mx-auto flex max-w-[620px] flex-col items-center">
         <PackageSearch
           size={34}
@@ -647,7 +630,7 @@ function CategoryNotFoundState({
           className="text-accent"
         />
 
-        <h1 className="mt-7 font-heading text-5xl leading-none text-foreground sm:text-6xl">
+        <h1 className="mt-7 font-heading text-5xl font-semibold leading-[0.96] tracking-[-0.035em] text-foreground sm:text-6xl">
           {locale === "tr"
             ? "Kategori bulunamadı."
             : locale === "ar"

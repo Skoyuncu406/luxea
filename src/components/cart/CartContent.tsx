@@ -134,14 +134,14 @@ export default function CartContent({
         {Array.from({ length: 2 }).map((_, index) => (
           <div
             key={index}
-            className="grid animate-pulse gap-5 border-b border-border pb-6 sm:grid-cols-[140px_minmax(0,1fr)]"
+            className="grid animate-pulse gap-5 border-b border-white/20 pb-6 sm:grid-cols-[140px_minmax(0,1fr)]"
           >
-            <div className="aspect-[4/5] bg-surface-strong/50" />
+            <div className="aspect-[4/5] bg-[#E5E0D7]/18 backdrop-blur-[1px]" />
 
             <div className="py-2">
-              <div className="h-8 w-2/3 bg-surface-strong/50" />
-              <div className="mt-4 h-4 w-1/3 bg-surface-strong/40" />
-              <div className="mt-8 h-12 w-40 bg-surface-strong/40" />
+              <div className="h-8 w-2/3 bg-[#E5E0D7]/18 backdrop-blur-[1px]" />
+              <div className="mt-4 h-4 w-1/3 bg-[#E5E0D7]/14 backdrop-blur-[1px]" />
+              <div className="mt-8 h-12 w-40 bg-[#E5E0D7]/14 backdrop-blur-[1px]" />
             </div>
           </div>
         ))}
@@ -151,8 +151,8 @@ export default function CartContent({
 
   if (resolvedCartItems.length === 0) {
     return (
-      <div className="mt-6 flex min-h-[300px] flex-col items-center justify-center border-y border-border px-5 text-center">
-        <span className="flex h-14 w-14 items-center justify-center rounded-full border border-border bg-surface/50">
+      <div className="mt-6 flex min-h-[300px] flex-col items-center justify-center border-y border-white/20 px-5 text-center">
+        <span className="flex h-14 w-14 items-center justify-center rounded-full border border-white/25 bg-[#E5E0D7]/10 backdrop-blur-[1px]">
           <ShoppingBag
             size={29}
             strokeWidth={1.1}
@@ -160,7 +160,7 @@ export default function CartContent({
           />
         </span>
 
-        <h2 className="mt-5 font-heading text-[32px] leading-none text-foreground sm:text-[38px]">
+        <h2 className="mt-5 font-heading text-[32px] font-semibold leading-[0.98] tracking-[-0.03em] text-foreground sm:text-[38px]">
           {dictionary.emptyTitle}
         </h2>
 
@@ -170,7 +170,7 @@ export default function CartContent({
 
         <Link
           href={`/${locale}/products`}
-          className="group mt-5 inline-flex min-h-12 items-center justify-center gap-3 border border-foreground bg-foreground px-8 text-[10px] font-semibold uppercase tracking-[0.17em] !text-[#F3F0EA] transition-all duration-300 hover:border-accent hover:bg-accent hover:!text-white"
+          className="group mt-5 inline-flex min-h-12 items-center justify-center gap-3 border border-foreground bg-foreground px-8 text-[10px] font-semibold uppercase tracking-[0.17em] !text-[#F3F0EA] transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-accent hover:bg-accent hover:!text-white"
         >
           <span>{dictionary.discoverProducts}</span>
 
@@ -187,15 +187,15 @@ export default function CartContent({
   return (
     <div className="mt-8">
       {/* Sepet üst bilgisi */}
-      <div className="flex min-h-[72px] flex-wrap items-center justify-between gap-5 border-y border-border">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">
+      <div className="flex min-h-[72px] flex-wrap items-center justify-between gap-5 border-y border-white/20">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.21em] text-muted">
           {cartCount} {dictionary.productCount}
         </p>
 
         <button
           type="button"
           onClick={clearCart}
-          className="inline-flex items-center gap-2 text-[9px] font-semibold uppercase tracking-[0.16em] text-foreground transition-colors duration-300 hover:text-danger"
+          className="inline-flex items-center gap-2 text-[9px] font-semibold uppercase tracking-[0.18em] text-foreground transition-colors duration-300 hover:text-danger"
         >
           <Trash2 size={13} strokeWidth={1.4} />
 
@@ -203,10 +203,10 @@ export default function CartContent({
         </button>
       </div>
 
-      <div className="grid gap-12 pt-10 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-16 xl:grid-cols-[minmax(0,1fr)_420px]">
+      <div className="grid gap-12 pt-10 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-14 xl:grid-cols-[minmax(0,1fr)_410px]">
         {/* Sepetteki ürünler */}
         <div className="min-w-0">
-          <div className="divide-y divide-border border-y border-border">
+          <div className="divide-y divide-border border-y border-white/20">
             {resolvedCartItems.map(({ cartItem, product }) => (
               <article
                 key={cartItem.id}
@@ -215,14 +215,14 @@ export default function CartContent({
                 {/* Görsel */}
                 <Link
                   href={`/${locale}/products/${product.slug}`}
-                  className="group/image relative aspect-[4/5] w-full overflow-hidden bg-surface sm:w-[150px] lg:w-[170px]"
+                  className="group/image relative aspect-[4/5] w-full overflow-hidden border border-white/20 bg-surface/45 shadow-[0_16px_38px_rgba(36,35,32,0.055)] sm:w-[150px] lg:w-[170px]"
                 >
                   <Image
                     src={product.image}
                     alt={product.name[locale]}
                     fill
                     sizes="(max-width: 639px) 100vw, 170px"
-                    className="object-cover object-center transition-transform duration-700 group-hover/image:scale-[1.04]"
+                    className="object-cover object-center transition-transform duration-700 group-hover/image:scale-[1.025]"
                   />
                 </Link>
 
@@ -233,7 +233,7 @@ export default function CartContent({
                       <div className="min-w-0">
                         <Link
                           href={`/${locale}/products/${product.slug}`}
-                          className="font-heading text-[28px] leading-none text-foreground transition-colors duration-300 hover:text-accent sm:text-[32px]"
+                          className="font-heading text-[27px] font-semibold leading-[0.98] tracking-[-0.025em] text-foreground transition-all duration-300 hover:bg-accent/[0.06] hover:text-accent sm:text-[31px]"
                         >
                           {product.name[locale]}
                         </Link>
@@ -246,7 +246,7 @@ export default function CartContent({
 
                             <span
                               aria-hidden="true"
-                              className="h-4 w-4 rounded-full border border-black/15"
+                              className="h-4 w-4 rounded-full border border-black/15 shadow-[0_0_0_1px_rgba(255,255,255,0.22)]"
                               style={{
                                 backgroundColor: cartItem.color,
                               }}
@@ -280,7 +280,7 @@ export default function CartContent({
                         }
                         aria-label={dictionary.remove}
                         title={dictionary.remove}
-                        className="flex h-9 w-9 shrink-0 items-center justify-center text-muted transition-colors duration-300 hover:text-danger"
+                        className="flex h-9 w-9 shrink-0 items-center justify-center border border-transparent text-muted transition-all duration-300 hover:border-danger/25 hover:bg-danger/[0.06] hover:text-danger"
                       >
                         <Trash2 size={16} strokeWidth={1.35} />
                       </button>
@@ -298,19 +298,19 @@ export default function CartContent({
                         {dictionary.quantity}
                       </p>
 
-                      <div className="inline-flex h-11 items-center border border-border">
+                      <div className="inline-flex h-11 items-center border border-white/25 bg-[#E5E0D7]/10 backdrop-blur-[1px]">
                         <button
                           type="button"
                           onClick={() =>
                             decreaseQuantity(cartItem.id)
                           }
                           aria-label="-"
-                          className="flex h-full w-11 items-center justify-center text-foreground transition-colors duration-300 hover:text-accent"
+                          className="flex h-full w-11 items-center justify-center text-foreground transition-all duration-300 hover:bg-accent/[0.06] hover:text-accent"
                         >
                           <Minus size={13} strokeWidth={1.5} />
                         </button>
 
-                        <span className="flex h-full min-w-11 items-center justify-center border-x border-border text-sm">
+                        <span className="flex h-full min-w-11 items-center justify-center border-x border-white/25 text-sm font-medium">
                           {cartItem.quantity}
                         </span>
 
@@ -326,7 +326,7 @@ export default function CartContent({
                             cartItem.quantity >= product.stock
                           }
                           aria-label="+"
-                          className="flex h-full w-11 items-center justify-center text-foreground transition-colors duration-300 hover:text-accent disabled:cursor-not-allowed disabled:opacity-35"
+                          className="flex h-full w-11 items-center justify-center text-foreground transition-all duration-300 hover:bg-accent/[0.06] hover:text-accent disabled:cursor-not-allowed disabled:opacity-35"
                         >
                           <Plus size={13} strokeWidth={1.5} />
                         </button>
@@ -340,7 +340,7 @@ export default function CartContent({
                       )}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="group/price inline-flex min-h-10 items-center justify-center gap-2 border border-accent/35 px-4 text-[8px] font-semibold uppercase tracking-[0.14em] text-accent transition-all duration-300 hover:border-accent hover:bg-accent hover:text-white"
+                      className="group/price inline-flex min-h-10 items-center justify-center gap-2 border border-accent/30 bg-[#E5E0D7]/10 px-4 text-[8px] font-semibold uppercase tracking-[0.17em] backdrop-blur-[1px] text-accent transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-accent hover:bg-accent hover:text-white"
                     >
                       <MessageCircle
                         size={13}
@@ -359,7 +359,7 @@ export default function CartContent({
 
           <Link
             href={`/${locale}/products`}
-            className="mt-7 inline-flex items-center gap-3 text-[9px] font-semibold uppercase tracking-[0.17em] text-foreground transition-colors duration-300 hover:text-accent"
+            className="mt-7 inline-flex items-center gap-3.5 text-[9px] font-semibold uppercase tracking-[0.19em] text-foreground transition-all duration-300 hover:bg-accent/[0.06] hover:text-accent"
           >
             <span>←</span>
             <span>{dictionary.continueShopping}</span>
@@ -368,12 +368,12 @@ export default function CartContent({
 
         {/* Fiyat ve sipariş bilgisi */}
         <aside className="lg:sticky lg:top-[116px] lg:self-start">
-          <div className="border border-border bg-surface/55 p-6 sm:p-8">
-            <p className="text-[9px] font-semibold uppercase tracking-[0.24em] text-accent">
+          <div className="border border-white/25 bg-[#E5E0D7]/12 p-6 shadow-[0_22px_55px_rgba(36,35,32,0.055)] backdrop-blur-[2px] sm:p-8">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.28em] text-accent">
               LUXEA
             </p>
 
-            <h2 className="mt-3 font-heading text-4xl leading-none text-foreground">
+            <h2 className="mt-3 font-heading text-4xl font-semibold leading-[0.98] tracking-[-0.03em] text-foreground">
               {copy.orderInfo}
             </h2>
 
@@ -381,8 +381,8 @@ export default function CartContent({
               {copy.description}
             </p>
 
-            <div className="mt-7 border-y border-border py-6">
-              <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-muted">
+            <div className="mt-7 border-y border-white/20 py-6">
+              <p className="text-[9px] font-semibold uppercase tracking-[0.19em] text-muted">
                 {cartCount} {dictionary.productCount}
               </p>
 
@@ -393,7 +393,7 @@ export default function CartContent({
 
             <Link
               href={`/${locale}/checkout`}
-              className="group mt-8 inline-flex min-h-14 w-full items-center justify-center gap-3 border border-[#242320] bg-[#242320] px-7 text-center text-[10px] font-semibold uppercase tracking-[0.17em] !text-[#F3F0EA] transition-all duration-300 hover:border-accent hover:bg-accent hover:!text-white"
+              className="group mt-8 inline-flex min-h-14 w-full items-center justify-center gap-3 border border-[#242320] bg-[#242320] px-7 text-center shadow-[0_12px_28px_rgba(36,35,32,0.12)] text-[10px] font-semibold uppercase tracking-[0.17em] !text-[#F3F0EA] transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-accent hover:bg-accent hover:!text-white"
             >
               <ShoppingBag
                 size={17}

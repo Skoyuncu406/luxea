@@ -174,7 +174,7 @@ export default function FavoritesContent({
           grid
           grid-cols-1
           gap-x-6
-          gap-y-16
+          gap-y-14
           sm:grid-cols-2
           lg:grid-cols-3
           xl:grid-cols-4
@@ -194,7 +194,7 @@ export default function FavoritesContent({
               <div
                 className="
                   aspect-[4/5]
-                  bg-surface-strong/50
+                  bg-[#E5E0D7]/18 backdrop-blur-[1px]
                 "
               />
 
@@ -203,7 +203,7 @@ export default function FavoritesContent({
                   mt-5
                   h-7
                   w-2/3
-                  bg-surface-strong/50
+                  bg-[#E5E0D7]/18 backdrop-blur-[1px]
                 "
               />
 
@@ -212,7 +212,7 @@ export default function FavoritesContent({
                   mt-3
                   h-4
                   w-1/3
-                  bg-surface-strong/40
+                  bg-[#E5E0D7]/14 backdrop-blur-[1px]
                 "
               />
             </div>
@@ -242,7 +242,7 @@ export default function FavoritesContent({
           items-center
           justify-center
           border-y
-          border-border
+          border-white/20
           px-5
           text-center
         "
@@ -256,8 +256,9 @@ export default function FavoritesContent({
             justify-center
             rounded-full
             border
-            border-border
-            bg-surface/50
+            border-white/25
+            bg-[#E5E0D7]/10
+            backdrop-blur-[1px]
           "
         >
           <Heart
@@ -272,7 +273,9 @@ export default function FavoritesContent({
             mt-5
             font-heading
             text-[32px]
-            leading-none
+            font-semibold
+            leading-[0.98]
+            tracking-[-0.03em]
             text-foreground
             sm:text-[38px]
           "
@@ -302,7 +305,7 @@ export default function FavoritesContent({
           href={`/${locale}/products`}
           className="
             group
-            mt-5
+            mt-6
             inline-flex
             min-h-12
             items-center
@@ -319,6 +322,8 @@ export default function FavoritesContent({
             !text-[#F3F0EA]
             transition-all
             duration-300
+            ease-out
+            hover:-translate-y-0.5
             hover:border-accent
             hover:bg-accent
             hover:!text-white
@@ -367,7 +372,7 @@ export default function FavoritesContent({
           justify-between
           gap-5
           border-y
-          border-border
+          border-white/20
         "
       >
         <p
@@ -375,7 +380,7 @@ export default function FavoritesContent({
             text-[10px]
             font-semibold
             uppercase
-            tracking-[0.18em]
+            tracking-[0.21em]
             text-muted
           "
         >
@@ -397,7 +402,7 @@ export default function FavoritesContent({
             text-[9px]
             font-semibold
             uppercase
-            tracking-[0.16em]
+            tracking-[0.18em]
             text-foreground
             transition-colors
             duration-300
@@ -426,15 +431,15 @@ export default function FavoritesContent({
           grid
           grid-cols-1
           gap-x-6
-          gap-y-16
+          gap-y-14
           pt-10
           sm:grid-cols-2
           sm:pt-12
           lg:grid-cols-3
-          lg:gap-x-8
-          lg:gap-y-20
+          lg:gap-x-7
+          lg:gap-y-16
           xl:grid-cols-4
-          xl:gap-x-9
+          xl:gap-x-8
         "
       >
         {favoriteProducts.map(
@@ -468,7 +473,9 @@ export default function FavoritesContent({
                     relative
                     aspect-[4/5]
                     overflow-hidden
-                    bg-surface
+                    border border-white/20
+                    bg-surface/45
+                    shadow-[0_18px_45px_rgba(36,35,32,0.055)]
                   "
                 >
                   <Link
@@ -504,8 +511,8 @@ export default function FavoritesContent({
                       "ease-out",
 
                       product.hoverImage
-                        ? "group-hover:scale-[1.025] group-hover:opacity-0"
-                        : "group-hover:scale-[1.035]",
+                        ? "group-hover:scale-[1.018] group-hover:opacity-0"
+                        : "group-hover:scale-[1.025]",
                     ].join(
                       " "
                     )}
@@ -530,7 +537,7 @@ export default function FavoritesContent({
                         transition-all
                         duration-700
                         ease-out
-                        group-hover:scale-[1.025]
+                        group-hover:scale-[1.018]
                         group-hover:opacity-100
                       "
                     />
@@ -543,7 +550,7 @@ export default function FavoritesContent({
                       absolute
                       inset-0
                       bg-gradient-to-t
-                      from-[#242320]/20
+                      from-[#242320]/16
                       via-transparent
                       to-transparent
                     "
@@ -577,9 +584,11 @@ export default function FavoritesContent({
                       border
                       border-accent
                       bg-accent
+                      shadow-[0_10px_24px_rgba(146,115,74,0.14)]
                       text-white
                       transition-all
                       duration-300
+                      hover:-translate-y-0.5
                       hover:border-danger
                       hover:bg-danger
                     "
@@ -605,19 +614,19 @@ export default function FavoritesContent({
                       translate-y-3
                       border
                       border-white/45
-                      bg-[#E5E0D7]/92
+                      bg-[#E5E0D7]/88
                       px-4
                       py-3
                       text-center
                       text-[9px]
                       font-semibold
                       uppercase
-                      tracking-[0.16em]
+                      tracking-[0.18em]
                       text-foreground
                       opacity-0
                       backdrop-blur-xl
                       transition-all
-                      duration-500
+                      duration-300
                       group-hover:translate-y-0
                       group-hover:opacity-100
                     "
@@ -635,7 +644,7 @@ export default function FavoritesContent({
                 <div
                   className="
                     border-b
-                    border-border
+                    border-white/20
                     pb-6
                     pt-5
                   "
@@ -654,13 +663,15 @@ export default function FavoritesContent({
                       className="
                         min-w-0
                         font-heading
-                        text-[27px]
-                        leading-[1.02]
+                        text-[25px]
+                        font-semibold
+                        leading-[0.98]
+                        tracking-[-0.025em]
                         text-foreground
                         transition-colors
                         duration-300
                         hover:text-accent
-                        lg:text-[29px]
+                        lg:text-[27px]
                       "
                     >
                       {
@@ -673,9 +684,10 @@ export default function FavoritesContent({
 
                   <p
                     className="
-                      mt-3
+                      mt-3.5
                       line-clamp-2
-                      text-xs
+                      text-[11px]
+                      sm:text-xs
                       leading-6
                       text-foreground-soft
                     "
@@ -692,7 +704,7 @@ export default function FavoritesContent({
 
                   <div
                     className="
-                      mt-5
+                      mt-4.5
                       flex
                       min-h-5
                       items-center
@@ -709,11 +721,12 @@ export default function FavoritesContent({
                           }
                           aria-hidden="true"
                           className="
-                            h-3.5
-                            w-3.5
+                            h-3
+                            w-3
                             rounded-full
                             border
                             border-black/15
+                            shadow-[0_0_0_1px_rgba(255,255,255,0.22)]
                           "
                           style={{
                             backgroundColor:
@@ -737,16 +750,16 @@ export default function FavoritesContent({
                     className="
                       group/whatsapp
                       relative
-                      mt-5
+                      mt-4
                       inline-flex
-                      min-h-10
+                      min-h-9
                       items-center
                       gap-2.5
                       overflow-hidden
                       text-[9px]
                       font-semibold
                       uppercase
-                      tracking-[0.16em]
+                      tracking-[0.18em]
                       text-accent
                       transition-colors
                       duration-300
@@ -757,15 +770,16 @@ export default function FavoritesContent({
                     <span
                       className="
                         flex
-                        h-8
-                        w-8
+                        h-7
+                        w-7
                         items-center
                         justify-center
                         border
                         border-accent/30
-                        bg-accent/[0.04]
+                        bg-[#E5E0D7]/10
+                        backdrop-blur-[1px]
                         transition-all
-                        duration-500
+                        duration-300
                         ease-out
                         group-hover/whatsapp:border-accent
                         group-hover/whatsapp:bg-accent
@@ -780,9 +794,9 @@ export default function FavoritesContent({
                         }
                         className="
                           transition-transform
-                          duration-500
+                          duration-300
                           ease-out
-                          group-hover/whatsapp:scale-110
+                          group-hover/whatsapp:scale-105
                         "
                       />
                     </span>
@@ -807,7 +821,7 @@ export default function FavoritesContent({
                           w-0
                           bg-accent
                           transition-all
-                          duration-500
+                          duration-300
                           ease-out
                           group-hover/whatsapp:w-full
                         "
@@ -821,11 +835,11 @@ export default function FavoritesContent({
                       }
                       className="
                         transition-all
-                        duration-500
+                        duration-300
                         ease-out
                         group-hover/whatsapp:-translate-y-0.5
-                        group-hover/whatsapp:translate-x-1
-                        rtl:group-hover/whatsapp:-translate-x-1
+                        group-hover/whatsapp:translate-x-0.5
+                        rtl:group-hover/whatsapp:-translate-x-0.5
                       "
                     />
                   </a>
