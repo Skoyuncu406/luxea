@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -92,25 +93,43 @@ export default function AccountDashboard({
 
   /*
    * ===========================================================
+   * AUTH REDIRECT
+   * ===========================================================
+   *
+   * router.replace artık render sırasında çalışmıyor.
+   *
+   * UserContext yüklemesini tamamladıktan sonra kullanıcı yoksa
+   * login sayfasına yönlendiriyoruz.
+   */
+
+  useEffect(() => {
+    if (!isLoaded) {
+      return;
+    }
+
+    if (!user) {
+      router.replace(
+        `/${locale}/account/login`
+      );
+    }
+  }, [
+    isLoaded,
+    user,
+    router,
+    locale,
+  ]);
+
+  /*
+   * ===========================================================
    * LOADING
    * ===========================================================
    */
 
   if (!isLoaded) {
     return (
-      <main className="flex min-h-[calc(100vh-88px)] items-center justify-center bg-background px-5">
-        <div className="text-center">
-          <LoaderCircle
-            size={30}
-            strokeWidth={1.2}
-            className="mx-auto animate-spin text-accent"
-          />
-
-          <p className="mt-5 text-center text-[9px] font-semibold uppercase tracking-[0.22em] text-muted">
-            {dictionary.loading}
-          </p>
-        </div>
-      </main>
+      <AccountLoading
+        label={dictionary.loading}
+      />
     );
   }
 
@@ -118,21 +137,16 @@ export default function AccountDashboard({
    * ===========================================================
    * AUTH GUARD
    * ===========================================================
+   *
+   * useEffect yönlendirmeyi gerçekleştirirken kısa süreli
+   * loading görünümü gösteriyoruz.
    */
 
   if (!user) {
-    router.replace(
-      `/${locale}/account/login`
-    );
-
     return (
-      <main className="flex min-h-[calc(100vh-88px)] items-center justify-center bg-background">
-        <LoaderCircle
-          size={30}
-          strokeWidth={1.2}
-          className="animate-spin text-accent"
-        />
-      </main>
+      <AccountLoading
+        label={dictionary.loading}
+      />
     );
   }
 
@@ -146,16 +160,21 @@ export default function AccountDashboard({
     try {
       await logout();
 
+      /*
+       * Kullanıcı çıkış yaptıktan sonra
+       * ana sayfaya dönsün.
+       */
+
       router.replace(
-        `/${locale}/account/login`
+        `/${locale}`
       );
 
       router.refresh();
-    } catch {
-      /*
-       * Hata yönetimi UserContext
-       * tarafından gerçekleştiriliyor.
-       */
+    } catch (error) {
+      console.error(
+        "Çıkış yapılamadı:",
+        error
+      );
     }
   }
 
@@ -171,6 +190,10 @@ export default function AccountDashboard({
   ]
     .filter(Boolean)
     .join(" ");
+
+  const displayName =
+    fullName ||
+    user.email;
 
   const actionLabel =
     locale === "tr"
@@ -229,17 +252,23 @@ export default function AccountDashboard({
 
         <section className="mx-auto mt-12 w-full max-w-[920px] border-y border-border py-8 sm:py-10">
           <div className="flex flex-col items-center justify-center text-center">
+            {/* PROFILE LABEL */}
+
             <p className="w-full text-center text-[8px] font-semibold uppercase tracking-[0.22em] text-accent">
               {dictionary.profile}
             </p>
 
+            {/* USER NAME */}
+
             <h2 className="mt-3 w-full text-center font-heading text-4xl leading-none text-foreground sm:text-5xl">
-              {fullName}
+              {displayName}
             </h2>
 
-            {/* Contact */}
+            {/* CONTACT */}
 
             <div className="mt-6 flex flex-col items-center justify-center gap-3 text-center text-sm text-foreground-soft sm:flex-row sm:gap-8">
+              {/* EMAIL */}
+
               <div className="flex items-center justify-center gap-2">
                 <Mail
                   size={15}
@@ -251,6 +280,8 @@ export default function AccountDashboard({
                   {user.email}
                 </span>
               </div>
+
+              {/* PHONE */}
 
               <div className="flex items-center justify-center gap-2">
                 <Phone
@@ -265,23 +296,42 @@ export default function AccountDashboard({
               </div>
             </div>
 
-            {/* Logout */}
+            {/* LOGOUT */}
 
             <button
               type="button"
               onClick={handleLogout}
               disabled={isLoading}
               className={[
-                "mt-7 inline-flex min-h-12",
+                "group mt-7 inline-flex min-h-12",
                 "items-center justify-center",
                 "gap-3 border px-6",
+
                 "text-[9px] font-semibold uppercase",
                 "tracking-[0.15em]",
-                "transition-all duration-300",
+
+                "transition-all duration-500",
+                "ease-[cubic-bezier(0.22,1,0.36,1)]",
 
                 isLoading
-                  ? "cursor-wait border-border bg-surface-strong text-muted"
-                  : "border-border-strong text-foreground hover:border-danger hover:bg-danger hover:text-white",
+                  ? [
+                      "cursor-wait",
+                      "border-border",
+                      "bg-surface-strong",
+                      "text-muted",
+                    ].join(" ")
+                  : [
+                      "border-border-strong",
+                      "bg-transparent",
+                      "text-foreground",
+
+                      "hover:-translate-y-0.5",
+                      "hover:border-danger",
+                      "hover:bg-danger",
+                      "hover:text-white",
+
+                      "hover:shadow-[0_12px_32px_rgba(169,96,88,0.16)]",
+                    ].join(" "),
               ].join(" ")}
             >
               {isLoading ? (
@@ -294,6 +344,7 @@ export default function AccountDashboard({
                 <LogOut
                   size={15}
                   strokeWidth={1.4}
+                  className="transition-transform duration-300 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5"
                 />
               )}
 
@@ -372,6 +423,34 @@ export default function AccountDashboard({
 
 /*
  * =============================================================
+ * LOADING
+ * =============================================================
+ */
+
+function AccountLoading({
+  label,
+}: {
+  label: string;
+}) {
+  return (
+    <main className="flex min-h-[calc(100vh-88px)] items-center justify-center bg-background px-5">
+      <div className="text-center">
+        <LoaderCircle
+          size={30}
+          strokeWidth={1.2}
+          className="mx-auto animate-spin text-accent"
+        />
+
+        <p className="mt-5 text-center text-[9px] font-semibold uppercase tracking-[0.22em] text-muted">
+          {label}
+        </p>
+      </div>
+    </main>
+  );
+}
+
+/*
+ * =============================================================
  * ACCOUNT LINK
  * =============================================================
  */
@@ -389,59 +468,117 @@ function AccountLink({
       href={href}
       className={[
         "group relative",
+
         "flex min-h-[270px] flex-col",
+
         "items-center justify-center",
+
         "overflow-hidden",
+
         "border border-border",
+
         "bg-surface/25",
+
         "px-7 py-9",
+
         "text-center",
-        "transition-all duration-500 ease-out",
+
+        "transition-all duration-500",
+
+        "ease-[cubic-bezier(0.22,1,0.36,1)]",
 
         "hover:-translate-y-1",
+
         "hover:border-accent/45",
+
         "hover:bg-surface/65",
+
         "hover:shadow-[0_22px_60px_rgba(36,35,32,0.08)]",
       ].join(" ")}
     >
-      {/* Premium hover glow */}
+      {/* =====================================================
+          PREMIUM HOVER GLOW
+      ===================================================== */}
 
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute left-1/2 top-0 h-32 w-56 -translate-x-1/2 -translate-y-16 rounded-full bg-accent/[0.08] blur-3xl opacity-0 transition-opacity duration-700 group-hover:opacity-100"
+        className={[
+          "pointer-events-none",
+
+          "absolute left-1/2 top-0",
+
+          "h-32 w-56",
+
+          "-translate-x-1/2",
+          "-translate-y-16",
+
+          "rounded-full",
+
+          "bg-accent/[0.08]",
+
+          "blur-3xl",
+
+          "opacity-0",
+
+          "transition-all duration-700",
+
+          "group-hover:scale-110",
+
+          "group-hover:opacity-100",
+        ].join(" ")}
       />
 
-      {/* Number */}
+      {/* =====================================================
+          NUMBER
+      ===================================================== */}
 
       <span className="absolute start-5 top-5 text-[8px] font-semibold uppercase tracking-[0.22em] text-muted transition-colors duration-500 group-hover:text-accent">
         {number}
       </span>
 
-      {/* Icon */}
+      {/* =====================================================
+          ICON
+      ===================================================== */}
 
       <span
         className={[
           "relative flex h-14 w-14",
+
           "items-center justify-center",
+
           "border border-accent/25",
+
           "bg-accent/[0.04]",
+
           "text-accent",
+
           "transition-all duration-500",
 
+          "ease-[cubic-bezier(0.22,1,0.36,1)]",
+
           "group-hover:-translate-y-1",
+
+          "group-hover:scale-[1.04]",
+
           "group-hover:border-accent",
+
           "group-hover:bg-accent",
+
           "group-hover:text-white",
+
           "group-hover:shadow-[0_12px_30px_rgba(146,115,74,0.18)]",
         ].join(" ")}
       >
         <Icon
           size={21}
           strokeWidth={1.2}
+          className="transition-transform duration-500 group-hover:scale-105"
         />
       </span>
 
-      {/* Content */}
+      {/* =====================================================
+          CONTENT
+      ===================================================== */}
 
       <div className="relative mt-7 flex w-full flex-col items-center justify-center text-center">
         <h3 className="w-full text-center font-heading text-3xl leading-none text-foreground transition-colors duration-500 group-hover:text-accent sm:text-[38px]">
@@ -453,7 +590,9 @@ function AccountLink({
         </p>
       </div>
 
-      {/* Action */}
+      {/* =====================================================
+          ACTION
+      ===================================================== */}
 
       <div className="relative mt-7 flex items-center justify-center gap-2 text-center text-[8px] font-semibold uppercase tracking-[0.17em] text-muted transition-colors duration-500 group-hover:text-accent">
         <span>
@@ -467,9 +606,14 @@ function AccountLink({
         />
       </div>
 
-      {/* Bottom premium line */}
+      {/* =====================================================
+          BOTTOM PREMIUM LINE
+      ===================================================== */}
 
-      <span className="absolute bottom-0 left-1/2 h-px w-0 -translate-x-1/2 bg-accent transition-all duration-700 group-hover:w-[72%]" />
+      <span
+        aria-hidden="true"
+        className="absolute bottom-0 left-1/2 h-px w-0 -translate-x-1/2 bg-accent transition-all duration-700 group-hover:w-[72%]"
+      />
     </Link>
   );
 }
