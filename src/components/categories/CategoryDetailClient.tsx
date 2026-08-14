@@ -10,6 +10,8 @@ import {
   PackageSearch,
 } from "lucide-react";
 
+import MobileProductSlider from "@/components/products/MobileProductSlider";
+
 import {
   useCategories,
 } from "@/contexts/CategoryContext";
@@ -214,7 +216,10 @@ export default function CategoryDetailClient({
 
       {categoryProducts.length >
       0 ? (
-        <div className="mt-14 grid gap-x-6 gap-y-14 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 xl:gap-x-7">
+        <MobileProductSlider
+          className="mt-14"
+          desktopClassName="sm:grid-cols-2 sm:gap-x-6 sm:gap-y-14 lg:grid-cols-3 xl:grid-cols-4 xl:gap-x-7"
+        >
           {categoryProducts.map(
             (product) => {
               const productName =
@@ -547,7 +552,7 @@ export default function CategoryDetailClient({
               );
             }
           )}
-        </div>
+        </MobileProductSlider>
       ) : (
         <div className="mt-14 flex min-h-[360px] flex-col items-center justify-center border-y border-white/20 px-5 py-12 text-center">
           <PackageSearch

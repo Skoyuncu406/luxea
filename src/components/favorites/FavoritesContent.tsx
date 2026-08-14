@@ -10,6 +10,8 @@ import {
   Trash2,
 } from "lucide-react";
 
+import MobileProductSlider from "@/components/products/MobileProductSlider";
+
 import {
   useFavorites,
 } from "@/contexts/FavoritesContext";
@@ -426,21 +428,9 @@ export default function FavoritesContent({
           PRODUCTS
       ===================================================== */}
 
-      <div
-        className="
-          grid
-          grid-cols-1
-          gap-x-6
-          gap-y-14
-          pt-10
-          sm:grid-cols-2
-          sm:pt-12
-          lg:grid-cols-3
-          lg:gap-x-7
-          lg:gap-y-16
-          xl:grid-cols-4
-          xl:gap-x-8
-        "
+      <MobileProductSlider
+        className="pt-10 sm:pt-12"
+        desktopClassName="sm:grid-cols-2 sm:gap-x-6 sm:gap-y-14 lg:grid-cols-3 lg:gap-x-7 lg:gap-y-16 xl:grid-cols-4 xl:gap-x-8"
       >
         {favoriteProducts.map(
           (product) => {
@@ -848,7 +838,7 @@ export default function FavoritesContent({
             );
           }
         )}
-      </div>
+      </MobileProductSlider>
     </div>
   );
 }

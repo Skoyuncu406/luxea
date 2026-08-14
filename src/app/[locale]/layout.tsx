@@ -294,6 +294,7 @@ export default async function LocaleLayout({
       lang={locale}
       dir={direction}
       suppressHydrationWarning
+      data-scroll-behavior="smooth"
     >
       <body
         className={

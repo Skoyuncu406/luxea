@@ -4,7 +4,6 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -982,16 +981,6 @@ export function OrderProvider({
       },
       []
     );
-
-  /*
-   * Provider açıldığında siparişleri yükle.
-   */
-
-  useEffect(() => {
-    void refreshOrders();
-  }, [
-    refreshOrders,
-  ]);
 
   /*
    * ===========================================================
