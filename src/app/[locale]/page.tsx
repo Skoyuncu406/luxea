@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-
+import BrandStory from "@/components/home/BrandStory";
 import CategoryShowcase from "@/components/home/CategoryShowcase";
 import FeaturedProducts from "@/components/home/FeaturedProducts";
 import Navbar from "@/components/layout/Navbar";
@@ -593,6 +593,11 @@ export default async function HomePage({
           dictionary={
             dictionary.featuredProducts
           }
+        />
+      </div>
+       <div className="relative z-10">
+        <BrandStory
+          locale={locale}
         />
       </div>
     </main>

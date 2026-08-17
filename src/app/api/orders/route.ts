@@ -14,11 +14,13 @@ import {
   verifyAdminSessionToken,
 } from "@/lib/auth/admin-session";
 
-import { prisma } from "@/lib/prisma";
-
 import {
   getUserSession,
 } from "@/lib/auth/user-session";
+
+import {
+  prisma,
+} from "@/lib/prisma";
 
 /*
  * =============================================================
@@ -46,8 +48,10 @@ type CreateOrderRequestBody = {
   items?: unknown;
 
   /*
-   * Client'tan gelebilirler ancak fiyat hesaplamasında
-   * güvenilir kaynak olarak KULLANILMAZLAR.
+   * Client tarafından gönderilebilir.
+   *
+   * Ancak fiyat hesaplamasında güvenilir kaynak değildir.
+   * Gerçek fiyat PostgreSQL Product tablosundan alınır.
    */
   subtotal?: unknown;
   shippingCost?: unknown;
@@ -130,10 +134,13 @@ function isValidEmail(
  * ADMIN SESSION
  * =============================================================
  *
- * GET /api/orders yalnızca admin tarafından kullanılabilir.
+ * GET /api/orders
  *
- * POST /api/orders bu kontrolü KULLANMAZ.
- * Guest checkout public kalır.
+ * yalnızca admin tarafından kullanılabilir.
+ *
+ * POST /api/orders
+ *
+ * public checkout olduğu için admin session istemez.
  * =============================================================
  */
 
@@ -256,8 +263,7 @@ type OrderWithRelations =
  */
 
 function serializeOrder(
-  order:
-    NonNullable<OrderWithRelations>
+  order: NonNullable<OrderWithRelations>
 ) {
   return {
     id:
@@ -309,12 +315,12 @@ function serializeOrder(
             item.id,
 
           /*
-           * Ürün daha sonra silinirse
-           * OrderItem.productId null olabilir.
+           * Ürün ileride silinirse
+           * productId null olabilir.
            */
+
           productId:
-            item.productId ??
-            "",
+            item.productId ?? "",
 
           slug:
             item.productSlug,
@@ -474,14 +480,7 @@ function normalizeOrderItems(
  *
  * ADMIN ONLY
  *
- * Bütün müşteri siparişlerini döndürdüğü için bu endpoint
- * public olamaz.
- *
- * Admin session cookie:
- *
- * luxea-admin-session
- *
- * doğrulanmadan sipariş bilgileri verilmez.
+ * Bütün siparişleri admin paneli için döndürür.
  * =============================================================
  */
 
@@ -591,16 +590,30 @@ export async function GET() {
  *
  * PUBLIC CHECKOUT
  *
- * Guest kullanıcıların da alışveriş yapabilmesi için
- * admin session KULLANILMAZ.
+ * Guest kullanıcı ve giriş yapmış kullanıcı sipariş verebilir.
  *
  * Checkout
- *      ↓
- * POST /api/orders
- *      ↓
- * server validation
- *      ↓
+ *       ↓
+ * Validation
+ *       ↓
+ * Product kontrolü
+ *       ↓
+ * Stok kontrolü
+ *       ↓
  * PostgreSQL transaction
+ *       ↓
+ * Stok düşürme
+ *       ↓
+ * Order
+ *       ↓
+ * OrderItems
+ *       ↓
+ * StatusHistory
+ *       ↓
+ * Success response
+ *
+ * Formspree burada çalışmaz.
+ * Formspree CheckoutContent.tsx tarafından çağrılır.
  * =============================================================
  */
 
@@ -612,18 +625,21 @@ export async function POST(
      * =========================================================
      * OPTIONAL USER SESSION
      * =========================================================
-     *
-     * Kullanıcı giriş yapmış olabilir veya guest olabilir.
-     *
-     * Session zorunlu DEĞİLDİR.
      */
 
     const userSession =
       await getUserSession();
 
+    /*
+     * =========================================================
+     * BODY
+     * =========================================================
+     */
+
     const body =
       (await request.json()) as
         CreateOrderRequestBody;
+
     /*
      * =========================================================
      * CUSTOMER
@@ -699,7 +715,7 @@ export async function POST(
 
     /*
      * =========================================================
-     * SHIPPING ADDRESS
+     * SHIPPING
      * =========================================================
      */
 
@@ -770,9 +786,6 @@ export async function POST(
      * =========================================================
      * TÜRKİYE SATIŞ KONTROLÜ
      * =========================================================
-     *
-     * Frontend kontrolüne güvenmiyoruz.
-     * Server tarafında da engellenir.
      */
 
     if (
@@ -824,10 +837,11 @@ export async function POST(
      * QUANTITIES BY PRODUCT
      * =========================================================
      *
-     * Aynı ürün farklı renklerle birden fazla sepet satırında
-     * bulunabilir.
+     * Aynı ürün farklı renklerle sepette
+     * birden fazla kez olabilir.
      *
-     * Stok kontrolü toplam ürün adedi üzerinden yapılır.
+     * Stok kontrolü toplam ürün adediyle yapılır.
+     * =========================================================
      */
 
     const quantitiesByProduct =
@@ -858,24 +872,21 @@ export async function POST(
       );
 
     /*
-     * ============================================================
-     * ORDER USER
-     * ============================================================
-     *
-     * Giriş yapmış kullanıcı:
-     * Sipariş doğrudan session kullanıcısına bağlanır.
-     *
-     * Checkout e-postası müşteri / iletişim bilgisi olarak
-     * saklanmaya devam eder ve hesap e-postasıyla aynı olmak
-     * zorunda değildir.
+     * =========================================================
+     * USER LINK
+     * =========================================================
      *
      * Guest checkout:
-     * userId null kalır.
-     * ============================================================
+     * userId = null
+     *
+     * Giriş yapmış kullanıcı:
+     * userId = session user id
+     * =========================================================
      */
 
     let orderUserId:
-      string | null = null;
+      string | null =
+      null;
 
     if (userSession) {
       const sessionUser =
@@ -886,8 +897,7 @@ export async function POST(
           },
 
           select: {
-            id:
-              true,
+            id: true,
           },
         });
 
@@ -902,24 +912,15 @@ export async function POST(
      * TRANSACTION
      * =========================================================
      *
-     * Hepsi başarılı:
+     * P2028 düzeltmesi:
      *
-     * COMMIT
+     * maxWait:
+     * Transaction bağlantısını almak için
+     * 10 saniyeye kadar bekler.
      *
-     * herhangi biri başarısız:
-     *
-     * ROLLBACK
-     *
-     * İşlemler:
-     *
-     * - ürün kontrolü
-     * - aktiflik kontrolü
-     * - stok kontrolü
-     * - fiyat hesaplama
-     * - stok düşürme
-     * - Order oluşturma
-     * - OrderItem oluşturma
-     * - OrderStatusHistory oluşturma
+     * timeout:
+     * Transaction başladıktan sonra
+     * 15 saniyeye kadar çalışabilir.
      * =========================================================
      */
 
@@ -976,9 +977,7 @@ export async function POST(
           const productMap =
             new Map(
               products.map(
-                (
-                  product
-                ) => [
+                (product) => [
                   product.id,
                   product,
                 ]
@@ -987,7 +986,7 @@ export async function POST(
 
           /*
            * ===================================================
-           * PRODUCT / STOCK VALIDATION
+           * ACTIVE / STOCK VALIDATION
            * ===================================================
            */
 
@@ -1031,9 +1030,6 @@ export async function POST(
            * ===================================================
            * CURRENCY
            * ===================================================
-           *
-           * Aynı sipariş içinde farklı para birimleri
-           * şimdilik desteklenmiyor.
            */
 
           const currencies =
@@ -1053,9 +1049,17 @@ export async function POST(
             );
           }
 
+          const firstProduct =
+            products[0];
+
+          if (!firstProduct) {
+            throw new Error(
+              "ORDER_PRODUCT_NOT_FOUND"
+            );
+          }
+
           const orderCurrency =
-            products[0]
-              .currency;
+            firstProduct.currency;
 
           /*
            * ===================================================
@@ -1063,7 +1067,8 @@ export async function POST(
            * ===================================================
            */
 
-          let subtotal = 0;
+          let subtotal =
+            0;
 
           const orderItems =
             requestedItems.map(
@@ -1080,9 +1085,9 @@ export async function POST(
                 }
 
                 /*
-                 * =============================================
-                 * COLOR VALIDATION
-                 * =============================================
+                 * =================================================
+                 * COLOR
+                 * =================================================
                  */
 
                 const productColors =
@@ -1104,19 +1109,16 @@ export async function POST(
                 }
 
                 /*
-                 * =============================================
-                 * PRIMARY IMAGE
-                 * =============================================
+                 * =================================================
+                 * IMAGE
+                 * =================================================
                  */
 
                 const sortedImages =
                   [
                     ...product.images,
                   ].sort(
-                    (
-                      a,
-                      b
-                    ) =>
+                    (a, b) =>
                       a.order -
                       b.order
                   );
@@ -1137,11 +1139,9 @@ export async function POST(
                 }
 
                 /*
-                 * =============================================
-                 * SERVER-SIDE PRICE
-                 * =============================================
-                 *
-                 * Client fiyatına güvenilmez.
+                 * =================================================
+                 * SERVER PRICE
+                 * =================================================
                  */
 
                 const unitPrice =
@@ -1154,12 +1154,9 @@ export async function POST(
                   item.quantity;
 
                 /*
-                 * =============================================
+                 * =================================================
                  * SNAPSHOT
-                 * =============================================
-                 *
-                 * Ürün ileride değiştirilse dahi sipariş
-                 * geçmişindeki isim, fiyat ve görsel korunur.
+                 * =================================================
                  */
 
                 return {
@@ -1200,10 +1197,6 @@ export async function POST(
            * ===================================================
            * SHIPPING
            * ===================================================
-           *
-           * Şimdilik ücretsiz.
-           *
-           * İleride ülke bazlı server-side hesaplanabilir.
            */
 
           const shippingCost =
@@ -1218,12 +1211,9 @@ export async function POST(
            * STOCK DECREMENT
            * ===================================================
            *
-           * Atomic stock protection:
-           *
-           * stock >= quantity şartıyla update yapılır.
-           *
-           * Aynı anda iki müşteri son ürünü satın almaya
-           * çalışırsa negatif stok oluşmasını engeller.
+           * stock >= quantity koşuluyla atomik
+           * stok düşürme yapılır.
+           * ===================================================
            */
 
           for (
@@ -1293,37 +1283,34 @@ export async function POST(
           return tx.order.create({
             data: {
               /*
-               * =================================================
                * USER
-               * =================================================
-               *
-               * Guest sipariş:
-               * null
-               *
-               * Giriş yapmış kullanıcı:
-               * session user id
                */
 
               userId:
                 orderUserId,
 
+              /*
+               * CODES
+               */
+
               orderNumber,
 
               trackingCode,
 
+              /*
+               * STATUS
+               */
+
               status:
                 OrderStatus.RECEIVED,
 
-              /*
-               * Gerçek ödeme sistemi geldiğinde
-               * webhook PAID durumuna geçirecek.
-               */
               paymentStatus:
                 PaymentStatus.PENDING,
 
               /*
                * CUSTOMER
                */
+
               customerEmail:
                 email,
 
@@ -1339,6 +1326,7 @@ export async function POST(
               /*
                * SHIPPING
                */
+
               shippingCountry,
 
               shippingAddress,
@@ -1354,6 +1342,7 @@ export async function POST(
               /*
                * MONEY
                */
+
               subtotal,
 
               shippingCost,
@@ -1366,14 +1355,16 @@ export async function POST(
               /*
                * ORDER ITEMS
                */
+
               items: {
                 create:
                   orderItems,
               },
 
               /*
-               * INITIAL STATUS HISTORY
+               * STATUS HISTORY
                */
+
               statusHistory: {
                 create: {
                   status:
@@ -1381,6 +1372,10 @@ export async function POST(
                 },
               },
             },
+
+            /*
+             * Siparişi ilişkileriyle birlikte döndür.
+             */
 
             include: {
               items: {
@@ -1398,12 +1393,45 @@ export async function POST(
               },
             },
           });
+        },
+
+        /*
+         * =====================================================
+         * TRANSACTION OPTIONS
+         * =====================================================
+         */
+
+        {
+          /*
+           * Connection pool yoğun olduğunda transaction
+           * bağlantısını almak için 10 saniyeye kadar bekle.
+           */
+
+          maxWait:
+            10_000,
+
+          /*
+           * Transaction başladıktan sonra maksimum
+           * 15 saniye çalışmasına izin ver.
+           */
+
+          timeout:
+            15_000,
         }
       );
 
     /*
      * =========================================================
      * SUCCESS RESPONSE
+     * =========================================================
+     *
+     * Burada:
+     *
+     * - Nodemailer yok
+     * - SMTP yok
+     * - mail helper yok
+     *
+     * Formspree CheckoutContent.tsx tarafından gönderilir.
      * =========================================================
      */
 
@@ -1438,134 +1466,111 @@ export async function POST(
      */
 
     if (
-      error instanceof Error
+      error instanceof
+      Error
     ) {
       switch (
         error.message
       ) {
         /*
-         * -----------------------------------------------------
          * PRODUCT NOT FOUND
-         * -----------------------------------------------------
          */
 
         case "ORDER_PRODUCT_NOT_FOUND":
           return NextResponse.json(
             {
-              success:
-                false,
+              success: false,
 
               message:
                 "Sepetteki ürünlerden biri artık mevcut değil.",
             },
             {
-              status:
-                400,
+              status: 400,
             }
           );
 
         /*
-         * -----------------------------------------------------
          * PRODUCT INACTIVE
-         * -----------------------------------------------------
          */
 
         case "ORDER_PRODUCT_INACTIVE":
           return NextResponse.json(
             {
-              success:
-                false,
+              success: false,
 
               message:
                 "Sepetteki ürünlerden biri artık satışta değil.",
             },
             {
-              status:
-                400,
+              status: 400,
             }
           );
 
         /*
-         * -----------------------------------------------------
          * STOCK
-         * -----------------------------------------------------
          */
 
         case "ORDER_INSUFFICIENT_STOCK":
           return NextResponse.json(
             {
-              success:
-                false,
+              success: false,
 
               message:
                 "Sepetteki ürünlerden biri için yeterli stok bulunmuyor.",
             },
             {
-              status:
-                409,
+              status: 409,
             }
           );
 
         /*
-         * -----------------------------------------------------
          * CURRENCY
-         * -----------------------------------------------------
          */
 
         case "ORDER_MIXED_CURRENCY":
           return NextResponse.json(
             {
-              success:
-                false,
+              success: false,
 
               message:
                 "Farklı para birimlerindeki ürünler aynı siparişte kullanılamaz.",
             },
             {
-              status:
-                400,
+              status: 400,
             }
           );
 
         /*
-         * -----------------------------------------------------
          * COLOR
-         * -----------------------------------------------------
          */
 
         case "ORDER_INVALID_COLOR":
           return NextResponse.json(
             {
-              success:
-                false,
+              success: false,
 
               message:
                 "Seçilen ürün renklerinden biri artık kullanılamıyor.",
             },
             {
-              status:
-                400,
+              status: 400,
             }
           );
 
         /*
-         * -----------------------------------------------------
          * IMAGE
-         * -----------------------------------------------------
          */
 
         case "ORDER_PRODUCT_IMAGE_MISSING":
           return NextResponse.json(
             {
-              success:
-                false,
+              success: false,
 
               message:
                 "Sipariş ürünlerinden birinin görsel bilgisi eksik.",
             },
             {
-              status:
-                400,
+              status: 400,
             }
           );
       }
@@ -1573,7 +1578,37 @@ export async function POST(
 
     /*
      * =========================================================
-     * UNKNOWN SERVER ERROR
+     * PRISMA TRANSACTION ERROR
+     * =========================================================
+     *
+     * P2028 tekrar oluşursa kullanıcıya genel 500 yerine
+     * daha anlamlı cevap döndürür.
+     */
+
+    if (
+      typeof error ===
+        "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code ===
+        "P2028"
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+
+          message:
+            "Sipariş işlemi sırasında veritabanı bağlantısı zaman aşımına uğradı. Lütfen tekrar deneyin.",
+        },
+        {
+          status: 503,
+        }
+      );
+    }
+
+    /*
+     * =========================================================
+     * UNKNOWN ERROR
      * =========================================================
      */
 
