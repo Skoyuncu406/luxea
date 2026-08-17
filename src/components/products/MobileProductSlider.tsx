@@ -21,56 +21,135 @@ export default function MobileProductSlider({
   desktopClassName = "",
   interval = 4000,
 }: MobileProductSliderProps) {
+  /*
+   * =========================================================
+   * REFS
+   * =========================================================
+   */
+
+  const wrapperRef =
+    useRef<HTMLDivElement | null>(null);
+
   const containerRef =
     useRef<HTMLDivElement | null>(null);
 
   const resumeTimerRef =
     useRef<number | null>(null);
 
-  const items = Children.toArray(children);
+  /*
+   * =========================================================
+   * ITEMS
+   * =========================================================
+   */
 
-  const [activeIndex, setActiveIndex] =
-    useState(0);
-
-  const [isPaused, setIsPaused] =
-    useState(false);
+  const items =
+    Children.toArray(children);
 
   /*
-   * Ürün sayısı azalırsa mevcut index'in
-   * geçerli aralıkta kalmasını sağlar.
-   *
-   * Bunun için useEffect + setState kullanmıyoruz.
+   * =========================================================
+   * STATE
+   * =========================================================
    */
-  const safeActiveIndex = Math.min(
+
+  const [
     activeIndex,
-    Math.max(items.length - 1, 0)
-  );
+    setActiveIndex,
+  ] = useState(0);
+
+  const [
+    isPaused,
+    setIsPaused,
+  ] = useState(false);
+
+  const [
+    isInView,
+    setIsInView,
+  ] = useState(false);
+
+  /*
+   * Ürün sayısı değişirse geçerli index
+   * aralığında kalmamızı sağlar.
+   */
+  const safeActiveIndex =
+    Math.min(
+      activeIndex,
+      Math.max(
+        items.length - 1,
+        0
+      )
+    );
 
   /*
    * =========================================================
-   * BELİRLİ ÜRÜNE KAYDIR
+   * VIEWPORT OBSERVER
    * =========================================================
+   *
+   * Slider sayfa yüklenir yüklenmez başlamaz.
+   *
+   * Ürün alanının en az %25'i görünür hale
+   * geldiğinde otomatik slider aktif olur.
    */
 
-  function scrollToItem(index: number) {
-    const container = containerRef.current;
+  useEffect(() => {
+    const wrapper =
+      wrapperRef.current;
+
+    if (!wrapper) {
+      return;
+    }
+
+    const observer =
+      new IntersectionObserver(
+        ([entry]) => {
+          setIsInView(
+            entry.isIntersecting
+          );
+        },
+        {
+          threshold: 0.25,
+        }
+      );
+
+    observer.observe(wrapper);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  /*
+   * =========================================================
+   * BELİRLİ ÜRÜNE YATAY KAYDIR
+   * =========================================================
+   *
+   * scrollIntoView KULLANMIYORUZ.
+   *
+   * Çünkü scrollIntoView sayfanın dikey
+   * scroll konumunu da değiştirebilir.
+   */
+
+  function scrollToItem(
+    index: number
+  ) {
+    const container =
+      containerRef.current;
 
     if (!container) {
       return;
     }
 
-    const target = container.children[
-      index
-    ] as HTMLElement | undefined;
+    const target =
+      container.children[
+        index
+      ] as HTMLElement | undefined;
 
     if (!target) {
       return;
     }
 
-    target.scrollIntoView({
+    container.scrollTo({
+      left: target.offsetLeft,
       behavior: "smooth",
-      block: "nearest",
-      inline: "start",
     });
 
     setActiveIndex(index);
@@ -83,8 +162,12 @@ export default function MobileProductSlider({
    */
 
   function updateActiveIndex() {
-    const container = containerRef.current;
+    const container =
+      containerRef.current;
 
+    /*
+     * Yalnızca mobil slider için.
+     */
     if (
       !container ||
       window.innerWidth >= 640
@@ -92,12 +175,17 @@ export default function MobileProductSlider({
       return;
     }
 
-    const containerRect =
-      container.getBoundingClientRect();
+    /*
+     * Container'ın kendi yatay scroll
+     * koordinatlarını kullanıyoruz.
+     *
+     * getBoundingClientRect kullanmak
+     * zorunda değiliz.
+     */
 
     const containerCenter =
-      containerRect.left +
-      containerRect.width / 2;
+      container.scrollLeft +
+      container.clientWidth / 2;
 
     let closestIndex = 0;
 
@@ -106,25 +194,40 @@ export default function MobileProductSlider({
 
     Array.from(
       container.children
-    ).forEach((child, index) => {
-      const rect = (
-        child as HTMLElement
-      ).getBoundingClientRect();
+    ).forEach(
+      (
+        child,
+        index
+      ) => {
+        const item =
+          child as HTMLElement;
 
-      const childCenter =
-        rect.left + rect.width / 2;
+        const itemCenter =
+          item.offsetLeft +
+          item.offsetWidth / 2;
 
-      const distance = Math.abs(
-        childCenter - containerCenter
-      );
+        const distance =
+          Math.abs(
+            itemCenter -
+              containerCenter
+          );
 
-      if (distance < closestDistance) {
-        closestDistance = distance;
-        closestIndex = index;
+        if (
+          distance <
+          closestDistance
+        ) {
+          closestDistance =
+            distance;
+
+          closestIndex =
+            index;
+        }
       }
-    });
+    );
 
-    setActiveIndex(closestIndex);
+    setActiveIndex(
+      closestIndex
+    );
   }
 
   /*
@@ -136,12 +239,16 @@ export default function MobileProductSlider({
   function pauseAutoSlide() {
     setIsPaused(true);
 
-    if (resumeTimerRef.current !== null) {
+    if (
+      resumeTimerRef.current !==
+      null
+    ) {
       window.clearTimeout(
         resumeTimerRef.current
       );
 
-      resumeTimerRef.current = null;
+      resumeTimerRef.current =
+        null;
     }
   }
 
@@ -154,7 +261,10 @@ export default function MobileProductSlider({
   function resumeAutoSlide() {
     updateActiveIndex();
 
-    if (resumeTimerRef.current !== null) {
+    if (
+      resumeTimerRef.current !==
+      null
+    ) {
       window.clearTimeout(
         resumeTimerRef.current
       );
@@ -162,13 +272,22 @@ export default function MobileProductSlider({
 
     /*
      * Kullanıcı swipe yaptıktan sonra
-     * 5 saniye bekle.
+     * hemen yeniden otomatik kaydırma
+     * başlamasın.
+     *
+     * 5 saniye bekliyoruz.
      */
+
     resumeTimerRef.current =
-      window.setTimeout(() => {
-        setIsPaused(false);
-        resumeTimerRef.current = null;
-      }, 5000);
+      window.setTimeout(
+        () => {
+          setIsPaused(false);
+
+          resumeTimerRef.current =
+            null;
+        },
+        5000
+      );
   }
 
   /*
@@ -178,29 +297,41 @@ export default function MobileProductSlider({
    */
 
   useEffect(() => {
+    /*
+     * Slider şu koşullarda çalışmaz:
+     *
+     * - 1 veya daha az ürün varsa
+     * - kullanıcı slider ile etkileşimdeyse
+     * - ürün bölümü ekranda değilse
+     */
+
     if (
       items.length <= 1 ||
-      isPaused
+      isPaused ||
+      !isInView
     ) {
       return;
     }
+
+    /*
+     * Otomatik slider sadece mobil.
+     */
 
     const mobileQuery =
       window.matchMedia(
         "(max-width: 639px)"
       );
 
+    /*
+     * Kullanıcı reduced-motion tercih etmişse
+     * otomatik hareket yapmıyoruz.
+     */
+
     const reducedMotionQuery =
       window.matchMedia(
         "(prefers-reduced-motion: reduce)"
       );
 
-    /*
-     * Yalnızca mobilde çalışır.
-     *
-     * Kullanıcı reduced-motion tercih etmişse
-     * otomatik hareket yapılmaz.
-     */
     if (
       !mobileQuery.matches ||
       reducedMotionQuery.matches
@@ -208,49 +339,91 @@ export default function MobileProductSlider({
       return;
     }
 
-    const timer = window.setInterval(() => {
-      setActiveIndex((currentIndex) => {
-        /*
-         * Ürün sayısı değişmiş olabileceği için
-         * önce index'i güvenli hale getiriyoruz.
-         */
-        const currentSafeIndex = Math.min(
-          currentIndex,
-          Math.max(items.length - 1, 0)
-        );
+    const timer =
+      window.setInterval(
+        () => {
+          setActiveIndex(
+            (
+              currentIndex
+            ) => {
+              /*
+               * Ürün sayısı değişmiş
+               * olabileceği için index'i
+               * güvenli hale getiriyoruz.
+               */
 
-        const nextIndex =
-          currentSafeIndex >=
-          items.length - 1
-            ? 0
-            : currentSafeIndex + 1;
+              const currentSafeIndex =
+                Math.min(
+                  currentIndex,
+                  Math.max(
+                    items.length -
+                      1,
+                    0
+                  )
+                );
 
-        const container =
-          containerRef.current;
+              /*
+               * Son üründeysek başa dön.
+               */
 
-        const target =
-          container?.children[
-            nextIndex
-          ] as HTMLElement | undefined;
+              const nextIndex =
+                currentSafeIndex >=
+                items.length - 1
+                  ? 0
+                  : currentSafeIndex +
+                    1;
 
-        if (target) {
-          target.scrollIntoView({
-            behavior: "smooth",
-            block: "nearest",
-            inline: "start",
-          });
-        }
+              const container =
+                containerRef.current;
 
-        return nextIndex;
-      });
-    }, interval);
+              const target =
+                container
+                  ?.children[
+                  nextIndex
+                ] as
+                  | HTMLElement
+                  | undefined;
+
+              /*
+               * Kritik nokta:
+               *
+               * scrollIntoView yerine yalnızca
+               * container'ın yatay scrollLeft
+               * değerini değiştiriyoruz.
+               *
+               * Böylece sayfanın dikey
+               * scroll pozisyonu değişmez.
+               */
+
+              if (
+                container &&
+                target
+              ) {
+                container.scrollTo({
+                  left:
+                    target.offsetLeft,
+
+                  behavior:
+                    "smooth",
+                });
+              }
+
+              return nextIndex;
+            }
+          );
+        },
+        interval
+      );
 
     return () => {
-      window.clearInterval(timer);
+      window.clearInterval(
+        timer
+      );
     };
   }, [
     interval,
     isPaused,
+    isInView,
     items.length,
   ]);
 
@@ -263,7 +436,8 @@ export default function MobileProductSlider({
   useEffect(() => {
     return () => {
       if (
-        resumeTimerRef.current !== null
+        resumeTimerRef.current !==
+        null
       ) {
         window.clearTimeout(
           resumeTimerRef.current
@@ -278,92 +452,235 @@ export default function MobileProductSlider({
    * =========================================================
    */
 
-  if (items.length === 0) {
+  if (
+    items.length === 0
+  ) {
     return null;
   }
 
+  /*
+   * =========================================================
+   * RENDER
+   * =========================================================
+   */
+
   return (
-    <div className={className}>
+    <div
+      ref={wrapperRef}
+      className={className}
+    >
       {/* =====================================================
           MOBILE SLIDER / DESKTOP GRID
       ===================================================== */}
 
       <div
         ref={containerRef}
-        onTouchStart={pauseAutoSlide}
-        onTouchEnd={resumeAutoSlide}
-        onTouchCancel={resumeAutoSlide}
-        onPointerDown={pauseAutoSlide}
-        onPointerUp={resumeAutoSlide}
-        onPointerCancel={resumeAutoSlide}
-        onScroll={updateActiveIndex}
+        onTouchStart={
+          pauseAutoSlide
+        }
+        onTouchEnd={
+          resumeAutoSlide
+        }
+        onTouchCancel={
+          resumeAutoSlide
+        }
+        onPointerDown={
+          pauseAutoSlide
+        }
+        onPointerUp={
+          resumeAutoSlide
+        }
+        onPointerCancel={
+          resumeAutoSlide
+        }
+        onScroll={
+          updateActiveIndex
+        }
         className={[
           /*
            * MOBILE
            */
-          "flex w-full overflow-x-auto overflow-y-hidden",
-          "snap-x snap-mandatory scroll-smooth",
-          "overscroll-x-contain touch-pan-x",
+
+          "flex",
+
+          "w-full",
+
+          "overflow-x-auto",
+
+          "overflow-y-hidden",
+
+          /*
+           * Bir ürünün tam olarak
+           * slider alanına oturmasını sağlar.
+           */
+
+          "snap-x",
+
+          "snap-mandatory",
+
+          /*
+           * Programatik geçişlerde
+           * yumuşak animasyon.
+           */
+
+          "scroll-smooth",
+
+          /*
+           * Mobil yatay overscroll kontrolü.
+           */
+
+          "overscroll-x-contain",
+
+          /*
+           * Parmakla yatay swipe.
+           */
+
+          "touch-pan-x",
+
+          /*
+           * Scrollbar gizleme.
+           */
+
           "[scrollbar-width:none]",
+
           "[&::-webkit-scrollbar]:hidden",
 
           /*
            * TABLET / DESKTOP
+           *
+           * Burada normal grid yapısına
+           * geri dönüyoruz.
            */
+
           "sm:grid",
+
           "sm:overflow-visible",
+
           "sm:snap-none",
+
           "sm:scroll-auto",
 
           desktopClassName,
         ].join(" ")}
       >
-        {items.map((item, index) => (
-          <div
-            key={index}
-            className="w-full min-w-full shrink-0 snap-start snap-always sm:w-auto sm:min-w-0 sm:shrink"
-          >
-            {item}
-          </div>
-        ))}
+        {items.map(
+          (
+            item,
+            index
+          ) => (
+            <div
+              key={index}
+              className={[
+                /*
+                 * MOBILE
+                 */
+
+                "w-full",
+
+                "min-w-full",
+
+                "shrink-0",
+
+                "snap-start",
+
+                "snap-always",
+
+                /*
+                 * TABLET / DESKTOP
+                 */
+
+                "sm:w-auto",
+
+                "sm:min-w-0",
+
+                "sm:shrink",
+              ].join(" ")}
+            >
+              {item}
+            </div>
+          )
+        )}
       </div>
 
       {/* =====================================================
           MOBILE SLIDER GÖSTERGESİ
       ===================================================== */}
 
-      {items.length > 1 && (
+      {items.length >
+        1 && (
         <div
-          className="mt-5 flex items-center justify-center gap-2 sm:hidden"
+          className={[
+            "mt-5",
+
+            "flex",
+
+            "items-center",
+
+            "justify-center",
+
+            "gap-2",
+
+            "sm:hidden",
+          ].join(" ")}
           aria-label="Ürün slider göstergesi"
         >
-          {items.map((_, index) => {
-            const isActive =
-              safeActiveIndex === index;
+          {items.map(
+            (
+              _,
+              index
+            ) => {
+              const isActive =
+                safeActiveIndex ===
+                index;
 
-            return (
-              <button
-                key={index}
-                type="button"
-                onClick={() =>
-                  scrollToItem(index)
-                }
-                aria-label={`${index + 1}. ürüne git`}
-                aria-current={
-                  isActive
-                    ? "true"
-                    : undefined
-                }
-                className={[
-                  "h-1.5 rounded-full",
-                  "transition-all duration-300",
-                  isActive
-                    ? "w-6 bg-accent"
-                    : "w-1.5 bg-foreground/20",
-                ].join(" ")}
-              />
-            );
-          })}
+              return (
+                <button
+                  key={
+                    index
+                  }
+                  type="button"
+                  onClick={() =>
+                    scrollToItem(
+                      index
+                    )
+                  }
+                  aria-label={`${index + 1}. ürüne git`}
+                  aria-current={
+                    isActive
+                      ? "true"
+                      : undefined
+                  }
+                  className={[
+                    "h-1.5",
+
+                    "rounded-full",
+
+                    "transition-all",
+
+                    "duration-300",
+
+                    isActive
+                      ? [
+                          "w-6",
+
+                          "bg-accent",
+                        ].join(
+                          " "
+                        )
+                      : [
+                          "w-1.5",
+
+                          "bg-foreground/20",
+
+                          "hover:bg-accent/50",
+                        ].join(
+                          " "
+                        ),
+                  ].join(" ")}
+                />
+              );
+            }
+          )}
         </div>
       )}
     </div>
